@@ -64,3 +64,4 @@ export function OcrScanningSkeleton() {
     </div>
   );
 }
+
