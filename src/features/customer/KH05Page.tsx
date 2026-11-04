@@ -178,14 +178,14 @@ export function KH05Page() {
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700 border border-brand-200/80 shadow-xs">
-              KH-05
+              Bước 5 • Xác nhận xe
             </span>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-              Xác nhận tình trạng xe khi nhận
+              Kiểm tra & Nhận bàn giao xe
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Hồ sơ #{request.id.slice(0, 8)} • Vui lòng kiểm tra kỹ tình trạng xe và hình ảnh thực tế
+            Mã chuyến #{request.id.slice(0, 8)} • Quý khách vui lòng kiểm tra hình ảnh 4 góc và tình trạng thực tế
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export function KH05Page() {
             {getStatusLabel(request.status)}
           </Badge>
           <Badge variant="neutral" className="text-slate-600">
-            Lần #{attemptNo}
+            Lần kiểm tra #{attemptNo}
           </Badge>
         </div>
       </div>
@@ -223,7 +223,7 @@ export function KH05Page() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-brand-600" />
             <h3 className="font-bold text-slate-900 text-base">
-              Kết quả kiểm tra kỹ thuật của nhân viên (NV-03)
+              Biên bản kiểm tra an toàn kỹ thuật
             </h3>
           </div>
           <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
@@ -333,7 +333,7 @@ export function KH05Page() {
       >
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-slate-900 text-base">
-            Quyết định của khách hàng (Cổng BPMN Gateway_0ixde68)
+            Biên bản xác nhận tình trạng phương tiện
           </h3>
         </div>
 

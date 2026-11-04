@@ -216,13 +216,13 @@ export function KH03Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
-              KH-03
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
+              Bước 3 &bull; Đặt cọc giữ xe
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Thanh toán tiền đặt cọc</h1>
           </div>
           <p className="text-sm text-slate-500">
-            Quét mã QR VietQR để thanh toán tiền cọc 30% bảo chứng hợp đồng (M_CreateDeposit & M_WaitDeposit).
+            Quét mã VietQR chuyển khoản nhanh 30% để xác nhận đặt xe tức thì
           </p>
         </div>
 
@@ -231,36 +231,36 @@ export function KH03Page() {
         </Badge>
       </div>
 
-      {/* CẢNH BÁO: Hết hạn cọc M_BoundDeposit */}
+      {/* CẢNH BÁO: Hết hạn cọc */}
       {isExpired && (
-        <Card className="p-5 border-red-300 bg-red-50/80 text-red-900 space-y-3 shadow-sm">
+        <Card className="p-5 border-red-300 bg-red-50/80 text-red-900 space-y-3 shadow-sm rounded-2xl">
           <div className="flex items-center gap-2 font-bold text-base text-red-800">
             <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
-            Yêu cầu thuê bị từ chối do quá hạn đặt cọc (M_BoundDeposit)
+            Yêu cầu thuê đã hết hạn thanh toán cọc
           </div>
           <p className="text-xs text-red-700 leading-relaxed">
-            Đã quá 30 phút kể từ lúc tạo yêu cầu cọc nhưng hệ thống chưa ghi nhận thanh toán hợp lệ. Yêu cầu đã được đóng theo quy tắc BPMN To-Be.
+            Đã quá thời gian quy định (30 phút) kể từ lúc tạo yêu cầu cọc nhưng chưa ghi nhận giao dịch thành công. Vui lòng tạo yêu cầu mới.
           </p>
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate('/kh/01')}
-            className="text-red-700 border-red-300 bg-white hover:bg-red-100"
+            className="text-red-700 border-red-300 bg-white hover:bg-red-100 rounded-xl"
           >
             Tạo yêu cầu thuê mới
           </Button>
         </Card>
       )}
 
-      {/* THÔNG BÁO: Đang chờ nhân viên kiểm tra cọc ngoại lệ NV-02 */}
+      {/* THÔNG BÁO: Đang chờ nhân viên hỗ trợ */}
       {isPendingStaff && !isExpired && (
-        <Card className="p-5 border-amber-300 bg-amber-50/80 text-amber-900 space-y-2 shadow-sm">
+        <Card className="p-5 border-amber-300 bg-amber-50/80 text-amber-900 space-y-2 shadow-sm rounded-2xl">
           <div className="flex items-center gap-2 font-bold text-sm text-amber-800">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-            Đang chờ nhân viên kiểm tra cọc ngoại lệ (M_ManualDeposit)
+            Đang hỗ trợ đối soát thanh toán
           </div>
           <p className="text-xs text-amber-700 leading-relaxed">
-            Giao dịch chuyển khoản của bạn có sự chênh lệch về số tiền hoặc nội dung so với mã định danh VietQR. Nhân viên sẽ đối chiếu sao kê và phê duyệt thủ công tại màn hình <strong>NV-02</strong>.
+            Giao dịch chuyển khoản của bạn có sự chênh lệch so với số tiền hoặc nội dung mã QR. Nhân viên đang đối chiếu sao kê và phê duyệt thủ công cho bạn trong ít phút.
           </p>
         </Card>
       )}

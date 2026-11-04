@@ -225,15 +225,15 @@ export function KH02Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-300">
-              KH-02 &bull; BPMN M_CheckDocs
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
+              Bước 2 &bull; Xác thực hồ sơ & Báo giá
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Báo giá & Thẩm định hồ sơ
+            Xác thực hồ sơ & Báo giá
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Xem biểu phí minh bạch và nộp giấy tờ định danh để AI Gemini thẩm định tự động
+            Xem chi tiết biểu phí và tải ảnh giấy tờ để hệ thống xác thực tự động
           </p>
         </div>
 
@@ -247,10 +247,10 @@ export function KH02Page() {
         <Card className="p-5 border-red-300 bg-red-50 text-red-900 space-y-3">
           <div className="flex items-center gap-2 font-bold text-base text-red-800">
             <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
-            Hồ sơ thuê xe đã bị hủy (M_EndCancel)
+            Hồ sơ thuê xe đã dừng xử lý
           </div>
           <p className="text-xs text-red-700 leading-relaxed">
-            Hồ sơ của bạn đã vượt quá giới hạn 3 lần bổ sung giấy tờ theo quy định quy trình BPMN (<code className="font-mono font-bold text-red-800">Gateway_0x0p273</code>). Vui lòng tạo yêu cầu thuê mới khi đã chuẩn bị đầy đủ giấy tờ hợp lệ.
+            Hồ sơ đã vượt quá số lần tải lại giấy tờ cho phép. Vui lòng tạo yêu cầu thuê mới khi bạn đã có sẵn ảnh chụp rõ nét.
           </p>
           <Button
             variant="outline"

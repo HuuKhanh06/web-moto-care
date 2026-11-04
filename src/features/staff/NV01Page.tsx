@@ -190,13 +190,13 @@ export function NV01Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
-              NV-01
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
+              Điều hành
             </span>
-            <h1 className="text-2xl font-bold text-slate-900">Danh sách yêu cầu & Việc cần làm</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Trung tâm điều phối &amp; Hộp việc</h1>
           </div>
           <p className="text-sm text-slate-500">
-            Hộp việc trung tâm theo quy trình BPMN To-Be. Bấm &quot;Xử lý&quot; để thực hiện nghiệp vụ tương ứng.
+            Tiếp nhận và xử lý các yêu cầu bàn giao xe, kiểm tra kỹ thuật, đối soát và quyết toán
           </p>
         </div>
 
@@ -250,7 +250,7 @@ export function NV01Page() {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-600" />
-              Danh sách hồ sơ ghi nhận Công nợ (M_END_DEBT)
+              Danh sách hồ sơ ghi nhận công nợ tồn đọng
             </h2>
             <span className="text-xs text-slate-500 font-medium">
               Tổng số: {debtRequests.length} hồ sơ

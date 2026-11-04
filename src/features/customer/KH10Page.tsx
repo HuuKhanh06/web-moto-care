@@ -206,20 +206,16 @@ export function KH10Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Màn hình KH-10
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
+              Quyết toán cọc
             </span>
-            <span className="text-xs font-mono text-slate-500">Mã đơn #{requestId.slice(0, 8)}</span>
+            <span className="text-xs font-mono text-slate-500">Mã chuyến #{requestId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">
-            Quyết Toán: {isRefundKind ? 'Nhận Hoàn Cọc' : isExtraKind ? 'Thanh Toán Thu Thêm' : 'Cân Bằng Tiền Cọc'}
+            Quyết toán: {isRefundKind ? 'Nhận hoàn cọc' : isExtraKind ? 'Thanh toán phụ phí' : 'Cân bằng tiền cọc'}
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Quy trình BPMN: <code className="font-mono text-brand-700 font-semibold">M_NetDeposit</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_GBalance</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">
-              {isRefundKind ? 'M_Refund / M_ConfirmRefund' : isExtraKind ? 'M_PayExtra / M_ReceiveExtra' : 'M_Settle'}
-            </code>
+            Hoàn tất các thủ tục tài chính cuối cùng và giải ngân hoàn tiền cọc
           </p>
         </div>
 

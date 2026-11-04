@@ -133,13 +133,13 @@ export function KH06Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
-              KH-06
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
+              Chuyến đi
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Yêu cầu thuê của tôi</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Chuyến đi của tôi</h1>
           </div>
           <p className="text-sm text-slate-500">
-            Theo dõi tiến trình các hợp đồng thuê xe máy và quản lý các sự kiện quy trình (Cổng sự kiện M_EG).
+            Quản lý hợp đồng đang thuê, yêu cầu gia hạn, cứu hộ khẩn cấp hoặc làm thủ tục trả xe
           </p>
         </div>
 
@@ -266,12 +266,12 @@ export function KH06Page() {
                   </span>
                 </div>
 
-                {/* Thông báo nếu bị từ chối do hết xe (M_RejectNoVehicle) */}
+                {/* Thông báo nếu bị từ chối do hết xe */}
                 {isRejectedNoVehicle && (
                   <div className="my-3 p-3 bg-red-50 rounded-xl border border-red-200 flex items-start gap-2 text-xs text-red-800">
                     <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong>Từ chối tiếp nhận (Hết xe phù hợp):</strong> Hệ thống tự động kiểm tra lịch xe tại cổng <code className="font-mono font-bold">M_G01</code> và phát hiện tạm thời không còn xe sẵn sàng trong khung giờ bạn yêu cầu. Vui lòng chọn khung giờ khác hoặc đổi phân khúc xe.
+                      <strong>Tạm thời hết xe:</strong> Phân khúc xe bạn chọn tạm thời không còn xe sẵn sàng trong khung giờ yêu cầu. Quý khách vui lòng chọn khung giờ khác hoặc đổi phân khúc xe.
                     </div>
                   </div>
                 )}
@@ -306,34 +306,34 @@ export function KH06Page() {
 
                 {/* KHU VỰC HÀNH ĐỘNG DỰA TRÊN TRẠNG THÁI HIỆN TẠI */}
                 <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                  {/* Trường hợp ĐANG THUÊ / GIA HẠN / SỰ CỐ (Cổng sự kiện M_EG: 3 nút với khóa tương hỗ) */}
+                  {/* Trường hợp ĐANG THUÊ / GIA HẠN / SỰ CỐ */}
                   {isUnderRentalEvent ? (
                     <div className="w-full space-y-3">
                       <div className="text-xs font-semibold text-slate-800 flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-brand-600" />
-                          <span>Hợp đồng đang có hiệu lực (Cổng sự kiện BPMN M_EG):</span>
+                          <span>Hợp đồng đang có hiệu lực:</span>
                         </span>
 
                         {isExtending && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
                             <Clock className="w-3 h-3 animate-spin" />
-                            Đang xử lý gia hạn (SP1)
+                            Đang xử lý gia hạn
                           </span>
                         )}
 
                         {isIncident && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                             <ShieldAlert className="w-3 h-3" />
-                            Đang xử lý sự cố cứu hộ (SP2)
+                            Đang xử lý cứu hộ khẩn cấp
                           </span>
                         )}
                       </div>
 
-                      {/* Cảnh báo khóa tương hỗ (ngữ nghĩa exclusive của Event-Based Gateway) */}
+                      {/* Cảnh báo khóa tương hỗ */}
                       {(isExtending || isIncident) && (
                         <p className="text-[11px] text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
-                          * Theo quy trình BPMN, chỉ có 1 sự kiện được xử lý tại một thời điểm. Khi đang xử lý {isExtending ? 'gia hạn' : 'sự cố'}, các sự kiện khác tạm thời bị khóa.
+                          * Hệ thống đang ưu tiên xử lý {isExtending ? 'yêu cầu gia hạn' : 'sự cố cứu hộ'}. Quý khách vui lòng hoàn tất bước này trước khi thực hiện thao tác khác.
                         </p>
                       )}
 

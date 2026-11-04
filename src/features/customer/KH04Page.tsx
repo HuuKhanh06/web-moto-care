@@ -226,13 +226,13 @@ export function KH04Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
-              KH-04
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
+              Bước 4 &bull; Ký hợp đồng điện tử
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ký hợp đồng điện tử</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ký hợp đồng thuê xe</h1>
           </div>
           <p className="text-sm text-slate-500">
-            Xem văn bản hợp đồng chuẩn mẫu A4 và thực hiện ký số xác nhận trực tuyến (M_Contract & M_WaitSign).
+            Xem điều khoản pháp lý và ký số trực tuyến để khóa lịch phương tiện
           </p>
         </div>
 
@@ -255,13 +255,13 @@ export function KH04Page() {
 
       {/* Cảnh báo quá hạn 24 giờ */}
       {isExpired && (
-        <Card className="p-5 border-red-300 bg-red-50/80 text-red-900 space-y-2 shadow-sm">
+        <Card className="p-5 border-red-300 bg-red-50/80 text-red-900 space-y-2 shadow-sm rounded-2xl">
           <div className="flex items-center gap-2 font-bold text-sm text-red-800">
             <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
-            Hợp đồng bị hủy do quá hạn ký 24 giờ (M_BoundSign)
+            Hợp đồng đã hết hạn ký nhận (24 giờ)
           </div>
           <p className="text-xs text-red-700 leading-relaxed">
-            Hệ thống đã tự động thực hiện hoàn trả tiền cọc cho bạn (<code className="font-mono">M_CancelRefund</code>) và kết thúc quy trình do quá hạn ký hợp đồng.
+            Hệ thống đã tự động hoàn tiền đặt cọc vào tài khoản của quý khách do quá hạn ký hợp đồng.
           </p>
         </Card>
       )}

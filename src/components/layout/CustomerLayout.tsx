@@ -5,6 +5,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { NotificationBell } from './NotificationBell';
 import { SyncStatus } from '@/components/common/SyncStatus';
+import { Logo } from '@/components/common/Logo';
 import { cn } from '@/lib/utils';
 import {
   Bike,
@@ -24,47 +25,42 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-16 md:pb-0">
+    <div className="min-h-screen bg-slate-50/60 flex flex-col pb-16 md:pb-0">
       {/* Top Header cho Desktop & Tablet */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center font-black tracking-wider shadow-sm">
-              MC
-            </div>
-            <div>
-              <span className="font-extrabold text-lg text-slate-900 tracking-tight">MOTO CARE</span>
-              <span className="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-semibold bg-brand-100 text-brand-800 rounded-full">
-                Khách hàng
-              </span>
-            </div>
+            <Logo size="md" />
+            <span className="hidden sm:inline-block px-2.5 py-0.5 text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200/60 rounded-full">
+              Khách hàng
+            </span>
           </div>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+          <nav className="hidden md:flex items-center gap-1.5 text-sm font-medium">
             <NavLink
               to="/kh/06"
               className={({ isActive }) =>
                 cn(
-                  'px-3.5 py-2 rounded-xl transition-colors',
-                  isActive ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  'px-3.5 py-2 rounded-xl transition-all duration-200',
+                  isActive ? 'bg-brand-50/80 text-brand-700 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                 )
               }
             >
-              Yêu cầu của tôi
+              Chuyến đi của tôi
             </NavLink>
             <NavLink
               to="/kh/01"
               className={({ isActive }) =>
                 cn(
-                  'px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5',
-                  isActive ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  'px-3.5 py-2 rounded-xl transition-all duration-200 flex items-center gap-1.5',
+                  isActive ? 'bg-brand-50/80 text-brand-700 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                 )
               }
             >
               <PlusCircle className="w-4 h-4 text-brand-600" />
-              Đặt xe mới
+              Đặt xe ngay
             </NavLink>
           </nav>
 

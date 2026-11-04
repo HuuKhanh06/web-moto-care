@@ -8,7 +8,8 @@ import { SEED_USERS, seedDatabase } from '@/db/seed';
 import { db } from '@/db';
 import { Button, Input, Card, Tabs } from '@/components/ui';
 import { toast } from '@/components/ui/toastStore';
-import { ShieldCheck, LogIn, UserPlus, Info, CheckCircle2 } from 'lucide-react';
+import { Logo } from '@/components/common/Logo';
+import { ShieldCheck, LogIn, UserPlus, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -30,7 +31,6 @@ export function AuthPage() {
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   const redirectAfterLogin = (role: string) => {
-    // Nếu có location state hướng tới trang trước đó thì chuyển về đó
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
     if (from && from !== '/login') {
       navigate(from, { replace: true });
@@ -44,7 +44,6 @@ export function AuthPage() {
     }
   };
 
-  // Tự động kiểm tra và nạp dữ liệu mẫu nếu IndexedDB đang trống
   useEffect(() => {
     async function ensureSeed() {
       try {
@@ -61,7 +60,9 @@ export function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginEmail || !loginPassword) {
+    const email = loginEmail.trim();
+    const password = loginPassword.trim();
+    if (!email || !password) {
       toast.warning('Vui lòng nhập đầy đủ email và mật khẩu');
       return;
     }
@@ -72,13 +73,13 @@ export function AuthPage() {
       if (count === 0) {
         await seedDatabase();
       }
-      const res = await login(loginEmail, loginPassword);
+      const res = await login(email, password);
       if (res.success) {
         const currentActor = useAuthStore.getState().currentActor;
         toast.success('Đăng nhập thành công!');
         if (currentActor) redirectAfterLogin(currentActor.role);
       } else {
-        toast.error(res.error || 'Đăng nhập thất bại');
+        toast.error(res.error || 'Email hoặc mật khẩu không chính xác');
       }
     } finally {
       setLoading(false);
@@ -113,7 +114,25 @@ export function AuthPage() {
     }
   };
 
-  // Nút đăng nhập nhanh cho các tài khoản mẫu
+  const handleResetSeed = async () => {
+    setLoading(true);
+    try {
+      await seedDatabase();
+      toast.success('Đã nạp lại toàn bộ dữ liệu mẫu mặc định!');
+    } catch (err) {
+      toast.error('Không thể nạp dữ liệu: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFillDemo = (email: string) => {
+    setActiveTab('login');
+    setLoginEmail(email);
+    setLoginPassword('password123');
+    toast.info(`Đã điền tài khoản: ${email}`);
+  };
+
   const handleQuickLogin = async (email: string) => {
     setLoading(true);
     try {
@@ -135,20 +154,17 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50/60 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-brand-50/50 via-slate-50/30 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       {/* Brand Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-500/30 mb-3">
-          <span className="text-2xl font-black tracking-wider">MC</span>
-        </div>
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">MOTO CARE</h2>
-        <p className="mt-1 text-sm text-slate-500 font-medium">
-          Hệ thống Quản lý & Thuê xe máy thông minh (BPMN To-Be)
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center flex flex-col items-center">
+        <Logo size="lg" className="mb-2" />
+        <p className="text-xs text-slate-500 font-medium">
+          Dịch vụ cho thuê xe máy linh hoạt & Hỗ trợ cứu hộ 24/7
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-xl px-4 sm:px-0">
-        <Card className="p-6 sm:p-8 shadow-md border-slate-200">
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl px-4 sm:px-0">
+        <Card className="p-6 sm:p-8 shadow-xl border-slate-200/80 bg-white/90 backdrop-blur-xl rounded-3xl">
           {/* Tabs chuyển đổi Đăng nhập / Đăng ký */}
           <Tabs
             tabs={[
@@ -181,8 +197,8 @@ export function AuthPage() {
                 required
               />
 
-              <Button type="submit" variant="primary" fullWidth size="lg" loading={loading} className="mt-2">
-                Đăng nhập hệ thống
+              <Button type="submit" variant="primary" fullWidth size="lg" loading={loading} className="mt-2 shadow-md">
+                Đăng nhập vào hệ thống
               </Button>
             </form>
           )}
@@ -190,11 +206,11 @@ export function AuthPage() {
           {/* Form Đăng ký */}
           {activeTab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
-              <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl flex items-start gap-2.5 text-xs text-brand-900">
+              <div className="p-3 bg-brand-50 border border-brand-200/80 rounded-2xl flex items-start gap-2.5 text-xs text-brand-900">
                 <CheckCircle2 className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
                 <span>
-                  Đăng ký trực tuyến áp dụng cho vai trò <strong>Khách hàng</strong>. Tài khoản Nhân viên và Quản lý
-                  được quản trị viên cấp phát.
+                  Đăng ký trực tuyến áp dụng cho tài khoản <strong>Khách hàng</strong>. Tài khoản Nhân viên và Quản trị
+                  được hệ thống phân quyền nội bộ.
                 </span>
               </div>
 
@@ -225,7 +241,7 @@ export function AuthPage() {
               />
 
               <Input
-                label="Mật khẩu (tối thiểu 6 ký tự, gồm cả chữ và số)"
+                label="Mật khẩu (tối thiểu 6 ký tự)"
                 type="password"
                 placeholder="Nhập mật khẩu"
                 value={regPassword}
@@ -242,19 +258,27 @@ export function AuthPage() {
                 required
               />
 
-              <Button type="submit" variant="primary" fullWidth size="lg" loading={loading} className="mt-2">
+              <Button type="submit" variant="primary" fullWidth size="lg" loading={loading} className="mt-2 shadow-md">
                 Tạo tài khoản Khách hàng
               </Button>
             </form>
           )}
 
           {/* Bảng tài khoản mẫu phục vụ Demo */}
-          <div className="mt-8 pt-6 border-t border-slate-200">
+          <div className="mt-7 pt-5 border-t border-slate-100">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-brand-600" />
-                Tài khoản mẫu để Demo (Mật khẩu: password123)
+                <Sparkles className="w-4 h-4 text-brand-600" />
+                Tài khoản trải nghiệm mẫu (Mật khẩu: password123)
               </h4>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleResetSeed}
+                className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 hover:underline cursor-pointer"
+              >
+                Làm mới dữ liệu mẫu
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -276,9 +300,9 @@ export function AuthPage() {
                 return (
                   <div
                     key={user.id}
-                    className="p-2.5 rounded-xl border border-slate-200 hover:border-brand-400 bg-slate-50/50 hover:bg-white transition-all flex items-center justify-between gap-2"
+                    className="p-2.5 rounded-2xl border border-slate-200/80 hover:border-brand-500 bg-slate-50/60 hover:bg-white transition-all flex items-center justify-between gap-2 shadow-2xs hover:shadow-xs"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 cursor-pointer" onClick={() => handleFillDemo(user.email)}>
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-slate-800 truncate">{user.full_name}</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${roleColor}`}>
@@ -287,14 +311,24 @@ export function AuthPage() {
                       </div>
                       <div className="text-[11px] text-slate-500 truncate">{user.email}</div>
                     </div>
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => handleQuickLogin(user.email)}
-                      className="px-2 py-1 text-[11px] font-medium rounded-lg bg-white border border-slate-300 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-400 text-slate-700 transition-colors shadow-sm flex-shrink-0"
-                    >
-                      Chọn
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => handleFillDemo(user.email)}
+                        className="px-2 py-1 text-[11px] font-medium rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95"
+                      >
+                        Điền
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => handleQuickLogin(user.email)}
+                        className="px-2.5 py-1 text-[11px] font-bold rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition-all shadow-xs active:scale-95"
+                      >
+                        Vào ngay
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -302,12 +336,11 @@ export function AuthPage() {
           </div>
         </Card>
 
-        {/* Thông báo pháp lý & Đồ án */}
-        <div className="mt-4 p-3.5 rounded-xl bg-slate-100/80 border border-slate-200 text-slate-600 text-xs flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong>Lưu ý bảo vệ đồ án môn học:</strong> Toàn bộ cơ chế xác thực, băm mật khẩu PBKDF2 (100.000 vòng lặp)
-            và quản lý phiên đều chạy 100% phía Frontend (Trình duyệt) qua Web Crypto API và IndexedDB, không dùng server ngoài.
+        {/* Thông báo bảo mật */}
+        <div className="mt-4 px-4 text-center">
+          <p className="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />
+            Bảo mật đầu cuối với mã hóa PBKDF2 • Không lưu trữ mật khẩu thuần
           </p>
         </div>
       </div>

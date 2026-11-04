@@ -156,9 +156,7 @@ export function KH09Page() {
             Bảng Kê Chi Tiết Trả Xe &amp; Quyết Toán
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Quy trình BPMN: <code className="font-mono text-brand-700 font-semibold">M_SendStatement</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_ReceiveReview</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_GDispute</code>
+            Vui lòng kiểm tra chi tiết các khoản phí phát sinh và đối trừ tiền cọc thực tế
           </p>
         </div>
 

@@ -154,7 +154,7 @@ export function KH08Page() {
         currentActor
       );
 
-      toast.success('Đã phát tín hiệu cứu hộ khẩn cấp (SC_Create)! Hệ thống đang tìm kiếm đối tác gần nhất.');
+      toast.success('Đã gửi yêu cầu cứu hộ khẩn cấp! Đội ngũ kỹ thuật đang tiếp nhận.');
       setDescription('');
     } catch (err: unknown) {
       console.error('Lỗi gửi sự cố:', err);
@@ -175,12 +175,10 @@ export function KH08Page() {
     );
   }
 
-  const { request, vehicle, incident, partner, lastDispatch, processState } = liveData;
+  const { request, vehicle, incident, partner, lastDispatch } = liveData;
   const isIncidentInProgress =
     request.status === 'DANG_XU_LY_SU_CO' ||
     (incident && incident.status !== 'DONG_TIEP_TUC' && incident.status !== 'DONG_TRA_SOM');
-
-  const waitingNode = processState?.waiting_node_ids?.[0] || '';
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
@@ -188,26 +186,21 @@ export function KH08Page() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-              KH-08
+            <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700 border border-rose-200/80 shadow-xs">
+              Cứu hộ 24/7
             </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Báo sự cố & Theo dõi cứu hộ (SP2)
+              Hỗ trợ sự cố & Cứu hộ khẩn cấp
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Hợp đồng #{request.id.slice(0, 8)} • Điều phối đối tác cứu hộ theo thời gian thực (Live Query)
+            Hợp đồng #{request.id.slice(0, 8)} • Điều phối đối tác cứu hộ theo thời gian thực
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          {waitingNode && (
-            <Badge variant="neutral" className="text-slate-600">
-              BPMN: {waitingNode}
-            </Badge>
-          )}
         </div>
       </div>
 
@@ -230,14 +223,12 @@ export function KH08Page() {
         </Card>
       )}
 
-      {/* ============================================================== */}
-      {/* THÔNG BÁO TIẾP TỤC THUÊ (SC_SendContinue)                      */}
-      {/* ============================================================== */}
+      {/* THÔNG BÁO TIẾP TỤC THUÊ */}
       {incident?.status === 'DONG_TIEP_TUC' && (
         <Card className="p-5 border-emerald-300 bg-emerald-50/40 text-emerald-900 space-y-3 shadow-sm">
           <div className="flex items-center gap-2 font-bold text-base">
             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            Sự cố đã được xử lý thành công! (SC_SendContinue)
+            Sự cố đã được khắc phục hoàn tất!
           </div>
           <p className="text-xs sm:text-sm">
             Kỹ thuật viên đã hỗ trợ khắc phục tại chỗ xong. Xe đạt tiêu chuẩn an toàn để bạn tiếp tục hành trình của mình.
@@ -256,17 +247,15 @@ export function KH08Page() {
         </Card>
       )}
 
-      {/* ============================================================== */}
-      {/* THÔNG BÁO HƯỚNG DẪN TRẢ XE SỚM (SC_NotifyEarly)                */}
-      {/* ============================================================== */}
+      {/* THÔNG BÁO HƯỚNG DẪN TRẢ XE SỚM */}
       {(incident?.status === 'DONG_TRA_SOM' || request.status === 'CHO_NHAN_XE_TRA') && (
         <Card className="p-5 border-amber-300 bg-amber-50/50 text-amber-900 space-y-3 shadow-sm">
           <div className="flex items-center gap-2 font-bold text-base">
             <AlertTriangle className="h-5 w-5 text-amber-600" />
-            Hướng dẫn trả xe sớm do sự cố kỹ thuật (SC_NotifyEarly)
+            Hướng dẫn trả xe sớm do sự cố kỹ thuật
           </div>
           <p className="text-xs sm:text-sm">
-            Xe không thể khắc phục tại chỗ và cần đưa về trạm bảo dưỡng. Hợp đồng của bạn đã được chuyển sang trạng thái <strong>Chờ nhận xe trả (CHO_NHAN_XE_TRA)</strong>.
+            Xe không thể khắc phục tại chỗ và cần đưa về trạm bảo dưỡng. Hợp đồng của bạn đã được chuyển sang trạng thái <strong>Chờ nhận xe trả</strong>.
             Nhân viên MotoCare sẽ liên hệ đón nhận xe và tiến hành quyết toán hoàn tiền cho thời gian chưa sử dụng.
           </p>
           <div className="pt-2">
@@ -281,16 +270,14 @@ export function KH08Page() {
         </Card>
       )}
 
-      {/* ============================================================== */}
-      {/* FORM BÁO CÁO SỰ CỐ MỚI (SC_Create)                             */}
-      {/* ============================================================== */}
+      {/* FORM BÁO CÁO SỰ CỐ MỚI */}
       {!isIncidentInProgress && incident?.status !== 'DONG_TIEP_TUC' && incident?.status !== 'DONG_TRA_SOM' && (
         <Card data-testid="node-SC_Create" className="p-5 sm:p-6 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
             <div className="flex items-center gap-2">
               <Wrench className="h-5 w-5 text-rose-600" />
               <h3 className="font-bold text-slate-900 text-base">
-                Biểu mẫu báo sự cố khẩn cấp (SC_Create)
+                Báo cáo sự cố khẩn cấp
               </h3>
             </div>
             <Button
@@ -370,16 +357,14 @@ export function KH08Page() {
                 className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-bold"
               >
                 <AlertTriangle className="mr-2 h-4 w-4" />
-                Gửi yêu cầu cứu hộ khẩn cấp (SC_Create)
+                Gửi yêu cầu cứu hộ khẩn cấp
               </Button>
             </div>
           </div>
         </Card>
       )}
 
-      {/* ============================================================== */}
-      {/* THEO DÕI TIẾN TRÌNH CỨU HỘ THỜI GIAN THỰC (SC_Track)           */}
-      {/* ============================================================== */}
+      {/* THEO DÕI TIẾN TRÌNH CỨU HỘ THỜI GIAN THỰC */}
       {isIncidentInProgress && incident && (
         <Card data-testid="node-SC_Track" className="p-5 sm:p-6 space-y-5 border-2 border-amber-300 bg-amber-50/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
@@ -387,7 +372,7 @@ export function KH08Page() {
               <Clock className="h-5 w-5 text-amber-600 animate-pulse" />
               <div>
                 <h3 className="font-bold text-slate-900 text-base">
-                  Theo dõi tiến trình cứu hộ (SC_Track)
+                  Tiến độ cứu hộ thời gian thực
                 </h3>
                 <span className="text-xs text-slate-500 font-mono">
                   Mã phiếu sự cố: #{incident.incident_code}

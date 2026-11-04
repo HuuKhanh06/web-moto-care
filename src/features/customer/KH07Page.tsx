@@ -271,26 +271,21 @@ export function KH07Page() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-md bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-800">
-              KH-07
+            <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700 border border-brand-200/80 shadow-xs">
+              Gia hạn chuyến đi
             </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Gia hạn hợp đồng thuê xe (SP1)
+              Gia hạn hợp đồng thuê xe
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Hợp đồng #{request.id.slice(0, 8)} • Thời hạn hiện tại: <strong>{formatDateTime(request.end_at)}</strong>
+            Hợp đồng #{request.id.slice(0, 8)} • Thời hạn trả hiện tại: <strong>{formatDateTime(request.end_at)}</strong>
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          {waitingNode && (
-            <Badge variant="neutral" className="text-slate-600">
-              BPMN: {waitingNode}
-            </Badge>
-          )}
         </div>
       </div>
 
@@ -327,7 +322,7 @@ export function KH07Page() {
 
           <div className="space-y-3">
             <p className="text-xs text-slate-600">
-              Hệ thống sẽ tự động kiểm tra lịch xe kế tiếp (GH_Check) và tính toán chi phí gia hạn tương ứng.
+              Hệ thống sẽ tự động kiểm tra tình trạng xe và tính toán phụ phí phát sinh tương ứng.
             </p>
 
             <div className="max-w-md">
@@ -349,7 +344,7 @@ export function KH07Page() {
                 className="bg-brand-600 hover:bg-brand-700 text-white font-bold"
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                Kiểm tra & Gửi yêu cầu gia hạn (GH_GetRequest)
+                Kiểm tra & Gửi yêu cầu gia hạn
               </Button>
             </div>
           </div>
@@ -368,12 +363,12 @@ export function KH07Page() {
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-brand-600" />
               <h3 className="font-bold text-slate-900 text-base">
-                Đề xuất chi phí gia hạn (GH_Offer)
+                Đề xuất chi phí gia hạn
               </h3>
             </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
               <Clock className="h-3.5 w-3.5" />
-              Hạn trả lời (GH_Timer): <strong>{formatTimer(remainingOfferSeconds)}</strong>
+              Thời gian xác nhận: <strong>{formatTimer(remainingOfferSeconds)}</strong>
             </div>
           </div>
 
@@ -433,12 +428,12 @@ export function KH07Page() {
             <div className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-emerald-600" />
               <h3 className="font-bold text-slate-900 text-base">
-                Thanh toán phụ phí gia hạn VietQR (GH_CreateQR)
+                Thanh toán phụ phí gia hạn VietQR
               </h3>
             </div>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-800 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
               <Clock className="h-3.5 w-3.5" />
-              Hạn chuyển khoản (GH_TimerPay 30m): <strong>{formatTimer(remainingPaySeconds)}</strong>
+              Thời hạn chuyển khoản: <strong>{formatTimer(remainingPaySeconds)}</strong>
             </div>
           </div>
 
