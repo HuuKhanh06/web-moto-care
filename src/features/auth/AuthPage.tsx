@@ -1,10 +1,11 @@
 // src/features/auth/AuthPage.tsx
 // Màn hình AUTH-01: Đăng nhập / Đăng ký tài khoản (xác thực Web Crypto FE)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './authStore';
-import { SEED_USERS } from '@/db/seed';
+import { SEED_USERS, seedDatabase } from '@/db/seed';
+import { db } from '@/db';
 import { Button, Input, Card, Tabs } from '@/components/ui';
 import { toast } from '@/components/ui/toastStore';
 import { ShieldCheck, LogIn, UserPlus, Info, CheckCircle2 } from 'lucide-react';
@@ -43,6 +44,21 @@ export function AuthPage() {
     }
   };
 
+  // Tự động kiểm tra và nạp dữ liệu mẫu nếu IndexedDB đang trống
+  useEffect(() => {
+    async function ensureSeed() {
+      try {
+        const count = await db.auth_accounts.count();
+        if (count === 0) {
+          await seedDatabase();
+        }
+      } catch (err) {
+        console.error('Seed check error:', err);
+      }
+    }
+    ensureSeed();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) {
@@ -51,15 +67,21 @@ export function AuthPage() {
     }
 
     setLoading(true);
-    const res = await login(loginEmail, loginPassword);
-    setLoading(false);
-
-    if (res.success) {
-      const currentActor = useAuthStore.getState().currentActor;
-      toast.success('Đăng nhập thành công!');
-      if (currentActor) redirectAfterLogin(currentActor.role);
-    } else {
-      toast.error(res.error || 'Đăng nhập thất bại');
+    try {
+      const count = await db.auth_accounts.count();
+      if (count === 0) {
+        await seedDatabase();
+      }
+      const res = await login(loginEmail, loginPassword);
+      if (res.success) {
+        const currentActor = useAuthStore.getState().currentActor;
+        toast.success('Đăng nhập thành công!');
+        if (currentActor) redirectAfterLogin(currentActor.role);
+      } else {
+        toast.error(res.error || 'Đăng nhập thất bại');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,15 +116,21 @@ export function AuthPage() {
   // Nút đăng nhập nhanh cho các tài khoản mẫu
   const handleQuickLogin = async (email: string) => {
     setLoading(true);
-    const res = await login(email, 'password123');
-    setLoading(false);
-
-    if (res.success) {
-      const currentActor = useAuthStore.getState().currentActor;
-      toast.success(`Đăng nhập thành công với vai trò ${currentActor?.role}`);
-      if (currentActor) redirectAfterLogin(currentActor.role);
-    } else {
-      toast.error(res.error || 'Đăng nhập mẫu thất bại');
+    try {
+      const count = await db.auth_accounts.count();
+      if (count === 0) {
+        await seedDatabase();
+      }
+      const res = await login(email, 'password123');
+      if (res.success) {
+        const currentActor = useAuthStore.getState().currentActor;
+        toast.success(`Đăng nhập thành công với vai trò ${currentActor?.role}`);
+        if (currentActor) redirectAfterLogin(currentActor.role);
+      } else {
+        toast.error(res.error || 'Đăng nhập mẫu thất bại');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 

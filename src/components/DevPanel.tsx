@@ -7,6 +7,7 @@ import { db } from '@/db';
 import { clock } from '@/lib/clock';
 import { timerManager } from '@/engine/timers';
 import { downloadDatabaseBackup, importDatabase } from '@/db/backup';
+import { seedDatabase } from '@/db/seed';
 import { formatDateTime } from '@/lib/format';
 import { toast } from '@/components/ui/toastStore';
 import {
@@ -19,6 +20,7 @@ import {
   ChevronDown,
   Cpu,
   Timer,
+  Database,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -77,6 +79,16 @@ export function DevPanel() {
       await db.clearAllTables();
       clock.reset();
       toast.warning('Đã xóa toàn bộ dữ liệu hệ thống.');
+    }
+  };
+
+  const handleSeedData = async () => {
+    try {
+      await seedDatabase();
+      toast.success('Đã nạp đầy đủ dữ liệu mẫu (xe, tài khoản, đối tác)!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi khi nạp dữ liệu mẫu');
     }
   };
 
@@ -204,22 +216,31 @@ export function DevPanel() {
           </div>
 
           {/* Các nút hành động chính */}
-          <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+          <div className="grid grid-cols-3 gap-1.5 mb-3 text-xs">
+            <button
+              type="button"
+              onClick={handleSeedData}
+              className="flex items-center justify-center gap-1 py-2 px-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 font-semibold text-white transition-colors"
+              title="Khôi phục/nạp lại dữ liệu xe và tài khoản mẫu"
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Nạp Data</span>
+            </button>
             <button
               type="button"
               onClick={handleSweepNow}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-brand-600 hover:bg-brand-500 font-semibold text-white transition-colors"
+              className="flex items-center justify-center gap-1 py-2 px-2 rounded-xl bg-brand-600 hover:bg-brand-500 font-semibold text-white transition-colors"
             >
               <Play className="w-3.5 h-3.5" />
-              Chạy sweepTimers
+              <span>Sweep</span>
             </button>
             <button
               type="button"
               onClick={handleClearData}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-900/60 hover:bg-red-800 border border-red-700 text-red-200 transition-colors font-medium"
+              className="flex items-center justify-center gap-1 py-2 px-2 rounded-xl bg-red-900/60 hover:bg-red-800 border border-red-700 text-red-200 transition-colors font-medium"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              Xóa toàn bộ Data
+              <span>Xóa Data</span>
             </button>
           </div>
 
