@@ -216,9 +216,9 @@ export function KH04Page() {
   const timerStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto pb-20 sm:pb-6">
       {/* Stepper */}
-      <Card className="p-4 border-slate-200">
+      <Card className="p-4 border-slate-200/80 shadow-sm glass-surface">
         <Stepper steps={CUSTOMER_RENTAL_STEPS} currentStepIndex={3} />
       </Card>
 
@@ -226,10 +226,10 @@ export function KH04Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
+            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
               KH-04
             </span>
-            <h1 className="text-2xl font-bold text-slate-900">Ký hợp đồng điện tử</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ký hợp đồng điện tử</h1>
           </div>
           <p className="text-sm text-slate-500">
             Xem văn bản hợp đồng chuẩn mẫu A4 và thực hiện ký số xác nhận trực tuyến (M_Contract & M_WaitSign).
@@ -244,10 +244,10 @@ export function KH04Page() {
             variant="outline"
             size="sm"
             onClick={() => window.print()}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 shadow-xs"
             title="In hoặc lưu file PDF từ trình duyệt"
           >
-            <Printer className="w-4 h-4" />
+            <Printer className="w-4 h-4 text-slate-600" />
             <span>In / Tải PDF</span>
           </Button>
         </div>
@@ -255,7 +255,7 @@ export function KH04Page() {
 
       {/* Cảnh báo quá hạn 24 giờ */}
       {isExpired && (
-        <Card className="p-5 border-red-300 bg-red-50 text-red-900 space-y-2">
+        <Card className="p-5 border-red-300 bg-red-50/80 text-red-900 space-y-2 shadow-sm">
           <div className="flex items-center gap-2 font-bold text-sm text-red-800">
             <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
             Hợp đồng bị hủy do quá hạn ký 24 giờ (M_BoundSign)
@@ -268,32 +268,37 @@ export function KH04Page() {
 
       {/* Thông báo nếu đã ký */}
       {isSigned && (
-        <Card className="p-4 border-emerald-200 bg-emerald-50 text-emerald-900 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <Card className="p-4 border-emerald-300 bg-emerald-50/90 text-emerald-900 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 text-xs sm:text-sm">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <span>
               Hợp đồng điện tử đã được ký kết thành công vào lúc <strong>{formatDateTime(contract?.signed_at || request.start_at)}</strong>.
             </span>
           </div>
-          <Badge variant="success">ĐÃ KÝ SỐ</Badge>
+          <Badge variant="success">ĐÃ KÝ SỐ HỢP LỆ</Badge>
         </Card>
       )}
 
       {/* Đếm ngược 24h */}
       {!isSigned && !isExpired && (
-        <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between text-xs text-amber-900">
+        <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-center justify-between text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2 font-medium">
             <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
             <span>Thời hạn hoàn tất ký hợp đồng (Timer 24h - M_BoundSign):</span>
           </div>
-          <span className="font-mono font-bold text-sm text-amber-950 bg-white px-2.5 py-0.5 rounded border border-amber-300">
+          <span className="font-mono font-bold text-sm text-amber-950 bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 shadow-xs">
             {timerStr}
           </span>
         </div>
       )}
 
       {/* KHUNG XEM TRƯỚC HỢP ĐỒNG KHỔ A4 (Preview Document) */}
-      <Card className="p-8 sm:p-12 border-slate-200 bg-white shadow-md text-slate-900 font-serif leading-relaxed text-xs sm:text-sm space-y-6">
+      <Card className="p-8 sm:p-12 border-slate-200/80 bg-white shadow-xl text-slate-900 font-serif leading-relaxed text-xs sm:text-sm space-y-6 rounded-3xl relative overflow-hidden">
+        {/* Dấu chìm bảo chứng an toàn */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.03] select-none text-center">
+          <div className="text-8xl font-black uppercase tracking-widest text-brand-900 font-sans">MOTO CARE</div>
+        </div>
+
         {/* Quốc hiệu & Tiêu ngữ */}
         <div className="text-center space-y-1 font-sans">
           <div className="font-bold uppercase tracking-wider text-xs">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
@@ -376,7 +381,7 @@ export function KH04Page() {
             <div className="font-bold uppercase text-slate-800">ĐẠI DIỆN BÊN A</div>
             <div className="text-[11px] text-slate-500 italic mt-0.5">Đã ký số điện tử</div>
             <div className="h-16 flex items-center justify-center">
-              <span className="font-serif italic font-bold text-brand-700 text-sm border-2 border-brand-600 px-3 py-1 rounded-lg rotate-[-3deg]">
+              <span className="font-serif italic font-bold text-brand-700 text-sm border-2 border-brand-600 px-3 py-1 rounded-lg rotate-[-3deg] shadow-xs">
                 MOTO CARE CO., LTD
               </span>
             </div>
@@ -403,7 +408,7 @@ export function KH04Page() {
 
       {/* KHU VỰC KÝ CHỮ KÝ SỐ (Dành cho khách hàng) */}
       {!isSigned && !isExpired && (
-        <Card className="p-6 border-slate-200 space-y-4">
+        <Card className="p-6 border-slate-200/80 space-y-4 glass-surface shadow-md">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
@@ -420,27 +425,31 @@ export function KH04Page() {
               <button
                 type="button"
                 onClick={() => setSignMode('draw')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                   signMode === 'draw'
-                    ? 'bg-white text-brand-800 shadow-sm'
+                    ? 'bg-white text-brand-800 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <PenTool className="w-3.5 h-3.5" />
-                Vẽ chữ ký
+                <span className="flex items-center gap-1">
+                  <PenTool className="w-3.5 h-3.5" />
+                  Vẽ chữ ký
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSignMode('type')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                   signMode === 'type'
-                    ? 'bg-white text-brand-800 shadow-sm'
+                    ? 'bg-white text-brand-800 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Type className="w-3.5 h-3.5" />
-                Nhập họ tên
+                <span className="flex items-center gap-1">
+                  <Type className="w-3.5 h-3.5" />
+                  Nhập họ tên
+                </span>
               </button>
             </div>
           </div>
@@ -448,7 +457,7 @@ export function KH04Page() {
           {/* Ô ký dạng vẽ Canvas */}
           {signMode === 'draw' ? (
             <div className="space-y-2">
-              <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 overflow-hidden relative">
+              <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-white overflow-hidden relative shadow-inner">
                 <canvas
                   ref={canvasRef}
                   width={600}
@@ -499,7 +508,7 @@ export function KH04Page() {
             </div>
           )}
 
-          {/* Nút gửi chữ ký */}
+          {/* Nút gửi chữ ký trên desktop */}
           <div className="pt-3 border-t border-slate-100 flex justify-end">
             <Button
               type="button"
@@ -508,13 +517,32 @@ export function KH04Page() {
               data-testid="node-M_WaitSign"
               loading={signing}
               onClick={handleSignContract}
-              className="w-full sm:w-auto flex items-center justify-center gap-2"
+              className="hidden sm:flex items-center justify-center gap-2 shadow-md"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Xác nhận ký hợp đồng (M_WaitSign)</span>
             </Button>
           </div>
         </Card>
+      )}
+
+      {/* Sticky Bottom CTA Bar cho Mobile */}
+      {!isSigned && !isExpired && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 shadow-lg">
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            data-testid="node-M_WaitSign"
+            loading={signing}
+            onClick={handleSignContract}
+            className="flex items-center justify-center gap-2 shadow-md"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Xác nhận ký hợp đồng</span>
+          </Button>
+        </div>
       )}
     </div>
   );

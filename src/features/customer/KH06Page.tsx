@@ -51,6 +51,7 @@ export function KH06Page() {
   const [requests, setRequests] = useState<EnrichedRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingReturnId, setProcessingReturnId] = useState<string | null>(null);
+  const [filterTab, setFilterTab] = useState<'ALL' | 'ACTIVE' | 'PENDING' | 'DONE'>('ALL');
 
   const loadRequests = useCallback(async () => {
     if (!currentActor) return;
@@ -113,16 +114,29 @@ export function KH06Page() {
     }
   };
 
+  const filteredRequests = requests.filter(({ request: req }) => {
+    if (filterTab === 'ACTIVE') {
+      return ['DANG_THUE', 'DANG_GIA_HAN', 'DANG_XU_LY_SU_CO'].includes(req.status);
+    }
+    if (filterTab === 'PENDING') {
+      return ['MOI', 'CHO_HO_SO', 'CHO_COC', 'CHO_KY', 'CHO_BAN_GIAO', 'CHO_KHACH_NHAN', 'CHO_NHAN_XE_TRA', 'CHO_KHACH_XAC_NHAN_BANG_KE', 'CHO_THU_THEM', 'CONG_NO'].includes(req.status);
+    }
+    if (filterTab === 'DONE') {
+      return ['HOAN_TAT', 'DA_HUY', 'TU_CHOI'].includes(req.status);
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
+            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
               KH-06
             </span>
-            <h1 className="text-2xl font-bold text-slate-900">Yêu cầu thuê của tôi</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Yêu cầu thuê của tôi</h1>
           </div>
           <p className="text-sm text-slate-500">
             Theo dõi tiến trình các hợp đồng thuê xe máy và quản lý các sự kiện quy trình (Cổng sự kiện M_EG).
@@ -135,7 +149,7 @@ export function KH06Page() {
             size="sm"
             onClick={loadRequests}
             loading={loading}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 shadow-xs"
           >
             <RotateCcw className="w-4 h-4" />
             Làm mới
@@ -144,7 +158,7 @@ export function KH06Page() {
           <Button
             size="sm"
             onClick={() => navigate('/kh/01')}
-            className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-sm"
+            className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Thuê xe mới</span>
@@ -152,20 +166,68 @@ export function KH06Page() {
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2 overflow-x-auto text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => setFilterTab('ALL')}
+          className={`px-3 py-1.5 rounded-xl transition-all ${
+            filterTab === 'ALL'
+              ? 'bg-brand-700 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Tất cả ({requests.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterTab('ACTIVE')}
+          className={`px-3 py-1.5 rounded-xl transition-all ${
+            filterTab === 'ACTIVE'
+              ? 'bg-brand-700 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Đang thuê ({requests.filter(r => ['DANG_THUE', 'DANG_GIA_HAN', 'DANG_XU_LY_SU_CO'].includes(r.request.status)).length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterTab('PENDING')}
+          className={`px-3 py-1.5 rounded-xl transition-all ${
+            filterTab === 'PENDING'
+              ? 'bg-brand-700 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Chờ xử lý ({requests.filter(r => ['MOI', 'CHO_HO_SO', 'CHO_COC', 'CHO_KY', 'CHO_BAN_GIAO', 'CHO_KHACH_NHAN', 'CHO_NHAN_XE_TRA', 'CHO_KHACH_XAC_NHAN_BANG_KE', 'CHO_THU_THEM', 'CONG_NO'].includes(r.request.status)).length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterTab('DONE')}
+          className={`px-3 py-1.5 rounded-xl transition-all ${
+            filterTab === 'DONE'
+              ? 'bg-brand-700 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Hoàn tất / Đã hủy ({requests.filter(r => ['HOAN_TAT', 'DA_HUY', 'TU_CHOI'].includes(r.request.status)).length})
+        </button>
+      </div>
+
       {/* Danh sách các yêu cầu thuê */}
-      {requests.length === 0 ? (
-        <Card className="p-8 border-slate-200">
+      {filteredRequests.length === 0 ? (
+        <Card className="p-10 border-slate-200/80 text-center glass-surface shadow-sm">
           <EmptyState
-            title="Bạn chưa có yêu cầu thuê xe nào"
+            title={filterTab === 'ALL' ? 'Bạn chưa có yêu cầu thuê xe nào' : 'Không có yêu cầu phù hợp bộ lọc'}
             description="Hãy bắt đầu hành trình của bạn bằng cách gửi yêu cầu thuê xe mới với thủ tục trực tuyến nhanh chóng."
             actionLabel="Đặt xe ngay"
             onAction={() => navigate('/kh/01')}
-            icon={<Bike className="w-8 h-8 text-brand-600" />}
+            icon={<Bike className="w-10 h-10 text-brand-600" />}
           />
         </Card>
       ) : (
         <div className="space-y-4">
-          {requests.map(({ request: req, vehicle: veh, processState: pState }) => {
+          {filteredRequests.map(({ request: req, vehicle: veh, processState: pState }) => {
             const isRejectedNoVehicle =
               req.status === 'TU_CHOI' && req.closed_reason === 'HET_XE';
             const isRenting = req.status === 'DANG_THUE';
@@ -176,16 +238,16 @@ export function KH06Page() {
             return (
               <Card
                 key={req.id}
-                className={`p-5 border transition-all ${
+                className={`p-6 rounded-3xl border transition-all duration-300 hover:shadow-lg glass-surface ${
                   isRejectedNoVehicle
-                    ? 'border-red-200 bg-red-50/20'
+                    ? 'border-red-200/90 bg-red-50/20'
                     : isRenting
-                    ? 'border-brand-300 bg-brand-50/15 shadow-sm'
+                    ? 'border-brand-500/50 bg-gradient-to-br from-brand-50/40 via-white to-brand-50/20 shadow-md ring-1 ring-brand-400/20'
                     : isExtending
-                    ? 'border-blue-300 bg-blue-50/20'
+                    ? 'border-blue-300/80 bg-blue-50/25 shadow-sm'
                     : isIncident
-                    ? 'border-amber-300 bg-amber-50/20'
-                    : 'border-slate-200'
+                    ? 'border-amber-300/80 bg-amber-50/25 shadow-sm'
+                    : 'border-slate-200/80 hover:border-slate-300'
                 }`}
               >
                 {/* Header đơn */}

@@ -15,4 +15,4 @@ export * from './EmptyState';
 export * from './FileUpload';
 export * from './QRBox';
 export * from './DataToolbar';
-
+export * from './Skeleton';

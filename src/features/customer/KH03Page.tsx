@@ -35,6 +35,8 @@ import {
   ArrowRight,
   ShieldAlert,
   Sparkles,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 export function KH03Page() {
@@ -48,6 +50,7 @@ export function KH03Page() {
   const [timerRecord, setTimerRecord] = useState<ProcessTimer | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(1800); // 30 phút = 1800s
   const [loading, setLoading] = useState(true);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Modal Giả lập ngân hàng
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
@@ -119,6 +122,13 @@ export function KH03Page() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [payment?.expires_at]);
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    toast.success(`Đã sao chép: ${text}`);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   if (loading) {
     return (
@@ -196,9 +206,9 @@ export function KH03Page() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-3xl mx-auto pb-20 sm:pb-6">
       {/* Stepper */}
-      <Card className="p-4 border-slate-200">
+      <Card className="p-4 border-slate-200/80 shadow-sm glass-surface">
         <Stepper steps={CUSTOMER_RENTAL_STEPS} currentStepIndex={2} />
       </Card>
 
@@ -206,10 +216,10 @@ export function KH03Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
+            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
               KH-03
             </span>
-            <h1 className="text-2xl font-bold text-slate-900">Thanh toán tiền đặt cọc</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Thanh toán tiền đặt cọc</h1>
           </div>
           <p className="text-sm text-slate-500">
             Quét mã QR VietQR để thanh toán tiền cọc 30% bảo chứng hợp đồng (M_CreateDeposit & M_WaitDeposit).
@@ -223,7 +233,7 @@ export function KH03Page() {
 
       {/* CẢNH BÁO: Hết hạn cọc M_BoundDeposit */}
       {isExpired && (
-        <Card className="p-5 border-red-300 bg-red-50 text-red-900 space-y-3">
+        <Card className="p-5 border-red-300 bg-red-50/80 text-red-900 space-y-3 shadow-sm">
           <div className="flex items-center gap-2 font-bold text-base text-red-800">
             <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
             Yêu cầu thuê bị từ chối do quá hạn đặt cọc (M_BoundDeposit)
@@ -244,7 +254,7 @@ export function KH03Page() {
 
       {/* THÔNG BÁO: Đang chờ nhân viên kiểm tra cọc ngoại lệ NV-02 */}
       {isPendingStaff && !isExpired && (
-        <Card className="p-5 border-amber-300 bg-amber-50 text-amber-900 space-y-2">
+        <Card className="p-5 border-amber-300 bg-amber-50/80 text-amber-900 space-y-2 shadow-sm">
           <div className="flex items-center gap-2 font-bold text-sm text-amber-800">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             Đang chờ nhân viên kiểm tra cọc ngoại lệ (M_ManualDeposit)
@@ -257,16 +267,16 @@ export function KH03Page() {
 
       {/* THÔNG BÁO: Đã cọc thành công */}
       {isPaidSuccess && (
-        <Card className="p-4 border-emerald-200 bg-emerald-50 text-emerald-900 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <Card className="p-5 border-emerald-300 bg-emerald-50/90 text-emerald-900 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <span>Tiền cọc đã được ghi nhận thành công! Bạn có thể tiếp tục ký hợp đồng.</span>
           </div>
           <Button
             variant="primary"
             size="sm"
             onClick={() => navigate(`/kh/04?requestId=${requestId}`)}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1.5 whitespace-nowrap shadow-sm"
           >
             <span>Đến trang Ký hợp đồng (KH-04)</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -279,23 +289,25 @@ export function KH03Page() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Cột trái: Mã QRBox */}
           <div className="md:col-span-5 flex flex-col items-center">
-            <Card className="p-6 border-slate-200 w-full flex flex-col items-center text-center space-y-3">
+            <Card className="p-6 border-slate-200/80 w-full flex flex-col items-center text-center space-y-3 glass-surface shadow-sm">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Mã QR Chuyển Khoản
+                Mã QR Chuyển Khoản Nhanh
               </span>
 
-              <QRBox
-                qrRef={payment.qr_ref}
-                amount={payment.amount}
-                bankName="MB Bank (Napas 247)"
-                accountName="CONG TY CP MOTO CARE"
-                size={210}
-              />
+              <div className="p-2 rounded-2xl bg-white border border-slate-100 shadow-inner">
+                <QRBox
+                  qrRef={payment.qr_ref}
+                  amount={payment.amount}
+                  bankName="MB Bank (Napas 247)"
+                  accountName="CONG TY CP MOTO CARE"
+                  size={210}
+                />
+              </div>
 
               {/* Đồng hồ đếm ngược */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 text-xs font-semibold shadow-xs">
                 <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-                <span>Thời gian thanh toán còn lại: </span>
+                <span>Hạn thanh toán: </span>
                 <span className="font-mono font-bold text-amber-900">{timeDisplay}</span>
               </div>
             </Card>
@@ -303,49 +315,69 @@ export function KH03Page() {
 
           {/* Cột phải: Chi tiết tài khoản & Nút giả lập */}
           <div className="md:col-span-7 space-y-4">
-            <Card className="p-5 border-slate-200 space-y-4">
+            <Card className="p-5 border-slate-200/80 space-y-4 glass-surface shadow-sm">
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-brand-600" />
-                Thông tin thanh toán qua ngân hàng
+                Thông tin thanh toán ngân hàng chính thức
               </h3>
 
               <div className="space-y-3 text-xs divide-y divide-slate-100">
-                <div className="flex justify-between py-1.5">
+                <div className="flex justify-between items-center py-2">
                   <span className="text-slate-500">Số tiền cọc cần chuyển:</span>
                   <span className="font-bold text-base text-brand-700">
                     {formatCurrency(payment.amount)}
                   </span>
                 </div>
 
-                <div className="flex justify-between py-1.5">
-                  <span className="text-slate-500">Ngân hàng:</span>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-slate-500">Ngân hàng thụ hưởng:</span>
                   <span className="font-semibold text-slate-800">MB Bank (Quân Đội)</span>
                 </div>
 
-                <div className="flex justify-between py-1.5">
+                <div className="flex justify-between items-center py-2">
                   <span className="text-slate-500">Số tài khoản:</span>
-                  <span className="font-mono font-bold text-slate-900">99998888MC</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-slate-900">99998888MC</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard('99998888MC', 'acc')}
+                      className="p-1 rounded text-slate-400 hover:text-brand-600 transition-colors"
+                      title="Sao chép số tài khoản"
+                    >
+                      {copiedKey === 'acc' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex justify-between py-1.5">
+                <div className="flex justify-between items-center py-2">
                   <span className="text-slate-500">Chủ tài khoản:</span>
                   <span className="font-semibold text-slate-800 uppercase">CONG TY CP MOTO CARE</span>
                 </div>
 
-                <div className="flex justify-between py-1.5">
-                  <span className="text-slate-500">Nội dung chuyển khoản (Bắt buộc):</span>
-                  <span className="font-mono font-bold text-brand-800 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">
-                    {payment.qr_ref}
-                  </span>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-slate-500">Nội dung CK (Bắt buộc):</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-brand-800 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">
+                      {payment.qr_ref}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(payment.qr_ref, 'ref')}
+                      className="p-1 rounded text-slate-400 hover:text-brand-600 transition-colors"
+                      title="Sao chép nội dung chuyển khoản"
+                    >
+                      {copiedKey === 'ref' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 leading-relaxed">
-                Quý khách vui lòng giữ nguyên nội dung chuyển khoản để hệ thống đối soát tự động trong vòng 30 giây.
+              <div className="p-3 bg-brand-50/40 rounded-xl text-[11px] text-slate-600 leading-relaxed border border-brand-100">
+                Hệ thống tự động lắng nghe Webhook ngân hàng và cập nhật trạng thái tức thì ngay khi nhận được thanh toán.
               </div>
             </Card>
 
-            {/* Nút mở Modal Giả Lập Ngân Hàng */}
+            {/* Nút mở Modal Giả Lập Ngân Hàng trên desktop */}
             {!isPaidSuccess && (
               <Button
                 type="button"
@@ -354,13 +386,31 @@ export function KH03Page() {
                 fullWidth
                 data-testid="node-M_WaitDeposit"
                 onClick={() => setIsSimulatorOpen(true)}
-                className="flex items-center justify-center gap-2 py-3 shadow-md"
+                className="hidden sm:flex items-center justify-center gap-2 py-3 shadow-md"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Đã chuyển khoản (Mở giả lập ngân hàng)</span>
+                <Sparkles className="w-4 h-4 text-emerald-200 animate-spin" />
+                <span>Đã chuyển khoản (Mở giả lập ngân hàng đối soát)</span>
               </Button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Sticky Bottom CTA Bar cho Mobile */}
+      {!isPaidSuccess && !isExpired && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 shadow-lg">
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            data-testid="node-M_WaitDeposit"
+            onClick={() => setIsSimulatorOpen(true)}
+            className="flex items-center justify-center gap-2 py-3 shadow-md"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-200" />
+            <span>Đã chuyển khoản (Giả lập đối soát)</span>
+          </Button>
         </div>
       )}
 
@@ -368,7 +418,7 @@ export function KH03Page() {
       <Modal
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
-        title="Giả lập cổng Webhook Ngân hàng"
+        title="Giả lập cổng Webhook Ngân hàng (Đối soát cọc)"
         size="md"
       >
         <div className="space-y-4">
@@ -383,7 +433,7 @@ export function KH03Page() {
               <button
                 type="button"
                 onClick={() => applyPreset('DU')}
-                className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-left transition-colors"
+                className="p-3 rounded-xl border border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 text-left transition-all active:scale-95"
               >
                 <div className="text-xs font-bold text-emerald-800 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -395,7 +445,7 @@ export function KH03Page() {
               <button
                 type="button"
                 onClick={() => applyPreset('THIEU')}
-                className="p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-left transition-colors"
+                className="p-3 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-left transition-all active:scale-95"
               >
                 <div className="text-xs font-bold text-amber-800 flex items-center gap-1">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
@@ -407,7 +457,7 @@ export function KH03Page() {
               <button
                 type="button"
                 onClick={() => applyPreset('SAI')}
-                className="p-2.5 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-left transition-colors"
+                className="p-3 rounded-xl border border-red-300 bg-red-50/70 hover:bg-red-100 text-left transition-all active:scale-95"
               >
                 <div className="text-xs font-bold text-red-800 flex items-center gap-1">
                   <XCircle className="w-3.5 h-3.5 text-red-600" />
