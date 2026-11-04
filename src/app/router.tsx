@@ -40,6 +40,7 @@ import { AD01Page } from '@/features/admin/AD01Page';
 import { TracePage } from '@/features/manager/TracePage';
 import { IntegrationLogPage } from '@/features/manager/IntegrationLogPage';
 import { AiLogPage } from '@/features/manager/AiLogPage';
+import { TimelinePage } from '@/features/manager/TimelinePage';
 
 /**
  * Điều hướng thông minh từ đường dẫn gốc '/'
@@ -268,6 +269,16 @@ export function AppRouter() {
       />
 
       {/* 404 fallback */}
+      <Route
+        path="/manager/timeline"
+        element={
+          <ProtectedRoute allowedRoles={['nhan_vien', 'quan_ly']}>
+            <ManagerLayout>
+              <TimelinePage />
+            </ManagerLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<RootRedirect />} />
     </Routes>
   );

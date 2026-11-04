@@ -4,6 +4,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { NotificationBell } from './NotificationBell';
+import { SyncStatus } from '@/components/common/SyncStatus';
 import { cn } from '@/lib/utils';
 import {
   Bike,
@@ -69,6 +70,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
 
           {/* User profile & Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <SyncStatus />
             <NotificationBell />
 
             <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">

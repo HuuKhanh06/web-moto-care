@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.2.5",
+    "@supabase/supabase-js": "^2.119.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dexie": "^4.0.11",

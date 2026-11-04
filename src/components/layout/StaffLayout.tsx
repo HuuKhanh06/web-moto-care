@@ -4,6 +4,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { NotificationBell } from './NotificationBell';
+import { SyncStatus } from '@/components/common/SyncStatus';
 import { cn } from '@/lib/utils';
 import {
   Inbox,
@@ -120,6 +121,7 @@ export function StaffLayout({ children }: { children?: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
+            <SyncStatus />
             <NotificationBell />
             <button
               type="button"

@@ -4,6 +4,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { NotificationBell } from './NotificationBell';
+import { SyncStatus } from '@/components/common/SyncStatus';
 import { cn } from '@/lib/utils';
 import {
   SlidersHorizontal,
@@ -16,6 +17,7 @@ import {
   Inbox,
   Activity,
   Sparkles,
+  LayoutGrid,
 } from 'lucide-react';
 
 export function ManagerLayout({ children }: { children?: React.ReactNode }) {
@@ -28,6 +30,7 @@ export function ManagerLayout({ children }: { children?: React.ReactNode }) {
   };
 
   const menuItems = [
+    { to: '/manager/timeline', label: 'Sơ đồ xe Timeline (Gantt)', icon: LayoutGrid },
     { to: '/nv/01', label: 'Hộp việc NV-01 (Giám sát)', icon: Inbox },
     { to: '/ql/01', label: 'Xử lý bất đồng QL-01', icon: FileCheck2 },
     { to: '/ql/02', label: 'Sự cố vượt SLA QL-02', icon: AlertTriangle },
@@ -119,6 +122,7 @@ export function ManagerLayout({ children }: { children?: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
+            <SyncStatus />
             <NotificationBell />
             <button
               type="button"
