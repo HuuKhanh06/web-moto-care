@@ -1,0 +1,1855 @@
+{
+ "source": "MotoCare_TO_BE_BIMP_input.bpmn (To-Be, đã đóng băng)",
+ "nodes": [
+  {
+   "id": "M_SendStatement",
+   "type": "serviceTask",
+   "name": "T07c • Gửi bảng kê chi tiết",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_049",
+     "to": "M_ReceiveReview",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_G03",
+   "type": "exclusiveGateway",
+   "name": "Đúng/đủ cọc?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_016",
+     "to": "M_ManualDeposit",
+     "label": "Sai/thiếu"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_015",
+     "to": "M_Contract",
+     "label": "Đủ"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_CheckDeposit",
+   "type": "serviceTask",
+   "name": "T02d • Đối soát tiền cọc",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_014",
+     "to": "M_G03",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_Contract",
+   "type": "serviceTask",
+   "name": "T03 • Tạo hợp đồng điện tử",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_020",
+     "to": "M_WaitSign",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_SaveBooking",
+   "type": "serviceTask",
+   "name": "T03b • Khóa lịch xe đặt thuê",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_024",
+     "to": "M_InspectPre",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_CancelRefund",
+   "type": "serviceTask",
+   "name": "Hoàn cọc hợp lệ, hủy yêu cầu",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_023",
+     "to": "M_EndCancel",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_WaitDeposit",
+   "type": "receiveTask",
+   "name": "Chờ xác nhận tiền cọc",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_012",
+     "to": "M_CheckDeposit",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_WaitSign",
+   "type": "receiveTask",
+   "name": "Nhận hợp đồng đã ký",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_021",
+     "to": "M_SaveBooking",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_CreateDeposit",
+   "type": "serviceTask",
+   "name": "T02c • Tạo yêu cầu cọc/QR",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_011",
+     "to": "M_WaitDeposit",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_G02",
+   "type": "exclusiveGateway",
+   "name": "Hồ sơ hợp lệ?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_010",
+     "to": "M_CreateDeposit",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_008",
+     "to": "M_AskDocs",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_CheckDocs",
+   "type": "businessRuleTask",
+   "name": "T02b • Kiểm tra hồ sơ/điều kiện",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_007",
+     "to": "M_G02",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_SendTerms",
+   "type": "serviceTask",
+   "name": "T02 • Báo giá/điều kiện thuê",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_006",
+     "to": "M_CheckDocs",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_RejectNoVehicle",
+   "type": "serviceTask",
+   "name": "T13 • Gửi thông báo không có xe",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_004",
+     "to": "M_END_REJECT",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_START",
+   "type": "startEvent",
+   "name": "Khách gửi yêu cầu",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_001",
+     "to": "M_CheckFleet",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_CheckFleet",
+   "type": "serviceTask",
+   "name": "T01b • Tra cứu xe và lịch thuê",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_002",
+     "to": "M_G01",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_G01",
+   "type": "exclusiveGateway",
+   "name": "Có xe?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_005",
+     "to": "M_SendTerms",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_003",
+     "to": "M_RejectNoVehicle",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_CheckReturn",
+   "type": "userTask",
+   "name": "T06b • Kiểm tra xe trả theo checklist",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_043",
+     "to": "M_DigitalCompare",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_CatchReturn",
+   "type": "intermediateCatchEvent",
+   "name": "Nhận yêu cầu trả xe",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_040",
+     "to": "M_ReturnMerge",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SP1",
+   "type": "subProcess",
+   "name": "SP1 • Xử lý gia hạn (TO-BE)",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_034",
+     "to": "M_EG",
+     "label": "Tiếp tục thuê"
+    }
+   ]
+  },
+  {
+   "id": "GH_START",
+   "type": "startEvent",
+   "name": "Bắt đầu SP1",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_001",
+     "to": "GH_GetRequest",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_GetRequest",
+   "type": "serviceTask",
+   "name": "GH01 • Ghi yêu cầu gia hạn",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_002",
+     "to": "GH_Check",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_Check",
+   "type": "businessRuleTask",
+   "name": "GH02 • Kiểm tra lịch + điều kiện",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_003",
+     "to": "GH_GEligible",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_GEligible",
+   "type": "exclusiveGateway",
+   "name": "Có thể gia hạn?",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_004",
+     "to": "GH_Offer",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_SP1_005",
+     "to": "GH_NotifyOld",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "GH_Offer",
+   "type": "serviceTask",
+   "name": "GH03 • Tính phí và gửi đề xuất",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_006",
+     "to": "GH_WaitAccept",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_WaitAccept",
+   "type": "receiveTask",
+   "name": "Chờ khách trả lời",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_007",
+     "to": "GH_GAccept",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_Timer",
+   "type": "boundaryEvent",
+   "name": "Quá hạn trả lời",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_008",
+     "to": "GH_NotifyOld",
+     "label": "Quá hạn"
+    }
+   ],
+   "attachedTo": "GH_WaitAccept",
+   "interrupting": true,
+   "timer": "PT2H"
+  },
+  {
+   "id": "GH_GAccept",
+   "type": "exclusiveGateway",
+   "name": "Khách đồng ý?",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_009",
+     "to": "GH_NeedPayment",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_SP1_010",
+     "to": "GH_NotifyOld",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "GH_NeedPayment",
+   "type": "exclusiveGateway",
+   "name": "Có phí bổ sung?",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_011",
+     "to": "GH_CreateQR",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_SP1_012",
+     "to": "GH_Update",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "GH_CreateQR",
+   "type": "serviceTask",
+   "name": "Tạo QR bổ sung",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_013",
+     "to": "GH_VerifyQR",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_VerifyQR",
+   "type": "receiveTask",
+   "name": "Chờ thanh toán được xác thực",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_014",
+     "to": "GH_Update",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_TimerPay",
+   "type": "boundaryEvent",
+   "name": "Quá hạn trả",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_015",
+     "to": "GH_NotifyOld",
+     "label": "Quá hạn"
+    }
+   ],
+   "attachedTo": "GH_VerifyQR",
+   "interrupting": true,
+   "timer": "PT30M"
+  },
+  {
+   "id": "GH_Update",
+   "type": "serviceTask",
+   "name": "GH03c • Cập nhật thời hạn/lịch/giá",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_016",
+     "to": "GH_NotifyOK",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_NotifyOK",
+   "type": "serviceTask",
+   "name": "GH03d • Gửi xác nhận gia hạn",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_017",
+     "to": "GH_GMerge",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_NotifyOld",
+   "type": "serviceTask",
+   "name": "GH04 • Giữ hạn cũ/thông báo từ chối",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_018",
+     "to": "GH_GMerge",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "GH_GMerge",
+   "type": "exclusiveGateway",
+   "name": "Kết thúc SP1",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": [
+    {
+     "flow": "Flow_SP1_019",
+     "to": "GH_END",
+     "label": null
+    }
+   ],
+   "gatewayRole": "merge"
+  },
+  {
+   "id": "GH_END",
+   "type": "endEvent",
+   "name": "Trở lại thuê",
+   "lane": "HỆ THỐNG",
+   "scope": "SP1",
+   "outgoing": []
+  },
+  {
+   "id": "M_CatchExtend",
+   "type": "intermediateCatchEvent",
+   "name": "Nhận yêu cầu gia hạn",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_033",
+     "to": "SP1",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_EG",
+   "type": "eventBasedGateway",
+   "name": "Chờ sự kiện thuê",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_039",
+     "to": "M_CatchReturn",
+     "label": "Trả xe"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_032",
+     "to": "M_CatchExtend",
+     "label": "Gia hạn"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_035",
+     "to": "M_CatchIncident",
+     "label": "Sự cố"
+    }
+   ]
+  },
+  {
+   "id": "M_CatchIncident",
+   "type": "intermediateCatchEvent",
+   "name": "Nhận báo sự cố",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_036",
+     "to": "SP2",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SP2",
+   "type": "subProcess",
+   "name": "SP2 • Hỗ trợ sự cố (TO-BE)",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_10cotiw",
+     "to": "M_EG",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_START",
+   "type": "startEvent",
+   "name": "Bắt đầu SP2",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_001",
+     "to": "SC_Create",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_Create",
+   "type": "serviceTask",
+   "name": "SC01 • Tạo phiếu từ vị trí/ảnh sự cố",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_002",
+     "to": "SC_Select",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_Select",
+   "type": "businessRuleTask",
+   "name": "Chọn đối tác theo vùng/khả dụng",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_003",
+     "to": "SC_Dispatch",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_Dispatch",
+   "type": "serviceTask",
+   "name": "SC02 • Gửi yêu cầu và mã sự cố",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_004",
+     "to": "SC_ReceiveAck",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_ReceiveAck",
+   "type": "receiveTask",
+   "name": "Chờ đối tác tiếp nhận",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_005",
+     "to": "SC_GAccept",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_AckTimer",
+   "type": "boundaryEvent",
+   "name": "Quá hạn phản hồi",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_008",
+     "to": "SC_TryNext",
+     "label": "Quá hạn"
+    }
+   ],
+   "attachedTo": "SC_ReceiveAck",
+   "interrupting": true,
+   "timer": "PT15M"
+  },
+  {
+   "id": "SC_GAccept",
+   "type": "exclusiveGateway",
+   "name": "Đã nhận hỗ trợ?",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_006",
+     "to": "SC_Track",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_SP2_007",
+     "to": "SC_TryNext",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "SC_TryNext",
+   "type": "serviceTask",
+   "name": "Tăng số thử, tìm đối tác khác",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_009",
+     "to": "SC_GRetry",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_GRetry",
+   "type": "exclusiveGateway",
+   "name": "Còn đối tác?",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_010",
+     "to": "SC_Dispatch",
+     "label": "Còn"
+    },
+    {
+     "flow": "Flow_SP2_011",
+     "to": "SC_Escalate",
+     "label": "Hết"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "SC_Track",
+   "type": "serviceTask",
+   "name": "Theo dõi trạng thái hỗ trợ",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_012",
+     "to": "SC_ReceiveResult",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_ReceiveResult",
+   "type": "receiveTask",
+   "name": "Chờ xác nhận kết quả hỗ trợ",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_013",
+     "to": "SC_Log",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_ResultTimer",
+   "type": "boundaryEvent",
+   "name": "Quá hạn SLA",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_014",
+     "to": "SC_Escalate",
+     "label": "Quá hạn"
+    }
+   ],
+   "attachedTo": "SC_ReceiveResult",
+   "interrupting": true,
+   "timer": "PT2H"
+  },
+  {
+   "id": "SC_Escalate",
+   "type": "userTask",
+   "name": "QL xử lý vượt SLA / phương án khác",
+   "lane": "QUẢN LÝ",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_015",
+     "to": "SC_GResolve",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_GResolve",
+   "type": "exclusiveGateway",
+   "name": "Có thể hỗ trợ?",
+   "lane": "QUẢN LÝ",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_016",
+     "to": "SC_Log",
+     "label": "Có phương án"
+    },
+    {
+     "flow": "Flow_SP2_017",
+     "to": "SC_NotifyEarly",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "SC_Log",
+   "type": "userTask",
+   "name": "SC04 • Xác nhận thực tế, ghi phí hợp lệ",
+   "lane": "NHÂN VIÊN",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_018",
+     "to": "SC_SettleDecision",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_SettleDecision",
+   "type": "exclusiveGateway",
+   "name": "Tiếp tục thuê?",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_019",
+     "to": "SC_SendContinue",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_SP2_020",
+     "to": "SC_NotifyEarly",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "SC_SendContinue",
+   "type": "serviceTask",
+   "name": "SC06 • Thông báo tiếp tục thuê",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_021",
+     "to": "SC_END_OK",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_NotifyEarly",
+   "type": "serviceTask",
+   "name": "SC05/06 • Hướng dẫn trả xe sớm",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [
+    {
+     "flow": "Flow_SP2_022",
+     "to": "SC_END_EARLY",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "SC_END_OK",
+   "type": "endEvent",
+   "name": "Tiếp tục",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": []
+  },
+  {
+   "id": "SC_END_EARLY",
+   "type": "endEvent",
+   "name": "Kết thúc sớm",
+   "lane": "HỆ THỐNG / ĐIỀU PHỐI",
+   "scope": "SP2",
+   "outgoing": [],
+   "errorEnd": true
+  },
+  {
+   "id": "M_CalcFees",
+   "type": "businessRuleTask",
+   "name": "T07b • Tự động tính phí",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_048",
+     "to": "M_SendStatement",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_VerifyDamage",
+   "type": "userTask",
+   "name": "Xác minh hư hỏng và bằng chứng",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_047",
+     "to": "M_CalcFees",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_ApproveAdjustment",
+   "type": "serviceTask",
+   "name": "Cập nhật kết luận/biên bản phí",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_053",
+     "to": "M_SendStatement",
+     "label": "Gửi lại"
+    }
+   ]
+  },
+  {
+   "id": "M_NetDeposit",
+   "type": "businessRuleTask",
+   "name": "T08 • Đối trừ tiền cọc",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_055",
+     "to": "M_GBalance",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_ReceiveReview",
+   "type": "receiveTask",
+   "name": "Chờ khách xác nhận bảng kê",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_050",
+     "to": "M_GDispute",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_GDispute",
+   "type": "exclusiveGateway",
+   "name": "Khách đồng ý?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_054",
+     "to": "M_NetDeposit",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_051",
+     "to": "M_Resolve",
+     "label": "Không"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_Refund",
+   "type": "serviceTask",
+   "name": "T08b • Khởi tạo hoàn cọc dư",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_068",
+     "to": "M_ConfirmRefund",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_GBalance",
+   "type": "exclusiveGateway",
+   "name": "Chênh lệch?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_067",
+     "to": "M_Refund",
+     "label": "Hoàn dư"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_070",
+     "to": "M_GJoinBalance",
+     "label": "Cân bằng"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_056",
+     "to": "M_PayExtra",
+     "label": "Thu thêm"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_VerifyExtra",
+   "type": "serviceTask",
+   "name": "Đối soát khoản thu bổ sung",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_059",
+     "to": "M_GExtra",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_ReceiveExtra",
+   "type": "receiveTask",
+   "name": "Chờ tiền bổ sung",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_058",
+     "to": "M_VerifyExtra",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_GExtra",
+   "type": "exclusiveGateway",
+   "name": "Thu thành công?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_061",
+     "to": "M_ManualExtra",
+     "label": "Chưa"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_060",
+     "to": "M_GJoinBalance",
+     "label": "Đúng"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_PayExtra",
+   "type": "serviceTask",
+   "name": "T08a • Tạo yêu cầu thu thêm",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_057",
+     "to": "M_ReceiveExtra",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_GJoinBalance",
+   "type": "exclusiveGateway",
+   "name": "Gộp quyết toán",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_071",
+     "to": "M_Settle",
+     "label": null
+    }
+   ],
+   "gatewayRole": "merge"
+  },
+  {
+   "id": "M_Settle",
+   "type": "serviceTask",
+   "name": "T08c • Ghi hoàn tất quyết toán",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_072",
+     "to": "M_CheckReady",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_RecordDebt",
+   "type": "serviceTask",
+   "name": "Ghi nhận công nợ chưa tất toán",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_066",
+     "to": "M_END_DEBT",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_END_DEBT",
+   "type": "endEvent",
+   "name": "Chờ xử lý công nợ",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": []
+  },
+  {
+   "id": "M_ConfirmRefund",
+   "type": "receiveTask",
+   "name": "Nhận xác nhận hoàn tiền",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_069",
+     "to": "M_GJoinBalance",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_GExtraDecision",
+   "type": "exclusiveGateway",
+   "name": "Khách thanh toán tiếp?",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_064",
+     "to": "M_ReceiveExtra",
+     "label": "Tiếp tục thanh toán"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_065",
+     "to": "M_RecordDebt",
+     "label": "Không / chưa thanh toán"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_ManualExtra",
+   "type": "userTask",
+   "name": "Liên hệ/xử lý khoản chưa thanh toán",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_063",
+     "to": "M_GExtraDecision",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_CheckReady",
+   "type": "userTask",
+   "name": "T09 • Đánh giá xe sau trả",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_073",
+     "to": "M_GReady",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_GReady",
+   "type": "exclusiveGateway",
+   "name": "Sẵn sàng?",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_075",
+     "to": "M_Maintenance",
+     "label": "Cần bảo trì"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_074",
+     "to": "M_MarkReady",
+     "label": "Đạt"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_Maintenance",
+   "type": "serviceTask",
+   "name": "T11/T11b • Lập phiếu bảo trì, khóa lịch",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_077",
+     "to": "M_GStatus",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_MarkReady",
+   "type": "serviceTask",
+   "name": "T10 • Trạng thái Sẵn sàng",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_076",
+     "to": "M_GStatus",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_GStatus",
+   "type": "exclusiveGateway",
+   "name": "Đồng bộ hồ sơ",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_078",
+     "to": "M_Archive",
+     "label": null
+    }
+   ],
+   "gatewayRole": "merge"
+  },
+  {
+   "id": "M_Archive",
+   "type": "serviceTask",
+   "name": "T12 • Lưu hồ sơ tập trung",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_079",
+     "to": "M_END",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_END",
+   "type": "endEvent",
+   "name": "Hoàn tất",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": []
+  },
+  {
+   "id": "M_ManualDeposit",
+   "type": "userTask",
+   "name": "Kiểm tra cọc ngoại lệ",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_017",
+     "to": "M_G03b",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_G03b",
+   "type": "exclusiveGateway",
+   "name": "Xác nhận được?",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_018",
+     "to": "M_Contract",
+     "label": "Có"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_019",
+     "to": "M_WaitDeposit",
+     "label": "Chưa"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_Resolve",
+   "type": "userTask",
+   "name": "T15 • Xử lý bất đồng/đề xuất điều chỉnh",
+   "lane": "QUẢN LÝ / CHỦ CƠ SỞ",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_052",
+     "to": "M_ApproveAdjustment",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_InspectPre",
+   "type": "userTask",
+   "name": "T04 • Kiểm tra kỹ thuật xe",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_025",
+     "to": "M_G04",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_Rework",
+   "type": "userTask",
+   "name": "T14 • Khắc phục/đổi xe",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_028",
+     "to": "M_InspectPre",
+     "label": "Kiểm tra lại"
+    }
+   ]
+  },
+  {
+   "id": "M_G04",
+   "type": "exclusiveGateway",
+   "name": "Xe đạt?",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_027",
+     "to": "M_Rework",
+     "label": "Chưa đạt"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_026",
+     "to": "M_Photo",
+     "label": "Đạt"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_ReceiveReturn",
+   "type": "manualTask",
+   "name": "T06 • Nhận xe trả",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_042",
+     "to": "M_CheckReturn",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_ReturnMerge",
+   "type": "exclusiveGateway",
+   "name": "Gộp trả xe",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_041",
+     "to": "M_ReceiveReturn",
+     "label": null
+    }
+   ],
+   "gatewayRole": "merge"
+  },
+  {
+   "id": "M_EarlyBoundary",
+   "type": "boundaryEvent",
+   "name": "Trả xe sớm",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_038",
+     "to": "M_ReturnMerge",
+     "label": null
+    }
+   ],
+   "attachedTo": "SP2",
+   "interrupting": true,
+   "error": true
+  },
+  {
+   "id": "M_BoundExtra",
+   "type": "boundaryEvent",
+   "name": "Hết hạn thu thêm",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_062",
+     "to": "M_ManualExtra",
+     "label": "Quá hạn"
+    }
+   ],
+   "attachedTo": "M_ReceiveExtra",
+   "interrupting": true,
+   "timer": "PT30M"
+  },
+  {
+   "id": "M_BoundDeposit",
+   "type": "boundaryEvent",
+   "name": "Hết hạn cọc",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_013",
+     "to": "M_END_REJECT",
+     "label": "Quá hạn"
+    }
+   ],
+   "attachedTo": "M_WaitDeposit",
+   "interrupting": true,
+   "timer": "PT30M"
+  },
+  {
+   "id": "M_BoundSign",
+   "type": "boundaryEvent",
+   "name": "Hết hạn ký",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_022",
+     "to": "M_CancelRefund",
+     "label": "Quá hạn"
+    }
+   ],
+   "attachedTo": "M_WaitSign",
+   "interrupting": true,
+   "timer": "PT24H"
+  },
+  {
+   "id": "M_END_REJECT",
+   "type": "endEvent",
+   "name": "Từ chối",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": []
+  },
+  {
+   "id": "M_AskDocs",
+   "type": "serviceTask",
+   "name": "Yêu cầu bổ sung/điều chỉnh",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_009",
+     "to": "Gateway_0x0p273",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "Gateway_0x0p273",
+   "type": "exclusiveGateway",
+   "name": "Yêu cầu >3?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_1kfvkjh",
+     "to": "M_CheckDocs",
+     "label": "Không"
+    },
+    {
+     "flow": "Flow_1yxvmm4",
+     "to": "M_EndCancel",
+     "label": "Có"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_EndCancel",
+   "type": "endEvent",
+   "name": "Kết thúc hủy",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": []
+  },
+  {
+   "id": "M_Photo",
+   "type": "userTask",
+   "name": "T04b • Checklist + ảnh bàn giao",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_029",
+     "to": "Activity_0w8x12e",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_Handover",
+   "type": "manualTask",
+   "name": "T05 • Bàn giao xe & phụ kiện",
+   "lane": "NHÂN VIÊN / VẬN HÀNH",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_030",
+     "to": "M_SetRented",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "M_SetRented",
+   "type": "serviceTask",
+   "name": "T05b • Cập nhật Đang thuê",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_031",
+     "to": "M_EG",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "Activity_0w8x12e",
+   "type": "serviceTask",
+   "name": "Gửi khách checklist và ảnh tình trạng xe",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_108vp6x",
+     "to": "Activity_0d0qzp6",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "Activity_0d0qzp6",
+   "type": "serviceTask",
+   "name": "Nhận phản hồi từ khách",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_0s6nzas",
+     "to": "Gateway_0ixde68",
+     "label": null
+    }
+   ]
+  },
+  {
+   "id": "Gateway_0ixde68",
+   "type": "exclusiveGateway",
+   "name": "Đồng ý nhận xe?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_0h3oqnj",
+     "to": "M_InspectPre",
+     "label": "Không"
+    },
+    {
+     "flow": "Flow_0n3rdue",
+     "to": "M_Handover",
+     "label": "Có"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_GDamage",
+   "type": "exclusiveGateway",
+   "name": "Có sai lệch?",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_046",
+     "to": "M_CalcFees",
+     "label": "Không"
+    },
+    {
+     "flow": "Flow_Process_MotoCare_045",
+     "to": "M_VerifyDamage",
+     "label": "Có"
+    }
+   ],
+   "gatewayRole": "split"
+  },
+  {
+   "id": "M_DigitalCompare",
+   "type": "serviceTask",
+   "name": "T07 • Đối chiếu ảnh/giao–nhận",
+   "lane": "HỆ THỐNG / TỰ ĐỘNG HÓA",
+   "scope": "MAIN",
+   "outgoing": [
+    {
+     "flow": "Flow_Process_MotoCare_044",
+     "to": "M_GDamage",
+     "label": null
+    }
+   ]
+  }
+ ],
+ "messageFlows": [
+  {
+   "id": "MsgFlow_000",
+   "name": "Gửi yêu cầu",
+   "from_": "P_KH",
+   "to": "M_START"
+  },
+  {
+   "id": "MsgFlow_001",
+   "name": "Giá/điều kiện",
+   "from_": "M_SendTerms",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_002",
+   "name": "Hồ sơ",
+   "from_": "P_KH",
+   "to": "M_CheckDocs"
+  },
+  {
+   "id": "MsgFlow_003",
+   "name": "Yêu cầu bổ sung",
+   "from_": "M_AskDocs",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_004",
+   "name": "QR tiền cọc",
+   "from_": "M_CreateDeposit",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_005",
+   "name": "Thông báo giao dịch",
+   "from_": "P_KH",
+   "to": "M_WaitDeposit"
+  },
+  {
+   "id": "MsgFlow_006",
+   "name": "Hợp đồng điện tử",
+   "from_": "M_Contract",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_007",
+   "name": "Hợp đồng đã ký",
+   "from_": "P_KH",
+   "to": "M_WaitSign"
+  },
+  {
+   "id": "MsgFlow_008",
+   "name": "Bàn giao xe",
+   "from_": "M_Handover",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_009",
+   "name": "Yêu cầu gia hạn",
+   "from_": "P_KH",
+   "to": "M_CatchExtend"
+  },
+  {
+   "id": "MsgFlow_010",
+   "name": "Báo sự cố",
+   "from_": "P_KH",
+   "to": "M_CatchIncident"
+  },
+  {
+   "id": "MsgFlow_011",
+   "name": "Đề nghị trả xe",
+   "from_": "P_KH",
+   "to": "M_CatchReturn"
+  },
+  {
+   "id": "MsgFlow_012",
+   "name": "Bảng kê",
+   "from_": "M_SendStatement",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_013",
+   "name": "Chấp thuận/khiếu nại",
+   "from_": "P_KH",
+   "to": "M_ReceiveReview"
+  },
+  {
+   "id": "MsgFlow_014",
+   "name": "QR thu thêm",
+   "from_": "M_PayExtra",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_015",
+   "name": "Giao dịch bổ sung",
+   "from_": "P_KH",
+   "to": "M_ReceiveExtra"
+  },
+  {
+   "id": "MsgFlow_016",
+   "name": "Hoàn cọc",
+   "from_": "M_Refund",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_017",
+   "name": "Xác nhận hoàn",
+   "from_": "P_KH",
+   "to": "M_ConfirmRefund"
+  },
+  {
+   "id": "MsgFlow_018",
+   "name": "Đề xuất gia hạn",
+   "from_": "GH_Offer",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_019",
+   "name": "Xác nhận gia hạn",
+   "from_": "P_KH",
+   "to": "GH_WaitAccept"
+  },
+  {
+   "id": "MsgFlow_020",
+   "name": "QR gia hạn",
+   "from_": "GH_CreateQR",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_021",
+   "name": "Đã thanh toán",
+   "from_": "P_KH",
+   "to": "GH_VerifyQR"
+  },
+  {
+   "id": "MsgFlow_022",
+   "name": "Hạn trả mới",
+   "from_": "GH_NotifyOK",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_023",
+   "name": "Giữ hạn cũ",
+   "from_": "GH_NotifyOld",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_024",
+   "name": "Đề nghị hỗ trợ",
+   "from_": "SC_Dispatch",
+   "to": "P_Partner"
+  },
+  {
+   "id": "MsgFlow_025",
+   "name": "Phản hồi tiếp nhận",
+   "from_": "P_Partner",
+   "to": "SC_ReceiveAck"
+  },
+  {
+   "id": "MsgFlow_026",
+   "name": "Kết quả hỗ trợ",
+   "from_": "P_Partner",
+   "to": "SC_ReceiveResult"
+  },
+  {
+   "id": "MsgFlow_027",
+   "name": "Tiếp tục thuê",
+   "from_": "SC_SendContinue",
+   "to": "P_KH"
+  },
+  {
+   "id": "MsgFlow_028",
+   "name": "Trả xe sớm",
+   "from_": "SC_NotifyEarly",
+   "to": "P_KH"
+  },
+  {
+   "id": "Flow_1f2gw83",
+   "name": "Gửi tình trạng xe cho khách",
+   "from_": "Activity_0w8x12e",
+   "to": "P_KH"
+  },
+  {
+   "id": "Flow_1t23qt7",
+   "name": null,
+   "from_": "P_KH",
+   "to": "Activity_0d0qzp6"
+  }
+ ]
+}

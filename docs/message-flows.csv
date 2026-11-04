@@ -1,0 +1,32 @@
+﻿ID,Tên luồng,Từ,Đến,Hướng,Chuyển thành,Trạng thái
+MsgFlow_000,Gửi yêu cầu,Khách hàng (pool ngoài),M_START (Khách gửi yêu cầu),KH -> HT,Form KH-01 gửi yêu cầu -> fn_create_rental_request.,Chưa làm
+MsgFlow_001,Giá/điều kiện,M_SendTerms (T02 • Báo giá/điều kiện thuê),Khách hàng (pool ngoài),HT -> KH,Báo giá/điều kiện hiển thị ở KH-02 và ghi notifications.,Chưa làm
+MsgFlow_002,Hồ sơ,Khách hàng (pool ngoài),M_CheckDocs (T02b • Kiểm tra hồ sơ/điều kiện),KH -> HT,"KH-02 tải hồ sơ lên Storage, ghi customer_documents.",Chưa làm
+MsgFlow_003,Yêu cầu bổ sung,M_AskDocs (Yêu cầu bổ sung/điều chỉnh),Khách hàng (pool ngoài),HT -> KH,"notifications liệt kê giấy tờ cần bổ sung, hiển thị ở KH-02.",Chưa làm
+MsgFlow_004,QR tiền cọc,M_CreateDeposit (T02c • Tạo yêu cầu cọc/QR),Khách hàng (pool ngoài),HT -> KH,Mã QR cọc hiển thị ở KH-03.,Chưa làm
+MsgFlow_005,Thông báo giao dịch,Khách hàng (pool ngoài),M_WaitDeposit (Chờ xác nhận tiền cọc),KH -> HT,"Giao dịch ngân hàng -> webhook fn_payment_webhook (hoặc nút ""Đã chuyển khoản"" mô phỏng).",Chưa làm
+MsgFlow_006,Hợp đồng điện tử,M_Contract (T03 • Tạo hợp đồng điện tử),Khách hàng (pool ngoài),HT -> KH,Hợp đồng điện tử hiển thị ở KH-04.,Chưa làm
+MsgFlow_007,Hợp đồng đã ký,Khách hàng (pool ngoài),M_WaitSign (Nhận hợp đồng đã ký),KH -> HT,"KH-04 nút ""Ký hợp đồng"" -> fn_sign_contract.",Chưa làm
+MsgFlow_008,Bàn giao xe,M_Handover (T05 • Bàn giao xe & phụ kiện),Khách hàng (pool ngoài),NV -> KH,"Sau NV-05, KH thấy trạng thái DANG_THUE ở KH-06.",Chưa làm
+MsgFlow_009,Yêu cầu gia hạn,Khách hàng (pool ngoài),M_CatchExtend (Nhận yêu cầu gia hạn),KH -> HT,"KH-06 nút ""Yêu cầu gia hạn"" -> fn_request_extension.",Chưa làm
+MsgFlow_010,Báo sự cố,Khách hàng (pool ngoài),M_CatchIncident (Nhận báo sự cố),KH -> HT,"KH-08 nút ""Báo sự cố"" -> fn_report_incident.",Chưa làm
+MsgFlow_011,Đề nghị trả xe,Khách hàng (pool ngoài),M_CatchReturn (Nhận yêu cầu trả xe),KH -> HT,"KH-06 nút ""Báo trả xe"" -> fn_request_return.",Chưa làm
+MsgFlow_012,Bảng kê,M_SendStatement (T07c • Gửi bảng kê chi tiết),Khách hàng (pool ngoài),HT -> KH,Bảng kê hiển thị ở KH-09.,Chưa làm
+MsgFlow_013,Chấp thuận/khiếu nại,Khách hàng (pool ngoài),M_ReceiveReview (Chờ khách xác nhận bảng kê),KH -> HT,"KH-09 ""Chấp thuận""/""Khiếu nại"" -> fn_answer_statement.",Chưa làm
+MsgFlow_014,QR thu thêm,M_PayExtra (T08a • Tạo yêu cầu thu thêm),Khách hàng (pool ngoài),HT -> KH,QR thu thêm hiển thị ở KH-10.,Chưa làm
+MsgFlow_015,Giao dịch bổ sung,Khách hàng (pool ngoài),M_ReceiveExtra (Chờ tiền bổ sung),KH -> HT,Giao dịch bổ sung -> webhook fn_payment_webhook (hoặc nút mô phỏng).,Chưa làm
+MsgFlow_016,Hoàn cọc,M_Refund (T08b • Khởi tạo hoàn cọc dư),Khách hàng (pool ngoài),HT -> KH,Thông báo hoàn cọc ở KH-10.,Chưa làm
+MsgFlow_017,Xác nhận hoàn,Khách hàng (pool ngoài),M_ConfirmRefund (Nhận xác nhận hoàn tiền),KH -> HT,KH-10 xác nhận đã nhận hoàn cọc.,Chưa làm
+MsgFlow_018,Đề xuất gia hạn,GH_Offer (GH03 • Tính phí và gửi đề xuất),Khách hàng (pool ngoài),HT -> KH,Đề xuất gia hạn và phí hiển thị ở KH-07.,Chưa làm
+MsgFlow_019,Xác nhận gia hạn,Khách hàng (pool ngoài),GH_WaitAccept (Chờ khách trả lời),KH -> HT,"KH-07 ""Đồng ý""/""Từ chối"" -> fn_answer_extension.",Chưa làm
+MsgFlow_020,QR gia hạn,GH_CreateQR (Tạo QR bổ sung),Khách hàng (pool ngoài),HT -> KH,QR gia hạn hiển thị ở KH-07.,Chưa làm
+MsgFlow_021,Đã thanh toán,Khách hàng (pool ngoài),GH_VerifyQR (Chờ thanh toán được xác thực),KH -> HT,Thanh toán gia hạn -> webhook fn_payment_webhook (hoặc nút mô phỏng).,Chưa làm
+MsgFlow_022,Hạn trả mới,GH_NotifyOK (GH03d • Gửi xác nhận gia hạn),Khách hàng (pool ngoài),HT -> KH,Thông báo hạn trả mới.,Chưa làm
+MsgFlow_023,Giữ hạn cũ,GH_NotifyOld (GH04 • Giữ hạn cũ/thông báo từ chối),Khách hàng (pool ngoài),HT -> KH,Thông báo giữ hạn cũ.,Chưa làm
+MsgFlow_024,Đề nghị hỗ trợ,SC_Dispatch (SC02 • Gửi yêu cầu và mã sự cố),Đối tác (pool ngoài),HT -> ĐT,fn_dispatch_partner gửi yêu cầu và mã sự cố cho đối tác.,Chưa làm
+MsgFlow_025,Phản hồi tiếp nhận,Đối tác (pool ngoài),SC_ReceiveAck (Chờ đối tác tiếp nhận),ĐT -> HT,"fn_partner_callback (webhook có khóa bí mật), hoặc DT-01 do Quản lý thao tác thay khi demo.",Chưa làm
+MsgFlow_026,Kết quả hỗ trợ,Đối tác (pool ngoài),SC_ReceiveResult (Chờ xác nhận kết quả hỗ trợ),ĐT -> HT,"fn_partner_callback (webhook có khóa bí mật), hoặc DT-01 do Quản lý thao tác thay khi demo.",Chưa làm
+MsgFlow_027,Tiếp tục thuê,SC_SendContinue (SC06 • Thông báo tiếp tục thuê),Khách hàng (pool ngoài),HT -> KH,Thông báo tiếp tục thuê ở KH-08.,Chưa làm
+MsgFlow_028,Trả xe sớm,SC_NotifyEarly (SC05/06 • Hướng dẫn trả xe sớm),Khách hàng (pool ngoài),HT -> KH,Hướng dẫn trả xe sớm ở KH-08.,Chưa làm
+Flow_1f2gw83,Gửi tình trạng xe cho khách,Activity_0w8x12e (Gửi khách checklist và ảnh tình trạng xe),Khách hàng (pool ngoài),HT -> KH,Checklist và ảnh tình trạng xe hiển thị ở KH-05.,Chưa làm
+Flow_1t23qt7,,Khách hàng (pool ngoài),Activity_0d0qzp6 (Nhận phản hồi từ khách),KH -> HT,"KH-05 ""Đồng ý nhận xe""/""Không đồng ý"" -> ghi handovers.",Chưa làm

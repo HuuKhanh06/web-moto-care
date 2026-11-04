@@ -1,0 +1,26 @@
+﻿Mã,Tên màn hình,Phần tử BPMN,Khách hàng,Nhân viên,Quản lý,Ghi chú
+AUTH-01,Đăng nhập / đăng ký,Xác thực (ngoài BPMN),S,S,S,Đăng nhập giả lập phía FE
+KH-01,Gửi yêu cầu thuê,M_START,T,,,
+KH-02,Báo giá & hồ sơ,"M_SendTerms, M_CheckDocs, M_AskDocs",S,X,X,
+KH-03,Thanh toán cọc (QR),"M_CreateDeposit, M_WaitDeposit",S,X,X,
+KH-04,Ký hợp đồng,"M_Contract, M_WaitSign",S,X,X,
+KH-05,Xác nhận tình trạng xe khi nhận,"Activity_0w8x12e, Activity_0d0qzp6, Gateway_0ixde68",D,X,X,
+KH-06,Yêu cầu thuê của tôi,"M_EG, M_CatchExtend, M_CatchIncident, M_CatchReturn",S,X,X,"Trang chủ của khách, chứa 3 nút sự kiện"
+KH-07,Gia hạn,"GH_Offer, GH_WaitAccept, GH_CreateQR, GH_VerifyQR",D,X,X,
+KH-08,Báo sự cố & theo dõi,"SC_Create, SC_Track, SC_SendContinue, SC_NotifyEarly",S,X,X,
+KH-09,Bảng kê trả xe,"M_SendStatement, M_ReceiveReview",D,X,X,
+KH-10,Thanh toán bổ sung / nhận hoàn cọc,"M_PayExtra, M_ReceiveExtra, M_Refund, M_ConfirmRefund",S,X,X,
+NV-01,Danh sách yêu cầu & việc cần làm,Tất cả user task của lane Nhân viên,,S,X,Hộp việc chung
+NV-02,Kiểm tra cọc ngoại lệ,"M_ManualDeposit, M_G03b",,D,X,
+NV-03,Kiểm tra kỹ thuật xe & khắc phục,"M_InspectPre, M_G04, M_Rework",,S,X,
+NV-04,Checklist + ảnh bàn giao,M_Photo,,S,X,
+NV-05,Bàn giao xe & phụ kiện,M_Handover,,S,X,
+NV-06,Nhận & kiểm tra xe trả,"M_ReceiveReturn, M_CheckReturn",,S,X,
+NV-07,Xác minh hư hỏng,M_VerifyDamage,,S,X,
+NV-08,Xử lý khoản chưa thanh toán,"M_ManualExtra, M_GExtraDecision",,D,X,
+NV-09,Đánh giá xe sau trả,"M_CheckReady, M_GReady",,D,X,
+NV-10,Xác nhận sự cố & ghi phí,"SC_Log, SC_SettleDecision",,D,X,
+QL-01,Xử lý bất đồng bảng kê,M_Resolve,,X,D,
+QL-02,Xử lý sự cố vượt SLA,"SC_Escalate, SC_GResolve",,X,D,
+DT-01,Cổng đối tác (mô phỏng),"SC_ReceiveAck, SC_ReceiveResult",,,S,"Màn hình mô phỏng khi demo: Quản lý thao tác thay đối tác. Tích hợp thật đi qua webhook có khóa, đối tác không đăng nhập"
+AD-01,Quản lý xe & người dùng (dữ liệu seed),Ngoài BPMN,,X,S,Cần để nạp dữ liệu demo/test

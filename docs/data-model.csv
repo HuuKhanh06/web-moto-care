@@ -1,0 +1,129 @@
+Bảng,Trường,Kiểu,Khóa / ràng buộc,Mô tả
+profiles,id,uuid,"PK, FK -> auth_accounts.user_id","Hồ sơ người dùng, trùng id tài khoản đăng nhập (bảng auth_accounts giả lập ở phía FE)"
+profiles,full_name,text,NOT NULL,Họ tên
+profiles,phone,text,,Số điện thoại
+profiles,role,enum,NOT NULL,khach_hang | nhan_vien | quan_ly; dùng để kiểm tra quyền phía FE (route guard và repository)
+vehicles,id,uuid,PK,
+vehicles,plate,text,"UNIQUE, NOT NULL",Biển số
+vehicles,model,text,,Dòng xe
+vehicles,vehicle_type,text,,Loại xe (dùng khi tra xe M_CheckFleet)
+vehicles,daily_price,numeric,NOT NULL,Giá thuê theo ngày
+vehicles,status,enum,NOT NULL,SAN_SANG | DANG_THUE | BAO_TRI
+vehicles,condition_note,text,,Ghi chú tình trạng
+rental_requests,id,uuid,PK,"Hồ sơ thuê, trung tâm của quy trình"
+rental_requests,customer_id,uuid,FK -> profiles.id,Khách thuê
+rental_requests,vehicle_id,uuid,"FK -> vehicles.id, NULL",Xe đề xuất/đã gán
+rental_requests,"start_at, end_at",timestamptz,NOT NULL,Thời gian thuê
+rental_requests,status,enum,NOT NULL,"MOI, CHO_HO_SO, CHO_COC, CHO_KY, CHO_BAN_GIAO, CHO_KHACH_NHAN, DANG_THUE, DANG_GIA_HAN, DANG_XU_LY_SU_CO, CHO_NHAN_XE_TRA, CHO_KHACH_XAC_NHAN_BANG_KE, CHO_THU_THEM, CONG_NO, CHO_DANH_GIA_XE, HOAN_TAT, DA_HUY, TU_CHOI"
+rental_requests,"total_price, deposit_amount",numeric,,Giá thuê và tiền cọc
+rental_requests,doc_request_count,int,DEFAULT 0,Số lần yêu cầu bổ sung hồ sơ (cổng Gateway_0x0p273)
+rental_requests,closed_reason,text,,HET_XE | QUA_HAN_COC | HO_SO_KHONG_DAT | QUA_HAN_KY
+rental_requests,"returned_at, closed_at, archived_at",timestamptz,,Mốc thời gian
+customer_documents,id,uuid,PK,
+customer_documents,request_id,uuid,FK -> rental_requests.id,
+customer_documents,doc_type,enum,,Loại giấy tờ
+customer_documents,file_url,text,,Đường dẫn Storage
+customer_documents,"is_valid, check_note","bool, text",,Kết quả M_CheckDocs
+payments,id,uuid,PK,
+payments,request_id,uuid,FK -> rental_requests.id,
+payments,kind,enum,NOT NULL,DEPOSIT | EXTENSION | EXTRA | REFUND
+payments,"amount, paid_amount",numeric,,Số phải thu/chi và số thực nhận
+payments,qr_ref,text,UNIQUE,Mã/nội dung chuyển khoản để đối soát
+payments,status,enum,NOT NULL,"PENDING | VERIFIED | EXPIRED | FAILED. Khi thanh toán lại, bản ghi cũ chuyển EXPIRED và giữ làm lịch sử"
+payments,expires_at,timestamptz,,Hạn thanh toán (timer 30 phút)
+payments,provider_txn_id,text,UNIQUE,"Mã giao dịch từ ngoài, chống xử lý trùng"
+payments,"paid_at, verified_at",timestamptz,,paid_at: lúc nhận giao dịch (M_WaitDeposit); verified_at: lúc chuyển VERIFIED (tự động hoặc do nhân viên xác nhận)
+payments,match_result,enum,,DU | THIEU | SAI
+payments,"manual_verified_by, manual_note","uuid, text",FK -> profiles.id,Xác nhận thủ công của nhân viên
+contracts,id,uuid,PK,
+contracts,request_id,uuid,"FK, UNIQUE",Mỗi hồ sơ một hợp đồng
+contracts,file_url,text,,
+contracts,status,enum,NOT NULL,SENT | SIGNED | EXPIRED
+contracts,"sent_at, expires_at, signed_at",timestamptz,,expires_at = sent_at + 24 giờ
+vehicle_schedule,id,uuid,PK,
+vehicle_schedule,vehicle_id,uuid,FK -> vehicles.id,
+vehicle_schedule,request_id,uuid,"FK, NULL",NULL khi là lịch bảo trì
+vehicle_schedule,kind,enum,,RENTAL | MAINTENANCE
+vehicle_schedule,period,tstzrange,"EXCLUDE USING gist (vehicle_id WITH =, period WITH &&)",Chống trùng lịch
+inspections,id,uuid,PK,
+inspections,"request_id, vehicle_id",uuid,FK,
+inspections,kind,enum,,PRE_HANDOVER | RETURN | POST_RETURN
+inspections,attempt_no,int,"NOT NULL, UNIQUE (request_id, kind, attempt_no)",Lần kiểm tra thứ mấy của cùng loại; tăng mỗi lần kiểm tra lại
+inspections,inspector_id,uuid,FK -> profiles.id,
+inspections,checklist,jsonb,,Các mục kiểm tra và kết quả
+inspections,result,enum,,DAT | CHUA_DAT | CAN_BAO_TRI
+inspections,photo_urls,text[],,Ảnh trên Storage
+inspections,"diff_items, rework_note","jsonb, text",,Sai lệch giao-trả; ghi chú khắc phục
+handovers,id,uuid,PK,
+handovers,request_id,uuid,FK,Nhiều bản ghi mỗi hồ sơ: mỗi lần khách phản hồi là một bản ghi
+handovers,attempt_no,int,"NOT NULL, UNIQUE (request_id, attempt_no)",Trùng attempt_no của bản PRE_HANDOVER đang được khách phản hồi
+handovers,accessories,jsonb,,Phụ kiện bàn giao
+handovers,staff_id,uuid,FK -> profiles.id,
+handovers,"customer_accepted, customer_note","bool, text",,Khách đồng ý nhận xe (Gateway_0ixde68)
+handovers,handed_over_at,timestamptz,,
+damage_findings,id,uuid,PK,
+damage_findings,"request_id, inspection_id",uuid,FK,
+damage_findings,"description, evidence_urls","text, text[]",,
+damage_findings,estimated_cost,numeric,,
+damage_findings,"verified_by, verified_at","uuid, timestamptz",FK -> profiles.id,
+statements,id,uuid,PK,Bảng kê trả xe
+statements,request_id,uuid,FK,
+statements,version,int,DEFAULT 1,Tăng sau mỗi lần điều chỉnh
+statements,items,jsonb,,Các khoản phí
+statements,total_fee,numeric,,
+statements,status,enum,,DRAFT | SENT | ACCEPTED | DISPUTED
+statements,"customer_answer, dispute_reason","enum, text",,CHAP_THUAN | KHIEU_NAI
+statements,"resolution_note, resolved_by","text, uuid",FK -> profiles.id,Kết luận của quản lý
+statements,"sent_at, answered_at",timestamptz,,
+settlements,id,uuid,PK,
+settlements,request_id,uuid,"FK, UNIQUE",
+settlements,"deposit_paid, total_fee, balance",numeric,,balance = deposit_paid - total_fee
+settlements,kind,enum,,HOAN_DU | CAN_BANG | THU_THEM
+settlements,status,enum,,CHO | HOAN_TAT | CONG_NO
+settlements,settled_at,timestamptz,,
+extension_requests,id,uuid,PK,
+extension_requests,request_id,uuid,FK,
+extension_requests,new_end_at,timestamptz,,
+extension_requests,"eligible, reject_reason","bool, text",,Kết quả GH_Check
+extension_requests,extra_fee,numeric,,
+extension_requests,status,enum,,YEU_CAU | DA_DE_XUAT | DA_AP_DUNG | TU_CHOI | HET_HAN
+extension_requests,customer_answer,enum,,DONG_Y | TU_CHOI
+extension_requests,offer_expires_at,timestamptz,,Timer 2 giờ
+partners,id,uuid,PK,Đối tác sửa chữa
+partners,"name, region, contact",text,,
+partners,available,bool,,
+incidents,id,uuid,PK,
+incidents,"request_id, reported_by",uuid,FK,
+incidents,incident_code,text,UNIQUE,Mã sự cố gửi đối tác
+incidents,"lat, lng, photo_urls, description","numeric, text[], text",,Dữ liệu khách gửi
+incidents,status,enum,,MOI | DANG_HO_TRO | VUOT_SLA | DONG_TIEP_TUC | DONG_TRA_SOM
+incidents,"attempt_no, partner_id","int, uuid",FK -> partners.id,Số lần thử và đối tác hiện tại
+incidents,escalation_note,text,,Phương án của quản lý
+incidents,"actual_cost, continue_rental, confirmed_by","numeric, bool, uuid",,SC_Log và SC_SettleDecision
+incidents,"created_at, closed_at",timestamptz,,
+incident_dispatches,id,uuid,PK,
+incident_dispatches,"incident_id, partner_id",uuid,FK,
+incident_dispatches,attempt_no,int,,
+incident_dispatches,status,enum,,SENT | ACCEPTED | DECLINED | TIMEOUT
+incident_dispatches,"sent_at, ack_at, result_at",timestamptz,,Timer 15 phút và SLA 2 giờ
+incident_dispatches,result,text,,
+maintenance_orders,id,uuid,PK,
+maintenance_orders,"vehicle_id, request_id",uuid,FK,
+maintenance_orders,"reason, status","text, enum",,MO | XONG
+notifications,id,uuid,PK,Thông báo hệ thống -> khách
+notifications,"user_id, request_id",uuid,FK,
+notifications,"template, message",text,,
+notifications,"is_read, created_at","bool, timestamptz",,
+process_events,id,uuid,PK,"Nhật ký theo ID phần tử BPMN, phục vụ kiểm thử"
+process_events,request_id,uuid,FK,
+process_events,bpmn_node_id,text,,ID trong file .bpmn (vd M_G03)
+process_events,"event_type, actor_id, payload","text, uuid, jsonb",,
+process_events,created_at,timestamptz,,
+customer_documents,"ai_result, ai_confidence, ai_source","json, numeric, enum",,"Kết quả trích xuất AI OCR, độ tin cậy và nguồn xử lý"
+ai_logs,id,int,PK,"Auto increment"
+ai_logs,"request_id, bpmn_node_id","uuid, text",,"Mã hồ sơ và ID phần tử BPMN (M_CheckDocs)"
+ai_logs,"scenario_preset, input_summary","text, text",,"Kịch bản mô phỏng và tóm tắt đầu vào"
+ai_logs,"output, confidence","json, numeric",,"JSON kết quả AI và độ tin cậy m"
+ai_logs,routing_action,text,,"PREFILL_FOR_RULES | MANUAL_REVIEW | REQUEST_REUPLOAD | FALLBACK_MANUAL"
+ai_logs,"is_overridden, override_note","bool, text",,"Có bị người dùng/nhân viên sửa đổi không"
+ai_logs,created_at,timestamptz,,Thời điểm gọi AI Agent

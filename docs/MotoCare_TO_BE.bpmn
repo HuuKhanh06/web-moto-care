@@ -1,0 +1,2298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:qbp="http://www.qbp-simulator.com/Schema201212" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_MotoCare_TO_BE_Nhom14" targetNamespace="https://motocare.example/bpmn/tobe" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.31.1">
+  <bpmn:error id="Error_EarlyReturn" name="Sự cố cần trả xe sớm" errorCode="EARLY_RETURN" />
+  <bpmn:message id="MsgNewRent" name="Yêu cầu thuê xe" />
+  <bpmn:message id="MsgDeposit" name="Xác nhận đặt cọc" />
+  <bpmn:message id="MsgSigned" name="Hợp đồng đã ký" />
+  <bpmn:message id="MsgExtend" name="Yêu cầu gia hạn" />
+  <bpmn:message id="MsgIncident" name="Báo sự cố" />
+  <bpmn:message id="MsgReturn" name="Báo trả xe" />
+  <bpmn:message id="MsgReview" name="Khách phản hồi bảng kê" />
+  <bpmn:message id="MsgExtra" name="Thanh toán bổ sung" />
+  <bpmn:message id="MsgRefund" name="Hoàn cọc thành công" />
+  <bpmn:message id="MsgGHDecision" name="Khách trả lời gia hạn" />
+  <bpmn:message id="MsgGHPayment" name="Thanh toán gia hạn" />
+  <bpmn:message id="MsgPartnerAck" name="Đối tác phản hồi" />
+  <bpmn:message id="MsgPartnerDone" name="Đối tác báo kết quả" />
+  <bpmn:collaboration id="CollabMotoCareTOBE" name="MotoCare TO-BE">
+    <bpmn:participant id="P_KH" name="KHÁCH HÀNG (pool ngoài: gửi yêu cầu, xác nhận, thanh toán)" />
+    <bpmn:participant id="P_MotoCare" name="MOTOCARE — quy trình nội bộ" processRef="Process_MotoCare" />
+    <bpmn:participant id="P_Partner" name="ĐỐI TÁC SỬA CHỮA (pool ngoài)" />
+    <bpmn:messageFlow id="MsgFlow_000" name="Gửi yêu cầu" sourceRef="P_KH" targetRef="M_START" />
+    <bpmn:messageFlow id="MsgFlow_001" name="Giá/điều kiện" sourceRef="M_SendTerms" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_002" name="Hồ sơ" sourceRef="P_KH" targetRef="M_CheckDocs" />
+    <bpmn:messageFlow id="MsgFlow_003" name="Yêu cầu bổ sung" sourceRef="M_AskDocs" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_004" name="QR tiền cọc" sourceRef="M_CreateDeposit" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_005" name="Thông báo giao dịch" sourceRef="P_KH" targetRef="M_WaitDeposit" />
+    <bpmn:messageFlow id="MsgFlow_006" name="Hợp đồng điện tử" sourceRef="M_Contract" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_007" name="Hợp đồng đã ký" sourceRef="P_KH" targetRef="M_WaitSign" />
+    <bpmn:messageFlow id="MsgFlow_008" name="Bàn giao xe" sourceRef="M_Handover" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_009" name="Yêu cầu gia hạn" sourceRef="P_KH" targetRef="M_CatchExtend" />
+    <bpmn:messageFlow id="MsgFlow_010" name="Báo sự cố" sourceRef="P_KH" targetRef="M_CatchIncident" />
+    <bpmn:messageFlow id="MsgFlow_011" name="Đề nghị trả xe" sourceRef="P_KH" targetRef="M_CatchReturn" />
+    <bpmn:messageFlow id="MsgFlow_012" name="Bảng kê" sourceRef="M_SendStatement" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_013" name="Chấp thuận/khiếu nại" sourceRef="P_KH" targetRef="M_ReceiveReview" />
+    <bpmn:messageFlow id="MsgFlow_014" name="QR thu thêm" sourceRef="M_PayExtra" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_015" name="Giao dịch bổ sung" sourceRef="P_KH" targetRef="M_ReceiveExtra" />
+    <bpmn:messageFlow id="MsgFlow_016" name="Hoàn cọc" sourceRef="M_Refund" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_017" name="Xác nhận hoàn" sourceRef="P_KH" targetRef="M_ConfirmRefund" />
+    <bpmn:messageFlow id="MsgFlow_018" name="Đề xuất gia hạn" sourceRef="GH_Offer" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_019" name="Xác nhận gia hạn" sourceRef="P_KH" targetRef="GH_WaitAccept" />
+    <bpmn:messageFlow id="MsgFlow_020" name="QR gia hạn" sourceRef="GH_CreateQR" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_021" name="Đã thanh toán" sourceRef="P_KH" targetRef="GH_VerifyQR" />
+    <bpmn:messageFlow id="MsgFlow_022" name="Hạn trả mới" sourceRef="GH_NotifyOK" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_023" name="Giữ hạn cũ" sourceRef="GH_NotifyOld" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_024" name="Đề nghị hỗ trợ" sourceRef="SC_Dispatch" targetRef="P_Partner" />
+    <bpmn:messageFlow id="MsgFlow_025" name="Phản hồi tiếp nhận" sourceRef="P_Partner" targetRef="SC_ReceiveAck" />
+    <bpmn:messageFlow id="MsgFlow_026" name="Kết quả hỗ trợ" sourceRef="P_Partner" targetRef="SC_ReceiveResult" />
+    <bpmn:messageFlow id="MsgFlow_027" name="Tiếp tục thuê" sourceRef="SC_SendContinue" targetRef="P_KH" />
+    <bpmn:messageFlow id="MsgFlow_028" name="Trả xe sớm" sourceRef="SC_NotifyEarly" targetRef="P_KH" />
+    <bpmn:messageFlow id="Flow_1f2gw83" name="Gửi tình trạng xe cho khách" sourceRef="Activity_0w8x12e" targetRef="P_KH" />
+    <bpmn:messageFlow id="Flow_1t23qt7" sourceRef="P_KH" targetRef="Activity_0d0qzp6" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_MotoCare" name="MotoCare TO-BE — Cho thuê xe máy và hỗ trợ sự cố" isExecutable="false">
+    <bpmn:documentation>Mô hình cải tiến từ AS-IS chi tiết và phân tích định lượng của Nhóm 14. Tác vụ tự động dùng Service/Business Rule; kiểm tra xe thực tế dùng User/Manual; tách đối tác và khách thành pool ngoài. Các thời gian SLA là đề xuất, cần xác nhận trước khi mô phỏng.</bpmn:documentation>
+    <bpmn:laneSet id="LS_Process_MotoCare">
+      <bpmn:lane id="L_NV" name="NHÂN VIÊN / VẬN HÀNH">
+        <bpmn:flowNodeRef>M_CheckReturn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_VerifyDamage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GExtraDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ManualExtra</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CheckReady</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GReady</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ManualDeposit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_G03b</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_InspectPre</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Rework</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_G04</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ReceiveReturn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ReturnMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Photo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Handover</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_QL" name="QUẢN LÝ / CHỦ CƠ SỞ">
+        <bpmn:flowNodeRef>M_Resolve</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_SYS" name="HỆ THỐNG / TỰ ĐỘNG HÓA">
+        <bpmn:flowNodeRef>M_SendStatement</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_G03</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CheckDeposit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Contract</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_SaveBooking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CancelRefund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_WaitDeposit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_WaitSign</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CreateDeposit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_G02</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CheckDocs</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_SendTerms</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_RejectNoVehicle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_START</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CheckFleet</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_G01</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CatchReturn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CatchExtend</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_EG</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CatchIncident</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_CalcFees</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ApproveAdjustment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_NetDeposit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ReceiveReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GDispute</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Refund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GBalance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_VerifyExtra</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ReceiveExtra</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GExtra</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_PayExtra</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GJoinBalance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Settle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_RecordDebt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_END_DEBT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_ConfirmRefund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Maintenance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_MarkReady</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GStatus</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Archive</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_END</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SP1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SP2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_EarlyBoundary</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_BoundExtra</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_BoundDeposit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_BoundSign</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_END_REJECT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_AskDocs</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_0x0p273</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_EndCancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_SetRented</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0w8x12e</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0d0qzp6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_0ixde68</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_GDamage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_DigitalCompare</bpmn:flowNodeRef>
+        <bpmn:childLaneSet id="LaneSet_079vpw1" />
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:serviceTask id="M_SendStatement" name="T07c • Gửi bảng kê chi tiết">
+      <bpmn:documentation>Thiết kế TO-BE — T07c • Gửi bảng kê chi tiết</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_048</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_053</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_049</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_G03" name="Đúng/đủ cọc?">
+      <bpmn:documentation>Thiết kế TO-BE — Đúng/đủ cọc?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_014</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_015</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_016</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_CheckDeposit" name="T02d • Đối soát tiền cọc">
+      <bpmn:documentation>Thiết kế TO-BE — T02d • Đối soát tiền cọc</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_012</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_014</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="M_Contract" name="T03 • Tạo hợp đồng điện tử">
+      <bpmn:documentation>Thiết kế TO-BE — T03 • Tạo hợp đồng điện tử</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_015</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_018</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_020</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="M_SaveBooking" name="T03b • Khóa lịch xe đặt thuê">
+      <bpmn:documentation>Thiết kế TO-BE — T03b • Khóa lịch xe đặt thuê</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_021</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_024</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="M_CancelRefund" name="Hoàn cọc hợp lệ, hủy yêu cầu">
+      <bpmn:documentation>Thiết kế TO-BE — Hoàn cọc hợp lệ, hủy yêu cầu</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_022</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_023</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:receiveTask id="M_WaitDeposit" name="Chờ xác nhận tiền cọc" messageRef="MsgDeposit">
+      <bpmn:documentation>Thiết kế TO-BE — Chờ xác nhận tiền cọc</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_011</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_019</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_012</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:receiveTask id="M_WaitSign" name="Nhận hợp đồng đã ký" messageRef="MsgSigned">
+      <bpmn:documentation>Thiết kế TO-BE — Nhận hợp đồng đã ký</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_020</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_021</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:serviceTask id="M_CreateDeposit" name="T02c • Tạo yêu cầu cọc/QR">
+      <bpmn:documentation>Thiết kế TO-BE — T02c • Tạo yêu cầu cọc/QR</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_010</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_011</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_G02" name="Hồ sơ hợp lệ?">
+      <bpmn:documentation>Thiết kế TO-BE — Hồ sơ hợp lệ?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_007</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_008</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_010</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:businessRuleTask id="M_CheckDocs" name="T02b • Kiểm tra hồ sơ/điều kiện">
+      <bpmn:documentation>Thiết kế TO-BE — T02b • Kiểm tra hồ sơ/điều kiện</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_006</bpmn:incoming>
+      <bpmn:incoming>Flow_1kfvkjh</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_007</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:serviceTask id="M_SendTerms" name="T02 • Báo giá/điều kiện thuê">
+      <bpmn:documentation>Thiết kế TO-BE — T02 • Báo giá/điều kiện thuê</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_005</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_006</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="M_RejectNoVehicle" name="T13 • Gửi thông báo không có xe">
+      <bpmn:documentation>Thiết kế TO-BE — T13 • Gửi thông báo không có xe</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_003</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_004</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="M_START" name="Khách gửi yêu cầu">
+      <bpmn:documentation>Thiết kế TO-BE — Khách gửi yêu cầu</bpmn:documentation>
+      <bpmn:outgoing>Flow_Process_MotoCare_001</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_M_START" messageRef="MsgNewRent" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="M_CheckFleet" name="T01b • Tra cứu xe và lịch thuê">
+      <bpmn:documentation>thay kiểm tra lịch bằng tra cứu DB</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_001</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_002</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_G01" name="Có xe?">
+      <bpmn:documentation>Thiết kế TO-BE — Có xe?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_002</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_003</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_005</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="M_CheckReturn" name="T06b • Kiểm tra xe trả theo checklist">
+      <bpmn:documentation>Thiết kế TO-BE — T06b • Kiểm tra xe trả theo checklist</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_042</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_043</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="M_CatchReturn" name="Nhận yêu cầu trả xe">
+      <bpmn:documentation>Thiết kế TO-BE — Nhận yêu cầu trả xe</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_039</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_040</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_M_CatchReturn" messageRef="MsgReturn" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:subProcess id="SP1" name="SP1 • Xử lý gia hạn (TO-BE)">
+      <bpmn:incoming>Flow_Process_MotoCare_033</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_034</bpmn:outgoing>
+      <bpmn:laneSet id="LS_SP1">
+        <bpmn:lane id="L_GH_NV" name="NHÂN VIÊN" />
+        <bpmn:lane id="L_GH_SYS" name="HỆ THỐNG">
+          <bpmn:flowNodeRef>GH_Offer</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_GEligible</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_Check</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_GetRequest</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_START</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_WaitAccept</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_Timer</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_GAccept</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_NeedPayment</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_CreateQR</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_VerifyQR</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_TimerPay</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_NotifyOld</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_NotifyOK</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_Update</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_GMerge</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>GH_END</bpmn:flowNodeRef>
+        </bpmn:lane>
+      </bpmn:laneSet>
+      <bpmn:startEvent id="GH_START" name="Bắt đầu SP1">
+        <bpmn:documentation>Thiết kế TO-BE — Bắt đầu SP1</bpmn:documentation>
+        <bpmn:outgoing>Flow_SP1_001</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="GH_GetRequest" name="GH01 • Ghi yêu cầu gia hạn">
+        <bpmn:documentation>Thiết kế TO-BE — GH01 • Ghi yêu cầu gia hạn</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_001</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_002</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:businessRuleTask id="GH_Check" name="GH02 • Kiểm tra lịch + điều kiện">
+        <bpmn:documentation>Thiết kế TO-BE — GH02 • Kiểm tra lịch + điều kiện</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_002</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_003</bpmn:outgoing>
+      </bpmn:businessRuleTask>
+      <bpmn:exclusiveGateway id="GH_GEligible" name="Có thể gia hạn?">
+        <bpmn:documentation>Thiết kế TO-BE — Có thể gia hạn?</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_003</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_004</bpmn:outgoing>
+        <bpmn:outgoing>Flow_SP1_005</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="GH_Offer" name="GH03 • Tính phí và gửi đề xuất">
+        <bpmn:documentation>Thiết kế TO-BE — GH03 • Tính phí và gửi đề xuất</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_004</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_006</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:receiveTask id="GH_WaitAccept" name="Chờ khách trả lời" messageRef="MsgGHDecision">
+        <bpmn:documentation>Thiết kế TO-BE — Chờ khách trả lời</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_006</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_007</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:boundaryEvent id="GH_Timer" name="Quá hạn trả lời" attachedToRef="GH_WaitAccept">
+        <bpmn:documentation>Thiết kế TO-BE — Quá hạn trả lời</bpmn:documentation>
+        <bpmn:outgoing>Flow_SP1_008</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TED_GH_Timer">
+          <bpmn:timeDuration>PT2H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:exclusiveGateway id="GH_GAccept" name="Khách đồng ý?">
+        <bpmn:documentation>Thiết kế TO-BE — Khách đồng ý?</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_007</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_009</bpmn:outgoing>
+        <bpmn:outgoing>Flow_SP1_010</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:exclusiveGateway id="GH_NeedPayment" name="Có phí bổ sung?">
+        <bpmn:documentation>Thiết kế TO-BE — Có phí bổ sung?</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_009</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_011</bpmn:outgoing>
+        <bpmn:outgoing>Flow_SP1_012</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="GH_CreateQR" name="Tạo QR bổ sung">
+        <bpmn:documentation>Thiết kế TO-BE — Tạo QR bổ sung</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_011</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_013</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:receiveTask id="GH_VerifyQR" name="Chờ thanh toán được xác thực" messageRef="MsgGHPayment">
+        <bpmn:documentation>Thiết kế TO-BE — Chờ thanh toán được xác thực</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_013</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_014</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:boundaryEvent id="GH_TimerPay" name="Quá hạn trả" attachedToRef="GH_VerifyQR">
+        <bpmn:documentation>Thiết kế TO-BE — Quá hạn trả</bpmn:documentation>
+        <bpmn:outgoing>Flow_SP1_015</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TED_GH_TimerPay">
+          <bpmn:timeDuration>PT30M</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:serviceTask id="GH_Update" name="GH03c • Cập nhật thời hạn/lịch/giá">
+        <bpmn:documentation>Thiết kế TO-BE — GH03c • Cập nhật thời hạn/lịch/giá</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_012</bpmn:incoming>
+        <bpmn:incoming>Flow_SP1_014</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_016</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="GH_NotifyOK" name="GH03d • Gửi xác nhận gia hạn">
+        <bpmn:documentation>Thiết kế TO-BE — GH03d • Gửi xác nhận gia hạn</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_016</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_017</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="GH_NotifyOld" name="GH04 • Giữ hạn cũ/thông báo từ chối">
+        <bpmn:documentation>Thiết kế TO-BE — GH04 • Giữ hạn cũ/thông báo từ chối</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_005</bpmn:incoming>
+        <bpmn:incoming>Flow_SP1_008</bpmn:incoming>
+        <bpmn:incoming>Flow_SP1_010</bpmn:incoming>
+        <bpmn:incoming>Flow_SP1_015</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_018</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:exclusiveGateway id="GH_GMerge" name="Kết thúc SP1">
+        <bpmn:documentation>Thiết kế TO-BE — Kết thúc SP1</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_017</bpmn:incoming>
+        <bpmn:incoming>Flow_SP1_018</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP1_019</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:endEvent id="GH_END" name="Trở lại thuê">
+        <bpmn:documentation>Thiết kế TO-BE — Trở lại thuê</bpmn:documentation>
+        <bpmn:incoming>Flow_SP1_019</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_SP1_001" sourceRef="GH_START" targetRef="GH_GetRequest" />
+      <bpmn:sequenceFlow id="Flow_SP1_002" sourceRef="GH_GetRequest" targetRef="GH_Check" />
+      <bpmn:sequenceFlow id="Flow_SP1_003" sourceRef="GH_Check" targetRef="GH_GEligible" />
+      <bpmn:sequenceFlow id="Flow_SP1_004" name="Có" sourceRef="GH_GEligible" targetRef="GH_Offer" />
+      <bpmn:sequenceFlow id="Flow_SP1_005" name="Không" sourceRef="GH_GEligible" targetRef="GH_NotifyOld" />
+      <bpmn:sequenceFlow id="Flow_SP1_006" sourceRef="GH_Offer" targetRef="GH_WaitAccept" />
+      <bpmn:sequenceFlow id="Flow_SP1_007" sourceRef="GH_WaitAccept" targetRef="GH_GAccept" />
+      <bpmn:sequenceFlow id="Flow_SP1_008" name="Quá hạn" sourceRef="GH_Timer" targetRef="GH_NotifyOld" />
+      <bpmn:sequenceFlow id="Flow_SP1_009" name="Có" sourceRef="GH_GAccept" targetRef="GH_NeedPayment" />
+      <bpmn:sequenceFlow id="Flow_SP1_010" name="Không" sourceRef="GH_GAccept" targetRef="GH_NotifyOld" />
+      <bpmn:sequenceFlow id="Flow_SP1_011" name="Có" sourceRef="GH_NeedPayment" targetRef="GH_CreateQR" />
+      <bpmn:sequenceFlow id="Flow_SP1_012" name="Không" sourceRef="GH_NeedPayment" targetRef="GH_Update" />
+      <bpmn:sequenceFlow id="Flow_SP1_013" sourceRef="GH_CreateQR" targetRef="GH_VerifyQR" />
+      <bpmn:sequenceFlow id="Flow_SP1_014" sourceRef="GH_VerifyQR" targetRef="GH_Update" />
+      <bpmn:sequenceFlow id="Flow_SP1_015" name="Quá hạn" sourceRef="GH_TimerPay" targetRef="GH_NotifyOld" />
+      <bpmn:sequenceFlow id="Flow_SP1_016" sourceRef="GH_Update" targetRef="GH_NotifyOK" />
+      <bpmn:sequenceFlow id="Flow_SP1_017" sourceRef="GH_NotifyOK" targetRef="GH_GMerge" />
+      <bpmn:sequenceFlow id="Flow_SP1_018" sourceRef="GH_NotifyOld" targetRef="GH_GMerge" />
+      <bpmn:sequenceFlow id="Flow_SP1_019" sourceRef="GH_GMerge" targetRef="GH_END" />
+    </bpmn:subProcess>
+    <bpmn:intermediateCatchEvent id="M_CatchExtend" name="Nhận yêu cầu gia hạn">
+      <bpmn:documentation>Thiết kế TO-BE — Nhận yêu cầu gia hạn</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_032</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_033</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_M_CatchExtend" messageRef="MsgExtend" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:eventBasedGateway id="M_EG" name="Chờ sự kiện thuê">
+      <bpmn:documentation>Thiết kế TO-BE — Chờ sự kiện thuê</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_031</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_034</bpmn:incoming>
+      <bpmn:incoming>Flow_10cotiw</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_032</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_035</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_039</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="M_CatchIncident" name="Nhận báo sự cố">
+      <bpmn:documentation>Thiết kế TO-BE — Nhận báo sự cố</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_035</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_036</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_M_CatchIncident" messageRef="MsgIncident" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:subProcess id="SP2" name="SP2 • Hỗ trợ sự cố (TO-BE)">
+      <bpmn:incoming>Flow_Process_MotoCare_036</bpmn:incoming>
+      <bpmn:outgoing>Flow_10cotiw</bpmn:outgoing>
+      <bpmn:laneSet id="LS_SP2">
+        <bpmn:lane id="L_SC_QL" name="QUẢN LÝ">
+          <bpmn:flowNodeRef>SC_Escalate</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_GResolve</bpmn:flowNodeRef>
+        </bpmn:lane>
+        <bpmn:lane id="L_SC_NV" name="NHÂN VIÊN">
+          <bpmn:flowNodeRef>SC_Log</bpmn:flowNodeRef>
+        </bpmn:lane>
+        <bpmn:lane id="L_SC_SYS" name="HỆ THỐNG / ĐIỀU PHỐI">
+          <bpmn:flowNodeRef>SC_ReceiveAck</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_Dispatch</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_Select</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_Create</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_TryNext</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_Track</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_ReceiveResult</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_SendContinue</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_NotifyEarly</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_AckTimer</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_START</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_GAccept</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_GRetry</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_ResultTimer</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_SettleDecision</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_END_EARLY</bpmn:flowNodeRef>
+          <bpmn:flowNodeRef>SC_END_OK</bpmn:flowNodeRef>
+        </bpmn:lane>
+      </bpmn:laneSet>
+      <bpmn:startEvent id="SC_START" name="Bắt đầu SP2">
+        <bpmn:documentation>Thiết kế TO-BE — Bắt đầu SP2</bpmn:documentation>
+        <bpmn:outgoing>Flow_SP2_001</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="SC_Create" name="SC01 • Tạo phiếu từ vị trí/ảnh sự cố">
+        <bpmn:documentation>Thiết kế TO-BE — SC01 • Tạo phiếu từ vị trí/ảnh sự cố</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_001</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_002</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:businessRuleTask id="SC_Select" name="Chọn đối tác theo vùng/khả dụng">
+        <bpmn:documentation>Thiết kế TO-BE — Chọn đối tác theo vùng/khả dụng</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_002</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_003</bpmn:outgoing>
+      </bpmn:businessRuleTask>
+      <bpmn:serviceTask id="SC_Dispatch" name="SC02 • Gửi yêu cầu và mã sự cố">
+        <bpmn:documentation>Thiết kế TO-BE — SC02 • Gửi yêu cầu và mã sự cố</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_003</bpmn:incoming>
+        <bpmn:incoming>Flow_SP2_010</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_004</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:receiveTask id="SC_ReceiveAck" name="Chờ đối tác tiếp nhận" messageRef="MsgPartnerAck">
+        <bpmn:documentation>Thiết kế TO-BE — Chờ đối tác tiếp nhận</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_004</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_005</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:boundaryEvent id="SC_AckTimer" name="Quá hạn phản hồi" attachedToRef="SC_ReceiveAck">
+        <bpmn:documentation>Thiết kế TO-BE — Quá hạn phản hồi</bpmn:documentation>
+        <bpmn:outgoing>Flow_SP2_008</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TED_SC_AckTimer">
+          <bpmn:timeDuration>PT15M</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:exclusiveGateway id="SC_GAccept" name="Đã nhận hỗ trợ?">
+        <bpmn:documentation>Thiết kế TO-BE — Đã nhận hỗ trợ?</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_005</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_006</bpmn:outgoing>
+        <bpmn:outgoing>Flow_SP2_007</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="SC_TryNext" name="Tăng số thử, tìm đối tác khác">
+        <bpmn:documentation>Thiết kế TO-BE — Tăng số thử, tìm đối tác khác</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_007</bpmn:incoming>
+        <bpmn:incoming>Flow_SP2_008</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_009</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:exclusiveGateway id="SC_GRetry" name="Còn đối tác?">
+        <bpmn:documentation>Thiết kế TO-BE — Còn đối tác?</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_009</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_010</bpmn:outgoing>
+        <bpmn:outgoing>Flow_SP2_011</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="SC_Track" name="Theo dõi trạng thái hỗ trợ">
+        <bpmn:documentation>Thiết kế TO-BE — Theo dõi trạng thái hỗ trợ</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_006</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_012</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:receiveTask id="SC_ReceiveResult" name="Chờ xác nhận kết quả hỗ trợ" messageRef="MsgPartnerDone">
+        <bpmn:documentation>Thiết kế TO-BE — Chờ xác nhận kết quả hỗ trợ</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_012</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_013</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:boundaryEvent id="SC_ResultTimer" name="Quá hạn SLA" attachedToRef="SC_ReceiveResult">
+        <bpmn:documentation>Thiết kế TO-BE — Quá hạn SLA</bpmn:documentation>
+        <bpmn:outgoing>Flow_SP2_014</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TED_SC_ResultTimer">
+          <bpmn:timeDuration>PT2H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:boundaryEvent>
+      <bpmn:userTask id="SC_Escalate" name="QL xử lý vượt SLA / phương án khác">
+        <bpmn:documentation>Thiết kế TO-BE — QL xử lý vượt SLA / phương án khác</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_011</bpmn:incoming>
+        <bpmn:incoming>Flow_SP2_014</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_015</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:exclusiveGateway id="SC_GResolve" name="Có thể hỗ trợ?">
+        <bpmn:documentation>Thiết kế TO-BE — Có thể hỗ trợ?</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_015</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_016</bpmn:outgoing>
+        <bpmn:outgoing>Flow_SP2_017</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:userTask id="SC_Log" name="SC04 • Xác nhận thực tế, ghi phí hợp lệ">
+        <bpmn:documentation>Thiết kế TO-BE — SC04 • Xác nhận thực tế, ghi phí hợp lệ</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_013</bpmn:incoming>
+        <bpmn:incoming>Flow_SP2_016</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_018</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:exclusiveGateway id="SC_SettleDecision" name="Tiếp tục thuê?">
+        <bpmn:documentation>Thiết kế TO-BE — Tiếp tục thuê?</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_018</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_019</bpmn:outgoing>
+        <bpmn:outgoing>Flow_SP2_020</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:serviceTask id="SC_SendContinue" name="SC06 • Thông báo tiếp tục thuê">
+        <bpmn:documentation>Thiết kế TO-BE — SC06 • Thông báo tiếp tục thuê</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_019</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_021</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="SC_NotifyEarly" name="SC05/06 • Hướng dẫn trả xe sớm">
+        <bpmn:documentation>Thiết kế TO-BE — SC05/06 • Hướng dẫn trả xe sớm</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_017</bpmn:incoming>
+        <bpmn:incoming>Flow_SP2_020</bpmn:incoming>
+        <bpmn:outgoing>Flow_SP2_022</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="SC_END_OK" name="Tiếp tục">
+        <bpmn:documentation>Thiết kế TO-BE — Tiếp tục</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_021</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:endEvent id="SC_END_EARLY" name="Kết thúc sớm">
+        <bpmn:documentation>Thiết kế TO-BE — Kết thúc sớm</bpmn:documentation>
+        <bpmn:incoming>Flow_SP2_022</bpmn:incoming>
+        <bpmn:errorEventDefinition id="EED_SC_END_EARLY" errorRef="Error_EarlyReturn" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_SP2_001" sourceRef="SC_START" targetRef="SC_Create" />
+      <bpmn:sequenceFlow id="Flow_SP2_002" sourceRef="SC_Create" targetRef="SC_Select" />
+      <bpmn:sequenceFlow id="Flow_SP2_003" sourceRef="SC_Select" targetRef="SC_Dispatch" />
+      <bpmn:sequenceFlow id="Flow_SP2_004" sourceRef="SC_Dispatch" targetRef="SC_ReceiveAck" />
+      <bpmn:sequenceFlow id="Flow_SP2_005" sourceRef="SC_ReceiveAck" targetRef="SC_GAccept" />
+      <bpmn:sequenceFlow id="Flow_SP2_006" name="Có" sourceRef="SC_GAccept" targetRef="SC_Track" />
+      <bpmn:sequenceFlow id="Flow_SP2_007" name="Không" sourceRef="SC_GAccept" targetRef="SC_TryNext" />
+      <bpmn:sequenceFlow id="Flow_SP2_008" name="Quá hạn" sourceRef="SC_AckTimer" targetRef="SC_TryNext" />
+      <bpmn:sequenceFlow id="Flow_SP2_009" sourceRef="SC_TryNext" targetRef="SC_GRetry" />
+      <bpmn:sequenceFlow id="Flow_SP2_010" name="Còn" sourceRef="SC_GRetry" targetRef="SC_Dispatch" />
+      <bpmn:sequenceFlow id="Flow_SP2_011" name="Hết" sourceRef="SC_GRetry" targetRef="SC_Escalate" />
+      <bpmn:sequenceFlow id="Flow_SP2_012" sourceRef="SC_Track" targetRef="SC_ReceiveResult" />
+      <bpmn:sequenceFlow id="Flow_SP2_013" sourceRef="SC_ReceiveResult" targetRef="SC_Log" />
+      <bpmn:sequenceFlow id="Flow_SP2_014" name="Quá hạn" sourceRef="SC_ResultTimer" targetRef="SC_Escalate" />
+      <bpmn:sequenceFlow id="Flow_SP2_015" sourceRef="SC_Escalate" targetRef="SC_GResolve" />
+      <bpmn:sequenceFlow id="Flow_SP2_016" name="Có phương án" sourceRef="SC_GResolve" targetRef="SC_Log" />
+      <bpmn:sequenceFlow id="Flow_SP2_017" name="Không" sourceRef="SC_GResolve" targetRef="SC_NotifyEarly" />
+      <bpmn:sequenceFlow id="Flow_SP2_018" sourceRef="SC_Log" targetRef="SC_SettleDecision" />
+      <bpmn:sequenceFlow id="Flow_SP2_019" name="Có" sourceRef="SC_SettleDecision" targetRef="SC_SendContinue" />
+      <bpmn:sequenceFlow id="Flow_SP2_020" name="Không" sourceRef="SC_SettleDecision" targetRef="SC_NotifyEarly" />
+      <bpmn:sequenceFlow id="Flow_SP2_021" sourceRef="SC_SendContinue" targetRef="SC_END_OK" />
+      <bpmn:sequenceFlow id="Flow_SP2_022" sourceRef="SC_NotifyEarly" targetRef="SC_END_EARLY" />
+    </bpmn:subProcess>
+    <bpmn:businessRuleTask id="M_CalcFees" name="T07b • Tự động tính phí">
+      <bpmn:documentation>Thiết kế TO-BE — T07b • Tự động tính phí</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_046</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_047</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_048</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:userTask id="M_VerifyDamage" name="Xác minh hư hỏng và bằng chứng">
+      <bpmn:documentation>Thiết kế TO-BE — Xác minh hư hỏng và bằng chứng</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_045</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_047</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="M_ApproveAdjustment" name="Cập nhật kết luận/biên bản phí">
+      <bpmn:documentation>Thiết kế TO-BE — Cập nhật kết luận/biên bản phí</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_052</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_053</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:businessRuleTask id="M_NetDeposit" name="T08 • Đối trừ tiền cọc">
+      <bpmn:documentation>Thiết kế TO-BE — T08 • Đối trừ tiền cọc</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_054</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_055</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:receiveTask id="M_ReceiveReview" name="Chờ khách xác nhận bảng kê" messageRef="MsgReview">
+      <bpmn:documentation>Thiết kế TO-BE — Chờ khách xác nhận bảng kê</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_049</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_050</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_GDispute" name="Khách đồng ý?">
+      <bpmn:documentation>Thiết kế TO-BE — Khách đồng ý?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_050</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_051</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_054</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_Refund" name="T08b • Khởi tạo hoàn cọc dư">
+      <bpmn:documentation>Thiết kế TO-BE — T08b • Khởi tạo hoàn cọc dư</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_067</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_068</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_GBalance" name="Chênh lệch?">
+      <bpmn:documentation>Thiết kế TO-BE — Chênh lệch?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_055</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_056</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_067</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_070</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_VerifyExtra" name="Đối soát khoản thu bổ sung">
+      <bpmn:documentation>Thiết kế TO-BE — Đối soát khoản thu bổ sung</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_058</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_059</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:receiveTask id="M_ReceiveExtra" name="Chờ tiền bổ sung" messageRef="MsgExtra">
+      <bpmn:documentation>Thiết kế TO-BE — Chờ tiền bổ sung</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_057</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_064</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_058</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_GExtra" name="Thu thành công?">
+      <bpmn:documentation>Thiết kế TO-BE — Thu thành công?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_059</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_060</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_061</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_PayExtra" name="T08a • Tạo yêu cầu thu thêm">
+      <bpmn:documentation>Thiết kế TO-BE — T08a • Tạo yêu cầu thu thêm</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_056</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_057</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_GJoinBalance" name="Gộp quyết toán">
+      <bpmn:documentation>Thiết kế TO-BE — Gộp quyết toán</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_060</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_069</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_070</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_071</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_Settle" name="T08c • Ghi hoàn tất quyết toán">
+      <bpmn:documentation>Thiết kế TO-BE — T08c • Ghi hoàn tất quyết toán</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_071</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_072</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="M_RecordDebt" name="Ghi nhận công nợ chưa tất toán">
+      <bpmn:documentation>Thiết kế TO-BE — Ghi nhận công nợ chưa tất toán</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_065</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_066</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="M_END_DEBT" name="Chờ xử lý công nợ">
+      <bpmn:documentation>Thiết kế TO-BE — Chờ xử lý công nợ</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_066</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:receiveTask id="M_ConfirmRefund" name="Nhận xác nhận hoàn tiền" messageRef="MsgRefund">
+      <bpmn:documentation>Thiết kế TO-BE — Nhận xác nhận hoàn tiền</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_068</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_069</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:exclusiveGateway id="M_GExtraDecision" name="Khách thanh toán tiếp?">
+      <bpmn:documentation>Thiết kế TO-BE — Khách thanh toán tiếp?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_063</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_064</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_065</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="M_ManualExtra" name="Liên hệ/xử lý khoản chưa thanh toán">
+      <bpmn:documentation>Thiết kế TO-BE — Liên hệ/xử lý khoản chưa thanh toán</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_061</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_062</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_063</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="M_CheckReady" name="T09 • Đánh giá xe sau trả">
+      <bpmn:documentation>Thiết kế TO-BE — T09 • Đánh giá xe sau trả</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_072</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_073</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="M_GReady" name="Sẵn sàng?">
+      <bpmn:documentation>Thiết kế TO-BE — Sẵn sàng?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_073</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_074</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_075</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_Maintenance" name="T11/T11b • Lập phiếu bảo trì, khóa lịch">
+      <bpmn:documentation>Thiết kế TO-BE — T11/T11b • Lập phiếu bảo trì, khóa lịch</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_075</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_077</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="M_MarkReady" name="T10 • Trạng thái Sẵn sàng">
+      <bpmn:documentation>Thiết kế TO-BE — T10 • Trạng thái Sẵn sàng</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_074</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_076</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_GStatus" name="Đồng bộ hồ sơ">
+      <bpmn:documentation>Thiết kế TO-BE — Đồng bộ hồ sơ</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_076</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_077</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_078</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_Archive" name="T12 • Lưu hồ sơ tập trung">
+      <bpmn:documentation>Thiết kế TO-BE — T12 • Lưu hồ sơ tập trung</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_078</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_079</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="M_END" name="Hoàn tất">
+      <bpmn:documentation>Thiết kế TO-BE — Hoàn tất</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_079</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="M_ManualDeposit" name="Kiểm tra cọc ngoại lệ">
+      <bpmn:documentation>Thiết kế TO-BE — Kiểm tra cọc ngoại lệ</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_016</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_017</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="M_G03b" name="Xác nhận được?">
+      <bpmn:documentation>Thiết kế TO-BE — Xác nhận được?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_017</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_018</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_019</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="M_Resolve" name="T15 • Xử lý bất đồng/đề xuất điều chỉnh">
+      <bpmn:documentation>Thiết kế TO-BE — T15 • Xử lý bất đồng/đề xuất điều chỉnh</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_051</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_052</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="M_InspectPre" name="T04 • Kiểm tra kỹ thuật xe">
+      <bpmn:documentation>Thiết kế TO-BE — T04 • Kiểm tra kỹ thuật xe</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_024</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_028</bpmn:incoming>
+      <bpmn:incoming>Flow_0h3oqnj</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_025</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="M_Rework" name="T14 • Khắc phục/đổi xe">
+      <bpmn:documentation>Thiết kế TO-BE — T14 • Khắc phục/đổi xe</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_027</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_028</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="M_G04" name="Xe đạt?">
+      <bpmn:documentation>Thiết kế TO-BE — Xe đạt?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_025</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_026</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_027</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:manualTask id="M_ReceiveReturn" name="T06 • Nhận xe trả">
+      <bpmn:documentation>Thiết kế TO-BE — T06 • Nhận xe trả</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_041</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_042</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="M_ReturnMerge" name="Gộp trả xe">
+      <bpmn:documentation>Thiết kế TO-BE — Gộp trả xe</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_038</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_040</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_041</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:boundaryEvent id="M_EarlyBoundary" name="Trả xe sớm" attachedToRef="SP2">
+      <bpmn:documentation>Thiết kế TO-BE — Trả xe sớm</bpmn:documentation>
+      <bpmn:outgoing>Flow_Process_MotoCare_038</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="EED_M_EarlyBoundary" errorRef="Error_EarlyReturn" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="M_BoundExtra" name="Hết hạn thu thêm" attachedToRef="M_ReceiveExtra">
+      <bpmn:documentation>Thiết kế TO-BE — Hết hạn thu thêm</bpmn:documentation>
+      <bpmn:outgoing>Flow_Process_MotoCare_062</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TED_M_BoundExtra">
+        <bpmn:timeDuration>PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="M_BoundDeposit" name="Hết hạn cọc" attachedToRef="M_WaitDeposit">
+      <bpmn:documentation>Thiết kế TO-BE — Hết hạn cọc</bpmn:documentation>
+      <bpmn:outgoing>Flow_Process_MotoCare_013</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TED_M_BoundDeposit">
+        <bpmn:timeDuration>PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="M_BoundSign" name="Hết hạn ký" attachedToRef="M_WaitSign">
+      <bpmn:documentation>Thiết kế TO-BE — Hết hạn ký</bpmn:documentation>
+      <bpmn:outgoing>Flow_Process_MotoCare_022</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TED_M_BoundSign">
+        <bpmn:timeDuration>PT24H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_053" name="Gửi lại" sourceRef="M_ApproveAdjustment" targetRef="M_SendStatement" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_048" sourceRef="M_CalcFees" targetRef="M_SendStatement" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_049" sourceRef="M_SendStatement" targetRef="M_ReceiveReview" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_044" sourceRef="M_DigitalCompare" targetRef="M_GDamage" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_046" name="Không" sourceRef="M_GDamage" targetRef="M_CalcFees" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_045" name="Có" sourceRef="M_GDamage" targetRef="M_VerifyDamage" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_014" sourceRef="M_CheckDeposit" targetRef="M_G03" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_016" name="Sai/thiếu" sourceRef="M_G03" targetRef="M_ManualDeposit" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_015" name="Đủ" sourceRef="M_G03" targetRef="M_Contract" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_012" sourceRef="M_WaitDeposit" targetRef="M_CheckDeposit" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_018" name="Có" sourceRef="M_G03b" targetRef="M_Contract" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_020" sourceRef="M_Contract" targetRef="M_WaitSign" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_021" sourceRef="M_WaitSign" targetRef="M_SaveBooking" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_024" sourceRef="M_SaveBooking" targetRef="M_InspectPre" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_023" sourceRef="M_CancelRefund" targetRef="M_EndCancel" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_022" name="Quá hạn" sourceRef="M_BoundSign" targetRef="M_CancelRefund" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_019" name="Chưa" sourceRef="M_G03b" targetRef="M_WaitDeposit" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_011" sourceRef="M_CreateDeposit" targetRef="M_WaitDeposit" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_010" name="Có" sourceRef="M_G02" targetRef="M_CreateDeposit" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_007" sourceRef="M_CheckDocs" targetRef="M_G02" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_008" name="Không" sourceRef="M_G02" targetRef="M_AskDocs" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_006" sourceRef="M_SendTerms" targetRef="M_CheckDocs" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_009" sourceRef="M_AskDocs" targetRef="Gateway_0x0p273" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_005" name="Có" sourceRef="M_G01" targetRef="M_SendTerms" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_003" name="Không" sourceRef="M_G01" targetRef="M_RejectNoVehicle" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_004" sourceRef="M_RejectNoVehicle" targetRef="M_END_REJECT" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_013" name="Quá hạn" sourceRef="M_BoundDeposit" targetRef="M_END_REJECT" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_001" sourceRef="M_START" targetRef="M_CheckFleet" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_002" sourceRef="M_CheckFleet" targetRef="M_G01" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_042" sourceRef="M_ReceiveReturn" targetRef="M_CheckReturn" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_043" sourceRef="M_CheckReturn" targetRef="M_DigitalCompare" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_039" name="Trả xe" sourceRef="M_EG" targetRef="M_CatchReturn" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_040" sourceRef="M_CatchReturn" targetRef="M_ReturnMerge" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_033" sourceRef="M_CatchExtend" targetRef="SP1" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_034" name="Tiếp tục thuê" sourceRef="SP1" targetRef="M_EG" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_032" name="Gia hạn" sourceRef="M_EG" targetRef="M_CatchExtend" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_031" sourceRef="M_SetRented" targetRef="M_EG" />
+    <bpmn:sequenceFlow id="Flow_10cotiw" sourceRef="SP2" targetRef="M_EG" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_035" name="Sự cố" sourceRef="M_EG" targetRef="M_CatchIncident" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_036" sourceRef="M_CatchIncident" targetRef="SP2" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_030" sourceRef="M_Handover" targetRef="M_SetRented" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_047" sourceRef="M_VerifyDamage" targetRef="M_CalcFees" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_052" sourceRef="M_Resolve" targetRef="M_ApproveAdjustment" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_054" name="Có" sourceRef="M_GDispute" targetRef="M_NetDeposit" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_055" sourceRef="M_NetDeposit" targetRef="M_GBalance" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_050" sourceRef="M_ReceiveReview" targetRef="M_GDispute" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_051" name="Không" sourceRef="M_GDispute" targetRef="M_Resolve" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_067" name="Hoàn dư" sourceRef="M_GBalance" targetRef="M_Refund" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_068" sourceRef="M_Refund" targetRef="M_ConfirmRefund" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_070" name="Cân bằng" sourceRef="M_GBalance" targetRef="M_GJoinBalance" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_056" name="Thu thêm" sourceRef="M_GBalance" targetRef="M_PayExtra" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_058" sourceRef="M_ReceiveExtra" targetRef="M_VerifyExtra" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_059" sourceRef="M_VerifyExtra" targetRef="M_GExtra" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_064" name="Tiếp tục thanh toán" sourceRef="M_GExtraDecision" targetRef="M_ReceiveExtra" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_057" sourceRef="M_PayExtra" targetRef="M_ReceiveExtra" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_061" name="Chưa" sourceRef="M_GExtra" targetRef="M_ManualExtra" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_060" name="Đúng" sourceRef="M_GExtra" targetRef="M_GJoinBalance" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_069" sourceRef="M_ConfirmRefund" targetRef="M_GJoinBalance" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_071" sourceRef="M_GJoinBalance" targetRef="M_Settle" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_072" sourceRef="M_Settle" targetRef="M_CheckReady" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_065" name="Không / chưa thanh toán" sourceRef="M_GExtraDecision" targetRef="M_RecordDebt" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_066" sourceRef="M_RecordDebt" targetRef="M_END_DEBT" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_063" sourceRef="M_ManualExtra" targetRef="M_GExtraDecision" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_062" name="Quá hạn" sourceRef="M_BoundExtra" targetRef="M_ManualExtra" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_073" sourceRef="M_CheckReady" targetRef="M_GReady" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_075" name="Cần bảo trì" sourceRef="M_GReady" targetRef="M_Maintenance" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_074" name="Đạt" sourceRef="M_GReady" targetRef="M_MarkReady" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_077" sourceRef="M_Maintenance" targetRef="M_GStatus" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_076" sourceRef="M_MarkReady" targetRef="M_GStatus" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_078" sourceRef="M_GStatus" targetRef="M_Archive" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_079" sourceRef="M_Archive" targetRef="M_END" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_017" sourceRef="M_ManualDeposit" targetRef="M_G03b" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_028" name="Kiểm tra lại" sourceRef="M_Rework" targetRef="M_InspectPre" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_025" sourceRef="M_InspectPre" targetRef="M_G04" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_027" name="Chưa đạt" sourceRef="M_G04" targetRef="M_Rework" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_026" name="Đạt" sourceRef="M_G04" targetRef="M_Photo" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_029" sourceRef="M_Photo" targetRef="Activity_0w8x12e" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_041" sourceRef="M_ReturnMerge" targetRef="M_ReceiveReturn" />
+    <bpmn:sequenceFlow id="Flow_Process_MotoCare_038" sourceRef="M_EarlyBoundary" targetRef="M_ReturnMerge" />
+    <bpmn:sequenceFlow id="Flow_1kfvkjh" name="Không" sourceRef="Gateway_0x0p273" targetRef="M_CheckDocs" />
+    <bpmn:endEvent id="M_END_REJECT" name="Từ chối">
+      <bpmn:documentation>Thiết kế TO-BE — Từ chối</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_004</bpmn:incoming>
+      <bpmn:incoming>Flow_Process_MotoCare_013</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1yxvmm4" name="Có" sourceRef="Gateway_0x0p273" targetRef="M_EndCancel" />
+    <bpmn:serviceTask id="M_AskDocs" name="Yêu cầu bổ sung/điều chỉnh">
+      <bpmn:documentation>Thiết kế TO-BE — Yêu cầu bổ sung/điều chỉnh</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_008</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_009</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_0x0p273" name="Yêu cầu &#62;3?">
+      <bpmn:documentation>Thiết kế TO-BE — Hồ sơ hợp lệ?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_009</bpmn:incoming>
+      <bpmn:outgoing>Flow_1kfvkjh</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1yxvmm4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="M_EndCancel" name="Kết thúc hủy">
+      <bpmn:documentation>Thiết kế TO-BE — Kết thúc hủy</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_023</bpmn:incoming>
+      <bpmn:incoming>Flow_1yxvmm4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="M_Photo" name="T04b • Checklist + ảnh bàn giao">
+      <bpmn:documentation>Thiết kế TO-BE — T04b • Checklist + ảnh bàn giao</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_026</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_029</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:manualTask id="M_Handover" name="T05 • Bàn giao xe &#38; phụ kiện">
+      <bpmn:documentation>Thiết kế TO-BE — T05 • Bàn giao xe &amp; phụ kiện</bpmn:documentation>
+      <bpmn:incoming>Flow_0n3rdue</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_030</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:serviceTask id="M_SetRented" name="T05b • Cập nhật Đang thuê">
+      <bpmn:documentation>Thiết kế TO-BE — T05b • Cập nhật Đang thuê</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_030</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_031</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_0w8x12e" name="Gửi khách checklist và ảnh tình trạng xe">
+      <bpmn:documentation>Thiết kế TO-BE — T05b • Cập nhật Đang thuê</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_029</bpmn:incoming>
+      <bpmn:outgoing>Flow_108vp6x</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_0d0qzp6" name="Nhận phản hồi từ khách">
+      <bpmn:documentation>Thiết kế TO-BE — T05b • Cập nhật Đang thuê</bpmn:documentation>
+      <bpmn:incoming>Flow_108vp6x</bpmn:incoming>
+      <bpmn:outgoing>Flow_0s6nzas</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_0ixde68" name="Đồng ý nhận xe?">
+      <bpmn:documentation>Thiết kế TO-BE — Xe đạt?</bpmn:documentation>
+      <bpmn:incoming>Flow_0s6nzas</bpmn:incoming>
+      <bpmn:outgoing>Flow_0h3oqnj</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0n3rdue</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0s6nzas" sourceRef="Activity_0d0qzp6" targetRef="Gateway_0ixde68" />
+    <bpmn:sequenceFlow id="Flow_0h3oqnj" name="Không" sourceRef="Gateway_0ixde68" targetRef="M_InspectPre" />
+    <bpmn:sequenceFlow id="Flow_0n3rdue" name="Có" sourceRef="Gateway_0ixde68" targetRef="M_Handover" />
+    <bpmn:sequenceFlow id="Flow_108vp6x" sourceRef="Activity_0w8x12e" targetRef="Activity_0d0qzp6" />
+    <bpmn:exclusiveGateway id="M_GDamage" name="Có sai lệch?">
+      <bpmn:documentation>Thiết kế TO-BE — Có sai lệch?</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_044</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_045</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Process_MotoCare_046</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="M_DigitalCompare" name="T07 • Đối chiếu ảnh/giao–nhận">
+      <bpmn:documentation>Thiết kế TO-BE — T07 • Đối chiếu ảnh/giao–nhận</bpmn:documentation>
+      <bpmn:incoming>Flow_Process_MotoCare_043</bpmn:incoming>
+      <bpmn:outgoing>Flow_Process_MotoCare_044</bpmn:outgoing>
+    </bpmn:serviceTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_Process_MotoCare" name="01 • TO-BE toàn trình">
+    <bpmndi:BPMNPlane id="Plane_Process_MotoCare" bpmnElement="CollabMotoCareTOBE">
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_P_KH" bpmnElement="P_KH" isHorizontal="true">
+        <dc:Bounds x="167" y="58" width="12408" height="132" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_P_MotoCare" bpmnElement="P_MotoCare" isHorizontal="true">
+        <dc:Bounds x="167" y="215" width="12800" height="705" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_L_SYS" bpmnElement="L_SYS" isHorizontal="true">
+        <dc:Bounds x="190" y="240" width="12770" height="353" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_L_QL" bpmnElement="L_QL" isHorizontal="true">
+        <dc:Bounds x="190" y="800" width="12770" height="120" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_L_NV" bpmnElement="L_NV" isHorizontal="true">
+        <dc:Bounds x="190" y="593" width="12770" height="207" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_SendStatement" bpmnElement="M_SendStatement">
+        <dc:Bounds x="7330" y="308" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GDamage" bpmnElement="M_GDamage" isMarkerVisible="true">
+        <dc:Bounds x="6593" y="323" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="6582" y="305" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_G03" bpmnElement="M_G03" isMarkerVisible="true">
+        <dc:Bounds x="2793" y="263" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2782" y="245" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CheckDeposit" bpmnElement="M_CheckDeposit">
+        <dc:Bounds x="2430" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Contract" bpmnElement="M_Contract">
+        <dc:Bounds x="2980" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_SaveBooking" bpmnElement="M_SaveBooking">
+        <dc:Bounds x="3910" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CancelRefund" bpmnElement="M_CancelRefund">
+        <dc:Bounds x="3250" y="418" width="160" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_WaitDeposit" bpmnElement="M_WaitDeposit">
+        <dc:Bounds x="2100" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_WaitSign" bpmnElement="M_WaitSign">
+        <dc:Bounds x="3330" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CreateDeposit" bpmnElement="M_CreateDeposit">
+        <dc:Bounds x="1710" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_G02" bpmnElement="M_G02" isMarkerVisible="true">
+        <dc:Bounds x="1513" y="263" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1499" y="245" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CheckDocs" bpmnElement="M_CheckDocs">
+        <dc:Bounds x="1180" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_SendTerms" bpmnElement="M_SendTerms">
+        <dc:Bounds x="870" y="248" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_RejectNoVehicle" bpmnElement="M_RejectNoVehicle">
+        <dc:Bounds x="870" y="428" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_START" bpmnElement="M_START">
+        <dc:Bounds x="241" y="361" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="219" y="402" width="83" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CheckFleet" bpmnElement="M_CheckFleet">
+        <dc:Bounds x="410" y="338" width="180" height="84" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_G01" bpmnElement="M_G01" isMarkerVisible="true">
+        <dc:Bounds x="703" y="353" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="767" y="373" width="41" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CheckReturn" bpmnElement="M_CheckReturn">
+        <dc:Bounds x="6180" y="628" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CatchReturn" bpmnElement="M_CatchReturn">
+        <dc:Bounds x="5201" y="531" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5251" y="546" width="77" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_END_REJECT" bpmnElement="M_END_REJECT">
+        <dc:Bounds x="1201" y="451" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1196" y="492" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_AskDocs" bpmnElement="M_AskDocs">
+        <dc:Bounds x="1470" y="378" width="140" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1u9r65c" bpmnElement="Gateway_0x0p273" isMarkerVisible="true">
+        <dc:Bounds x="1513" y="523" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1548" y="573" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_EndCancel" bpmnElement="M_EndCancel">
+        <dc:Bounds x="3131" y="531" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3111" y="507" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Photo" bpmnElement="M_Photo">
+        <dc:Bounds x="4310" y="698" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Handover" bpmnElement="M_Handover">
+        <dc:Bounds x="4730" y="698" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_SetRented" bpmnElement="M_SetRented">
+        <dc:Bounds x="4780" y="378" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0ew7msp" bpmnElement="Activity_0w8x12e">
+        <dc:Bounds x="4310" y="338" width="180" height="84" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0mlbmrp" bpmnElement="Activity_0d0qzp6">
+        <dc:Bounds x="4540" y="338" width="180" height="84" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1tsznrh" bpmnElement="Gateway_0ixde68" isMarkerVisible="true">
+        <dc:Bounds x="4603" y="483" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4667" y="503" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_SP1" bpmnElement="SP1" isExpanded="false">
+        <dc:Bounds x="5630" y="250" width="175" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CatchExtend" bpmnElement="M_CatchExtend">
+        <dc:Bounds x="5481" y="271" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5461" y="310" width="77" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_EG" bpmnElement="M_EG" isMarkerVisible="true">
+        <dc:Bounds x="5073" y="393" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5024" y="436" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CatchIncident" bpmnElement="M_CatchIncident">
+        <dc:Bounds x="5361" y="401" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5395" y="393" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_SP2" bpmnElement="SP2" isExpanded="false">
+        <dc:Bounds x="5630" y="380" width="175" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_DigitalCompare" bpmnElement="M_DigitalCompare">
+        <dc:Bounds x="6180" y="308" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CalcFees" bpmnElement="M_CalcFees">
+        <dc:Bounds x="6980" y="308" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_VerifyDamage" bpmnElement="M_VerifyDamage">
+        <dc:Bounds x="6760" y="628" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ApproveAdjustment" bpmnElement="M_ApproveAdjustment">
+        <dc:Bounds x="7330" y="488" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_NetDeposit" bpmnElement="M_NetDeposit">
+        <dc:Bounds x="8060" y="308" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ReceiveReview" bpmnElement="M_ReceiveReview">
+        <dc:Bounds x="7630" y="308" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GDispute" bpmnElement="M_GDispute" isMarkerVisible="true">
+        <dc:Bounds x="7913" y="323" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="7899" y="305" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Refund" bpmnElement="M_Refund">
+        <dc:Bounds x="8510" y="498" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GBalance" bpmnElement="M_GBalance" isMarkerVisible="true">
+        <dc:Bounds x="8303" y="393" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8254" y="443" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_VerifyExtra" bpmnElement="M_VerifyExtra">
+        <dc:Bounds x="9340" y="258" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ReceiveExtra" bpmnElement="M_ReceiveExtra">
+        <dc:Bounds x="9020" y="258" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GExtra" bpmnElement="M_GExtra" isMarkerVisible="true">
+        <dc:Bounds x="9693" y="273" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9673" y="255" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_PayExtra" bpmnElement="M_PayExtra">
+        <dc:Bounds x="8640" y="258" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GJoinBalance" bpmnElement="M_GJoinBalance" isMarkerVisible="true">
+        <dc:Bounds x="10013" y="273" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="10069" y="257" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Settle" bpmnElement="M_Settle">
+        <dc:Bounds x="10360" y="258" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_RecordDebt" bpmnElement="M_RecordDebt">
+        <dc:Bounds x="10120" y="488" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_END_DEBT" bpmnElement="M_END_DEBT">
+        <dc:Bounds x="10191" y="371" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="10165" y="334" width="89" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ConfirmRefund" bpmnElement="M_ConfirmRefund">
+        <dc:Bounds x="8800" y="498" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GExtraDecision" bpmnElement="M_GExtraDecision" isMarkerVisible="true">
+        <dc:Bounds x="9583" y="683" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9524" y="718" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ManualExtra" bpmnElement="M_ManualExtra">
+        <dc:Bounds x="9130" y="658" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_CheckReady" bpmnElement="M_CheckReady">
+        <dc:Bounds x="10360" y="638" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GReady" bpmnElement="M_GReady" isMarkerVisible="true">
+        <dc:Bounds x="10723" y="653" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="10721" y="717" width="59" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Maintenance" bpmnElement="M_Maintenance">
+        <dc:Bounds x="10830" y="488" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_MarkReady" bpmnElement="M_MarkReady">
+        <dc:Bounds x="10830" y="258" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_GStatus" bpmnElement="M_GStatus" isMarkerVisible="true">
+        <dc:Bounds x="11153" y="383" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="11198" y="423" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Archive" bpmnElement="M_Archive">
+        <dc:Bounds x="11430" y="368" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_END" bpmnElement="M_END">
+        <dc:Bounds x="11801" y="391" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="11793" y="432" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ManualDeposit" bpmnElement="M_ManualDeposit">
+        <dc:Bounds x="2730" y="608" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_G03b" bpmnElement="M_G03b" isMarkerVisible="true">
+        <dc:Bounds x="3043" y="623" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3107" y="643" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Resolve" bpmnElement="M_Resolve">
+        <dc:Bounds x="7850" y="818" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_InspectPre" bpmnElement="M_InspectPre">
+        <dc:Bounds x="3450" y="698" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_Rework" bpmnElement="M_Rework">
+        <dc:Bounds x="3805" y="608" width="150" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_G04" bpmnElement="M_G04" isMarkerVisible="true">
+        <dc:Bounds x="4127" y="713" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4131" y="777" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ReceiveReturn" bpmnElement="M_ReceiveReturn">
+        <dc:Bounds x="5930" y="628" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_ReturnMerge" bpmnElement="M_ReturnMerge" isMarkerVisible="true">
+        <dc:Bounds x="5763" y="643" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5758" y="707" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_BoundSign" bpmnElement="M_BoundSign">
+        <dc:Bounds x="3311" y="313" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3336" y="371" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_BoundDeposit" bpmnElement="M_BoundDeposit">
+        <dc:Bounds x="2081" y="313" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2121" y="352" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_BoundExtra" bpmnElement="M_BoundExtra">
+        <dc:Bounds x="9001" y="323" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8944" y="312" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Process_MotoCare_Shape_M_EarlyBoundary" bpmnElement="M_EarlyBoundary">
+        <dc:Bounds x="5771" y="441" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5727" y="432" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_052" bpmnElement="Flow_Process_MotoCare_053">
+        <di:waypoint x="7420" y="488" />
+        <di:waypoint x="7420" y="392" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="7356" y="466" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_047" bpmnElement="Flow_Process_MotoCare_048">
+        <di:waypoint x="7160" y="350" />
+        <di:waypoint x="7330" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_048" bpmnElement="Flow_Process_MotoCare_049">
+        <di:waypoint x="7510" y="350" />
+        <di:waypoint x="7630" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_043" bpmnElement="Flow_Process_MotoCare_044">
+        <di:waypoint x="6360" y="350" />
+        <di:waypoint x="6593" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_045" bpmnElement="Flow_Process_MotoCare_046">
+        <di:waypoint x="6647" y="350" />
+        <di:waypoint x="6980" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="6648" y="333" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_044" bpmnElement="Flow_Process_MotoCare_045">
+        <di:waypoint x="6620" y="377" />
+        <di:waypoint x="6620" y="670" />
+        <di:waypoint x="6760" y="670" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="6624" y="387" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_013" bpmnElement="Flow_Process_MotoCare_014">
+        <di:waypoint x="2610" y="290" />
+        <di:waypoint x="2793" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_015" bpmnElement="Flow_Process_MotoCare_016">
+        <di:waypoint x="2820" y="317" />
+        <di:waypoint x="2820" y="608" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2750" y="322" width="59" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_014" bpmnElement="Flow_Process_MotoCare_015">
+        <di:waypoint x="2847" y="290" />
+        <di:waypoint x="2980" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2850" y="273" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_011" bpmnElement="Flow_Process_MotoCare_012">
+        <di:waypoint x="2280" y="290" />
+        <di:waypoint x="2430" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_017" bpmnElement="Flow_Process_MotoCare_018">
+        <di:waypoint x="3070" y="623" />
+        <di:waypoint x="3070" y="332" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3041" y="603" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_019" bpmnElement="Flow_Process_MotoCare_020">
+        <di:waypoint x="3160" y="290" />
+        <di:waypoint x="3330" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_020" bpmnElement="Flow_Process_MotoCare_021">
+        <di:waypoint x="3510" y="290" />
+        <di:waypoint x="3910" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_023" bpmnElement="Flow_Process_MotoCare_024">
+        <di:waypoint x="4000" y="332" />
+        <di:waypoint x="4000" y="390" />
+        <di:waypoint x="3490" y="390" />
+        <di:waypoint x="3490" y="698" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_022" bpmnElement="Flow_Process_MotoCare_023">
+        <di:waypoint x="3330" y="502" />
+        <di:waypoint x="3330" y="550" />
+        <di:waypoint x="3169" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_021" bpmnElement="Flow_Process_MotoCare_022">
+        <di:waypoint x="3330" y="351" />
+        <di:waypoint x="3330" y="418" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3316" y="355" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_018" bpmnElement="Flow_Process_MotoCare_019">
+        <di:waypoint x="3070" y="677" />
+        <di:waypoint x="3070" y="750" />
+        <di:waypoint x="2190" y="750" />
+        <di:waypoint x="2190" y="332" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3074" y="704" width="30" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_010" bpmnElement="Flow_Process_MotoCare_011">
+        <di:waypoint x="1890" y="290" />
+        <di:waypoint x="2100" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_009" bpmnElement="Flow_Process_MotoCare_010">
+        <di:waypoint x="1567" y="290" />
+        <di:waypoint x="1710" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1588" y="273" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_006" bpmnElement="Flow_Process_MotoCare_007">
+        <di:waypoint x="1360" y="290" />
+        <di:waypoint x="1513" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_007" bpmnElement="Flow_Process_MotoCare_008">
+        <di:waypoint x="1540" y="317" />
+        <di:waypoint x="1540" y="378" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1542" y="352" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_005" bpmnElement="Flow_Process_MotoCare_006">
+        <di:waypoint x="1050" y="290" />
+        <di:waypoint x="1180" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_008" bpmnElement="Flow_Process_MotoCare_009">
+        <di:waypoint x="1540" y="462" />
+        <di:waypoint x="1540" y="523" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_004" bpmnElement="Flow_Process_MotoCare_005">
+        <di:waypoint x="730" y="353" />
+        <di:waypoint x="730" y="290" />
+        <di:waypoint x="870" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="734" y="273" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_002" bpmnElement="Flow_Process_MotoCare_003">
+        <di:waypoint x="730" y="407" />
+        <di:waypoint x="730" y="470" />
+        <di:waypoint x="870" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="690" y="418" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_003" bpmnElement="Flow_Process_MotoCare_004">
+        <di:waypoint x="1050" y="470" />
+        <di:waypoint x="1201" y="470" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_012" bpmnElement="Flow_Process_MotoCare_013">
+        <di:waypoint x="2100" y="351" />
+        <di:waypoint x="2100" y="470" />
+        <di:waypoint x="1239" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2104" y="393" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_000" bpmnElement="Flow_Process_MotoCare_001">
+        <di:waypoint x="279" y="380" />
+        <di:waypoint x="410" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_001" bpmnElement="Flow_Process_MotoCare_002">
+        <di:waypoint x="590" y="380" />
+        <di:waypoint x="703" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_041" bpmnElement="Flow_Process_MotoCare_042">
+        <di:waypoint x="6110" y="670" />
+        <di:waypoint x="6180" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_042" bpmnElement="Flow_Process_MotoCare_043">
+        <di:waypoint x="6270" y="628" />
+        <di:waypoint x="6270" y="392" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_038" bpmnElement="Flow_Process_MotoCare_039">
+        <di:waypoint x="5100" y="447" />
+        <di:waypoint x="5100" y="550" />
+        <di:waypoint x="5201" y="550" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5119" y="536" width="41" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_039" bpmnElement="Flow_Process_MotoCare_040">
+        <di:waypoint x="5220" y="569" />
+        <di:waypoint x="5220" y="670" />
+        <di:waypoint x="5763" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_032" bpmnElement="Flow_Process_MotoCare_033">
+        <di:waypoint x="5519" y="290" />
+        <di:waypoint x="5630" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_033" bpmnElement="Flow_Process_MotoCare_034">
+        <di:waypoint x="5718" y="330" />
+        <di:waypoint x="5718" y="360" />
+        <di:waypoint x="5120" y="360" />
+        <di:waypoint x="5120" y="413" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5118" y="343" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_031" bpmnElement="Flow_Process_MotoCare_032">
+        <di:waypoint x="5100" y="393" />
+        <di:waypoint x="5100" y="290" />
+        <di:waypoint x="5481" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5116" y="273" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_030" bpmnElement="Flow_Process_MotoCare_031">
+        <di:waypoint x="4960" y="420" />
+        <di:waypoint x="5073" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10cotiw_di" bpmnElement="Flow_10cotiw">
+        <di:waypoint x="5718" y="460" />
+        <di:waypoint x="5718" y="480" />
+        <di:waypoint x="5120" y="480" />
+        <di:waypoint x="5120" y="427" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_034" bpmnElement="Flow_Process_MotoCare_035">
+        <di:waypoint x="5127" y="420" />
+        <di:waypoint x="5361" y="420" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5132" y="403" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_035" bpmnElement="Flow_Process_MotoCare_036">
+        <di:waypoint x="5399" y="420" />
+        <di:waypoint x="5630" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_029" bpmnElement="Flow_Process_MotoCare_030">
+        <di:waypoint x="4870" y="698" />
+        <di:waypoint x="4870" y="462" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_046" bpmnElement="Flow_Process_MotoCare_047">
+        <di:waypoint x="6940" y="670" />
+        <di:waypoint x="7070" y="670" />
+        <di:waypoint x="7070" y="392" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_051" bpmnElement="Flow_Process_MotoCare_052">
+        <di:waypoint x="7850" y="860" />
+        <di:waypoint x="7420" y="860" />
+        <di:waypoint x="7420" y="572" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_053" bpmnElement="Flow_Process_MotoCare_054">
+        <di:waypoint x="7967" y="350" />
+        <di:waypoint x="8060" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="7978" y="333" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_054" bpmnElement="Flow_Process_MotoCare_055">
+        <di:waypoint x="8150" y="392" />
+        <di:waypoint x="8150" y="420" />
+        <di:waypoint x="8303" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_049" bpmnElement="Flow_Process_MotoCare_050">
+        <di:waypoint x="7810" y="350" />
+        <di:waypoint x="7913" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_050" bpmnElement="Flow_Process_MotoCare_051">
+        <di:waypoint x="7940" y="377" />
+        <di:waypoint x="7940" y="818" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="7952" y="396" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_066" bpmnElement="Flow_Process_MotoCare_067">
+        <di:waypoint x="8330" y="447" />
+        <di:waypoint x="8330" y="540" />
+        <di:waypoint x="8510" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8368" y="553" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_067" bpmnElement="Flow_Process_MotoCare_068">
+        <di:waypoint x="8690" y="540" />
+        <di:waypoint x="8800" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_069" bpmnElement="Flow_Process_MotoCare_070">
+        <di:waypoint x="8357" y="420" />
+        <di:waypoint x="9890" y="420" />
+        <di:waypoint x="10025" y="312" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8372" y="403" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_055" bpmnElement="Flow_Process_MotoCare_056">
+        <di:waypoint x="8330" y="393" />
+        <di:waypoint x="8330" y="300" />
+        <di:waypoint x="8640" y="300" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8372" y="283" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_057" bpmnElement="Flow_Process_MotoCare_058">
+        <di:waypoint x="9200" y="300" />
+        <di:waypoint x="9340" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_058" bpmnElement="Flow_Process_MotoCare_059">
+        <di:waypoint x="9520" y="300" />
+        <di:waypoint x="9693" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_063" bpmnElement="Flow_Process_MotoCare_064">
+        <di:waypoint x="9610" y="683" />
+        <di:waypoint x="9610" y="490" />
+        <di:waypoint x="9110" y="490" />
+        <di:waypoint x="9110" y="342" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9615" y="656" width="89" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_056" bpmnElement="Flow_Process_MotoCare_057">
+        <di:waypoint x="8820" y="300" />
+        <di:waypoint x="9020" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_060" bpmnElement="Flow_Process_MotoCare_061">
+        <di:waypoint x="9720" y="327" />
+        <di:waypoint x="9720" y="620" />
+        <di:waypoint x="9220" y="620" />
+        <di:waypoint x="9220" y="658" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9724" y="338" width="30" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_059" bpmnElement="Flow_Process_MotoCare_060">
+        <di:waypoint x="9747" y="300" />
+        <di:waypoint x="10013" y="300" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9744" y="283" width="30" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_068" bpmnElement="Flow_Process_MotoCare_069">
+        <di:waypoint x="8980" y="540" />
+        <di:waypoint x="10040" y="540" />
+        <di:waypoint x="10040" y="327" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_070" bpmnElement="Flow_Process_MotoCare_071">
+        <di:waypoint x="10067" y="300" />
+        <di:waypoint x="10360" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_071" bpmnElement="Flow_Process_MotoCare_072">
+        <di:waypoint x="10450" y="342" />
+        <di:waypoint x="10450" y="638" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_064" bpmnElement="Flow_Process_MotoCare_065">
+        <di:waypoint x="9637" y="710" />
+        <di:waypoint x="10210" y="710" />
+        <di:waypoint x="10210" y="572" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9966" y="716" width="77" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_065" bpmnElement="Flow_Process_MotoCare_066">
+        <di:waypoint x="10210" y="488" />
+        <di:waypoint x="10210" y="409" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_062" bpmnElement="Flow_Process_MotoCare_063">
+        <di:waypoint x="9310" y="710" />
+        <di:waypoint x="9583" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_061" bpmnElement="Flow_Process_MotoCare_062">
+        <di:waypoint x="9020" y="361" />
+        <di:waypoint x="9020" y="700" />
+        <di:waypoint x="9130" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9056" y="683" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_072" bpmnElement="Flow_Process_MotoCare_073">
+        <di:waypoint x="10540" y="680" />
+        <di:waypoint x="10723" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_074" bpmnElement="Flow_Process_MotoCare_075">
+        <di:waypoint x="10777" y="680" />
+        <di:waypoint x="10920" y="680" />
+        <di:waypoint x="10920" y="572" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="10824" y="693" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_073" bpmnElement="Flow_Process_MotoCare_074">
+        <di:waypoint x="10750" y="653" />
+        <di:waypoint x="10750" y="300" />
+        <di:waypoint x="10830" y="300" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="10754" y="627" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_076" bpmnElement="Flow_Process_MotoCare_077">
+        <di:waypoint x="11010" y="530" />
+        <di:waypoint x="11180" y="530" />
+        <di:waypoint x="11180" y="437" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_075" bpmnElement="Flow_Process_MotoCare_076">
+        <di:waypoint x="11010" y="300" />
+        <di:waypoint x="11180" y="300" />
+        <di:waypoint x="11180" y="383" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_077" bpmnElement="Flow_Process_MotoCare_078">
+        <di:waypoint x="11207" y="410" />
+        <di:waypoint x="11430" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_078" bpmnElement="Flow_Process_MotoCare_079">
+        <di:waypoint x="11610" y="410" />
+        <di:waypoint x="11801" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_016" bpmnElement="Flow_Process_MotoCare_017">
+        <di:waypoint x="2910" y="650" />
+        <di:waypoint x="3043" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_027" bpmnElement="Flow_Process_MotoCare_028">
+        <di:waypoint x="3805" y="650" />
+        <di:waypoint x="3580" y="650" />
+        <di:waypoint x="3580" y="698" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3664" y="633" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_024" bpmnElement="Flow_Process_MotoCare_025">
+        <di:waypoint x="3630" y="740" />
+        <di:waypoint x="4127" y="740" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_026" bpmnElement="Flow_Process_MotoCare_027">
+        <di:waypoint x="4154" y="713" />
+        <di:waypoint x="4154" y="650" />
+        <di:waypoint x="3955" y="650" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4157" y="670" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_025" bpmnElement="Flow_Process_MotoCare_026">
+        <di:waypoint x="4181" y="740" />
+        <di:waypoint x="4310" y="740" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4234" y="753" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_028" bpmnElement="Flow_Process_MotoCare_029">
+        <di:waypoint x="4400" y="698" />
+        <di:waypoint x="4400" y="422" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_040" bpmnElement="Flow_Process_MotoCare_041">
+        <di:waypoint x="5817" y="670" />
+        <di:waypoint x="5930" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_Edge_037" bpmnElement="Flow_Process_MotoCare_038">
+        <di:waypoint x="5790" y="479" />
+        <di:waypoint x="5790" y="643" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1kfvkjh_di" bpmnElement="Flow_1kfvkjh">
+        <di:waypoint x="1513" y="550" />
+        <di:waypoint x="1290" y="550" />
+        <di:waypoint x="1290" y="332" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1386" y="532" width="32" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1yxvmm4_di" bpmnElement="Flow_1yxvmm4">
+        <di:waypoint x="1567" y="550" />
+        <di:waypoint x="3131" y="550" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1679" y="532" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0s6nzas_di" bpmnElement="Flow_0s6nzas">
+        <di:waypoint x="4630" y="422" />
+        <di:waypoint x="4630" y="483" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0h3oqnj_di" bpmnElement="Flow_0h3oqnj">
+        <di:waypoint x="4603" y="510" />
+        <di:waypoint x="3540" y="510" />
+        <di:waypoint x="3540" y="698" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4494" y="492" width="32" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0n3rdue_di" bpmnElement="Flow_0n3rdue">
+        <di:waypoint x="4630" y="537" />
+        <di:waypoint x="4630" y="740" />
+        <di:waypoint x="4730" y="740" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4638" y="635.5" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_108vp6x_di" bpmnElement="Flow_108vp6x">
+        <di:waypoint x="4490" y="380" />
+        <di:waypoint x="4540" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_000" bpmnElement="MsgFlow_000">
+        <di:waypoint x="260" y="190" />
+        <di:waypoint x="260" y="361" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="264" y="196" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_001" bpmnElement="MsgFlow_001">
+        <di:waypoint x="960" y="248" />
+        <di:waypoint x="960" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="964" y="225" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_002" bpmnElement="MsgFlow_002">
+        <di:waypoint x="1270" y="190" />
+        <di:waypoint x="1270" y="248" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1274" y="188" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_003" bpmnElement="MsgFlow_003">
+        <di:waypoint x="1540" y="378" />
+        <di:waypoint x="1540" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1493" y="323" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_004" bpmnElement="MsgFlow_004">
+        <di:waypoint x="1800" y="248" />
+        <di:waypoint x="1800" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1804" y="235" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_005" bpmnElement="MsgFlow_005">
+        <di:waypoint x="2190" y="190" />
+        <di:waypoint x="2190" y="248" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2194" y="213" width="89" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_006" bpmnElement="MsgFlow_006">
+        <di:waypoint x="3070" y="248" />
+        <di:waypoint x="3070" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3074" y="235" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_007" bpmnElement="MsgFlow_007">
+        <di:waypoint x="3420" y="190" />
+        <di:waypoint x="3420" y="248" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3424" y="188" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_008" bpmnElement="MsgFlow_008">
+        <di:waypoint x="4760" y="698" />
+        <di:waypoint x="4760" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4764" y="673" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_009" bpmnElement="MsgFlow_009">
+        <di:waypoint x="5500" y="190" />
+        <di:waypoint x="5500" y="271" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5504" y="196" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_010" bpmnElement="MsgFlow_010">
+        <di:waypoint x="5380" y="190" />
+        <di:waypoint x="5380" y="401" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5310" y="199" width="59" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_011" bpmnElement="MsgFlow_011">
+        <di:waypoint x="5220" y="190" />
+        <di:waypoint x="5220" y="531" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="5127" y="199" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_012" bpmnElement="MsgFlow_012">
+        <di:waypoint x="7420" y="308" />
+        <di:waypoint x="7420" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="7424" y="289" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_013" bpmnElement="MsgFlow_013">
+        <di:waypoint x="7720" y="190" />
+        <di:waypoint x="7720" y="308" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="7724" y="250" width="100" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_014" bpmnElement="MsgFlow_014">
+        <di:waypoint x="8730" y="258" />
+        <di:waypoint x="8730" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8734" y="220" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_015" bpmnElement="MsgFlow_015">
+        <di:waypoint x="9110" y="190" />
+        <di:waypoint x="9110" y="258" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="9114" y="194" width="106" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_016" bpmnElement="MsgFlow_016">
+        <di:waypoint x="8600" y="498" />
+        <di:waypoint x="8600" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8543" y="466" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Process_MotoCare_MessageEdge_017" bpmnElement="MsgFlow_017">
+        <di:waypoint x="8890" y="190" />
+        <di:waypoint x="8890" y="498" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="8894" y="196" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1f2gw83_di" bpmnElement="Flow_1f2gw83">
+        <di:waypoint x="4400" y="338" />
+        <di:waypoint x="4400" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4398" y="311" width="83" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1t23qt7_di" bpmnElement="Flow_1t23qt7">
+        <di:waypoint x="4630" y="190" />
+        <di:waypoint x="4630" y="338" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Diagram_SP1" name="02 • SP1 gia hạn">
+    <bpmndi:BPMNPlane id="Plane_SP1" bpmnElement="SP1" bounds="[object Object]">
+      <bpmndi:BPMNShape id="SP1_Shape_L_GH_SYS" bpmnElement="L_GH_SYS" isHorizontal="true">
+        <dc:Bounds x="188" y="320" width="3902" height="330" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_L_GH_NV" bpmnElement="L_GH_NV" isHorizontal="true">
+        <dc:Bounds x="188" y="650" width="3902" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_START" bpmnElement="GH_START">
+        <dc:Bounds x="251" y="491" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="235" y="532" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_GetRequest" bpmnElement="GH_GetRequest">
+        <dc:Bounds x="480" y="468" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_Check" bpmnElement="GH_Check">
+        <dc:Bounds x="810" y="468" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_GEligible" bpmnElement="GH_GEligible" isMarkerVisible="true">
+        <dc:Bounds x="1143" y="483" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1193" y="503" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_Offer" bpmnElement="GH_Offer">
+        <dc:Bounds x="1220" y="338" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_WaitAccept" bpmnElement="GH_WaitAccept">
+        <dc:Bounds x="1530" y="338" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_GAccept" bpmnElement="GH_GAccept" isMarkerVisible="true">
+        <dc:Bounds x="1853" y="353" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1839" y="335" width="83" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_NeedPayment" bpmnElement="GH_NeedPayment" isMarkerVisible="true">
+        <dc:Bounds x="2043" y="353" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2023" y="335" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_CreateQR" bpmnElement="GH_CreateQR">
+        <dc:Bounds x="2250" y="338" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_VerifyQR" bpmnElement="GH_VerifyQR">
+        <dc:Bounds x="2570" y="338" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_Update" bpmnElement="GH_Update">
+        <dc:Bounds x="3000" y="338" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_NotifyOK" bpmnElement="GH_NotifyOK">
+        <dc:Bounds x="3340" y="338" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_NotifyOld" bpmnElement="GH_NotifyOld">
+        <dc:Bounds x="2650" y="558" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_GMerge" bpmnElement="GH_GMerge" isMarkerVisible="true">
+        <dc:Bounds x="3703" y="353" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3691" y="329" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_END" bpmnElement="GH_END">
+        <dc:Bounds x="3961" y="361" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3942" y="402" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_TimerPay" bpmnElement="GH_TimerPay">
+        <dc:Bounds x="2721" y="401" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2654" y="403" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP1_Shape_GH_Timer" bpmnElement="GH_Timer">
+        <dc:Bounds x="1681" y="401" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1593" y="403" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SP1_Edge_000" bpmnElement="Flow_SP1_001">
+        <di:waypoint x="289" y="510" />
+        <di:waypoint x="480" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_001" bpmnElement="Flow_SP1_002">
+        <di:waypoint x="660" y="510" />
+        <di:waypoint x="810" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_002" bpmnElement="Flow_SP1_003">
+        <di:waypoint x="990" y="510" />
+        <di:waypoint x="1143" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_003" bpmnElement="Flow_SP1_004">
+        <di:waypoint x="1170" y="483" />
+        <di:waypoint x="1170" y="380" />
+        <di:waypoint x="1220" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1181" y="363" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_004" bpmnElement="Flow_SP1_005">
+        <di:waypoint x="1170" y="537" />
+        <di:waypoint x="1170" y="630" />
+        <di:waypoint x="2650" y="630" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1182" y="613" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_005" bpmnElement="Flow_SP1_006">
+        <di:waypoint x="1400" y="380" />
+        <di:waypoint x="1530" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_006" bpmnElement="Flow_SP1_007">
+        <di:waypoint x="1710" y="380" />
+        <di:waypoint x="1853" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_007" bpmnElement="Flow_SP1_008">
+        <di:waypoint x="1700" y="439" />
+        <di:waypoint x="1700" y="600" />
+        <di:waypoint x="2650" y="600" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1730" y="603" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_008" bpmnElement="Flow_SP1_009">
+        <di:waypoint x="1907" y="380" />
+        <di:waypoint x="2043" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1937" y="363" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_009" bpmnElement="Flow_SP1_010">
+        <di:waypoint x="1880" y="407" />
+        <di:waypoint x="1880" y="570" />
+        <di:waypoint x="2650" y="570" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1884" y="441" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_010" bpmnElement="Flow_SP1_011">
+        <di:waypoint x="2097" y="380" />
+        <di:waypoint x="2250" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2107" y="363" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_011" bpmnElement="Flow_SP1_012">
+        <di:waypoint x="2070" y="407" />
+        <di:waypoint x="2070" y="510" />
+        <di:waypoint x="3090" y="510" />
+        <di:waypoint x="3090" y="422" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2099" y="456" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_012" bpmnElement="Flow_SP1_013">
+        <di:waypoint x="2430" y="380" />
+        <di:waypoint x="2570" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_013" bpmnElement="Flow_SP1_014">
+        <di:waypoint x="2750" y="380" />
+        <di:waypoint x="3000" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_014" bpmnElement="Flow_SP1_015">
+        <di:waypoint x="2740" y="439" />
+        <di:waypoint x="2740" y="558" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2686" y="470" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_015" bpmnElement="Flow_SP1_016">
+        <di:waypoint x="3180" y="380" />
+        <di:waypoint x="3340" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_016" bpmnElement="Flow_SP1_017">
+        <di:waypoint x="3520" y="380" />
+        <di:waypoint x="3703" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_017" bpmnElement="Flow_SP1_018">
+        <di:waypoint x="2830" y="600" />
+        <di:waypoint x="3730" y="600" />
+        <di:waypoint x="3730" y="407" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP1_Edge_018" bpmnElement="Flow_SP1_019">
+        <di:waypoint x="3757" y="380" />
+        <di:waypoint x="3961" y="380" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Diagram_SP2" name="03 • SP2 sự cố">
+    <bpmndi:BPMNPlane id="Plane_SP2" bpmnElement="SP2" bounds="[object Object]">
+      <bpmndi:BPMNShape id="SP2_Shape_L_SC_SYS" bpmnElement="L_SC_SYS" isHorizontal="true">
+        <dc:Bounds x="158" y="80" width="4372" height="378" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_L_SC_NV" bpmnElement="L_SC_NV" isHorizontal="true">
+        <dc:Bounds x="158" y="458" width="4372" height="147" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_L_SC_QL" bpmnElement="L_SC_QL" isHorizontal="true">
+        <dc:Bounds x="158" y="605" width="4372" height="165" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_START" bpmnElement="SC_START">
+        <dc:Bounds x="221" y="211" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="205" y="252" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_Create" bpmnElement="SC_Create">
+        <dc:Bounds x="400" y="188" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_Select" bpmnElement="SC_Select">
+        <dc:Bounds x="710" y="188" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_Dispatch" bpmnElement="SC_Dispatch">
+        <dc:Bounds x="990" y="188" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_ReceiveAck" bpmnElement="SC_ReceiveAck">
+        <dc:Bounds x="1210" y="188" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_GAccept" bpmnElement="SC_GAccept" isMarkerVisible="true">
+        <dc:Bounds x="1523" y="203" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1503" y="185" width="94" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_TryNext" bpmnElement="SC_TryNext">
+        <dc:Bounds x="1470" y="368" width="160" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_GRetry" bpmnElement="SC_GRetry" isMarkerVisible="true">
+        <dc:Bounds x="1928" y="383" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1917" y="440" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_Track" bpmnElement="SC_Track">
+        <dc:Bounds x="1730" y="188" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_ReceiveResult" bpmnElement="SC_ReceiveResult">
+        <dc:Bounds x="2050" y="188" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_Escalate" bpmnElement="SC_Escalate">
+        <dc:Bounds x="2130" y="648" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_GResolve" bpmnElement="SC_GResolve" isMarkerVisible="true">
+        <dc:Bounds x="2533" y="663" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2516" y="720" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_Log" bpmnElement="SC_Log">
+        <dc:Bounds x="2300" y="478" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_SettleDecision" bpmnElement="SC_SettleDecision" isMarkerVisible="true">
+        <dc:Bounds x="2743" y="263" width="54" height="54" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2665" y="263" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_SendContinue" bpmnElement="SC_SendContinue">
+        <dc:Bounds x="2970" y="118" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_NotifyEarly" bpmnElement="SC_NotifyEarly">
+        <dc:Bounds x="2970" y="348" width="180" height="84" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_END_OK" bpmnElement="SC_END_OK">
+        <dc:Bounds x="3291" y="141" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3283" y="123" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_END_EARLY" bpmnElement="SC_END_EARLY">
+        <dc:Bounds x="3291" y="371" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3272" y="412" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_ResultTimer" bpmnElement="SC_ResultTimer">
+        <dc:Bounds x="2201" y="251" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2242" y="262" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP2_Shape_SC_AckTimer" bpmnElement="SC_AckTimer">
+        <dc:Bounds x="1361" y="251" width="38" height="38" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1342" y="292" width="77" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SP2_Edge_000" bpmnElement="Flow_SP2_001">
+        <di:waypoint x="259" y="230" />
+        <di:waypoint x="400" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_001" bpmnElement="Flow_SP2_002">
+        <di:waypoint x="580" y="230" />
+        <di:waypoint x="710" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_002" bpmnElement="Flow_SP2_003">
+        <di:waypoint x="890" y="230" />
+        <di:waypoint x="990" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_003" bpmnElement="Flow_SP2_004">
+        <di:waypoint x="1170" y="230" />
+        <di:waypoint x="1210" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_004" bpmnElement="Flow_SP2_005">
+        <di:waypoint x="1390" y="230" />
+        <di:waypoint x="1523" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_005" bpmnElement="Flow_SP2_006">
+        <di:waypoint x="1577" y="230" />
+        <di:waypoint x="1730" y="230" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1580" y="213" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_006" bpmnElement="Flow_SP2_007">
+        <di:waypoint x="1550" y="257" />
+        <di:waypoint x="1550" y="368" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1510" y="314" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_007" bpmnElement="Flow_SP2_008">
+        <di:waypoint x="1380" y="289" />
+        <di:waypoint x="1380" y="440" />
+        <di:waypoint x="1470" y="440" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1363" y="416" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_008" bpmnElement="Flow_SP2_009">
+        <di:waypoint x="1630" y="410" />
+        <di:waypoint x="1928" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_009" bpmnElement="Flow_SP2_010">
+        <di:waypoint x="1955" y="383" />
+        <di:waypoint x="1955" y="110" />
+        <di:waypoint x="1080" y="110" />
+        <di:waypoint x="1080" y="188" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1959" y="338" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_010" bpmnElement="Flow_SP2_011">
+        <di:waypoint x="1982" y="410" />
+        <di:waypoint x="2080" y="410" />
+        <di:waypoint x="2080" y="690" />
+        <di:waypoint x="2130" y="690" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1989" y="393" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_011" bpmnElement="Flow_SP2_012">
+        <di:waypoint x="1910" y="230" />
+        <di:waypoint x="2050" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_012" bpmnElement="Flow_SP2_013">
+        <di:waypoint x="2230" y="230" />
+        <di:waypoint x="2390" y="230" />
+        <di:waypoint x="2390" y="478" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_013" bpmnElement="Flow_SP2_014">
+        <di:waypoint x="2220" y="289" />
+        <di:waypoint x="2220" y="648" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2224" y="296" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_014" bpmnElement="Flow_SP2_015">
+        <di:waypoint x="2310" y="690" />
+        <di:waypoint x="2533" y="690" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_015" bpmnElement="Flow_SP2_016">
+        <di:waypoint x="2560" y="663" />
+        <di:waypoint x="2560" y="540" />
+        <di:waypoint x="2480" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2564" y="633" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_016" bpmnElement="Flow_SP2_017">
+        <di:waypoint x="2587" y="690" />
+        <di:waypoint x="3060" y="690" />
+        <di:waypoint x="3060" y="432" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2612" y="713" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_017" bpmnElement="Flow_SP2_018">
+        <di:waypoint x="2480" y="500" />
+        <di:waypoint x="2650" y="500" />
+        <di:waypoint x="2650" y="290" />
+        <di:waypoint x="2743" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_018" bpmnElement="Flow_SP2_019">
+        <di:waypoint x="2770" y="263" />
+        <di:waypoint x="2770" y="160" />
+        <di:waypoint x="2970" y="160" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2804" y="143" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_019" bpmnElement="Flow_SP2_020">
+        <di:waypoint x="2770" y="317" />
+        <di:waypoint x="2770" y="390" />
+        <di:waypoint x="2970" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2795" y="403" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_020" bpmnElement="Flow_SP2_021">
+        <di:waypoint x="3150" y="160" />
+        <di:waypoint x="3291" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SP2_Edge_021" bpmnElement="Flow_SP2_022">
+        <di:waypoint x="3150" y="390" />
+        <di:waypoint x="3291" y="390" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+<qbp:processSimulationInfo id="qbp_bebcf6ee-4ac4-42c1-a99f-ec3613914b52" processInstances="100" startDateTime="2026-10-12T02:00:00.000Z" currency="EUR"><qbp:arrivalRateDistribution type="FIXED" mean="3600" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:arrivalRateDistribution><qbp:timetables><qbp:timetable id="QBP_DEFAULT_TIMETABLE" default="true" name="Default"><qbp:rules><qbp:rule fromTime="08:00:00.000+00:00" toTime="16:00:00.000+00:00" fromWeekDay="MONDAY" toWeekDay="SUNDAY"/></qbp:rules></qbp:timetable><qbp:timetable id="QBP_247_TIMETABLE" default="false" name="24/7"><qbp:rules><qbp:rule fromTime="00:00:00.000+00:00" toTime="23:59:59.999+00:00" fromWeekDay="MONDAY" toWeekDay="SUNDAY"/></qbp:rules></qbp:timetable></qbp:timetables><qbp:resources><qbp:resource id="Lane_main_KH" name="Khách hàng" totalAmount="100" costPerHour="0" timetableId="QBP_247_TIMETABLE"/><qbp:resource id="Lane_NV" name="Nhân viên" totalAmount="2" costPerHour="0" timetableId="QBP_DEFAULT_TIMETABLE"/><qbp:resource id="Lane_QL" name="Quản lý / Chủ cơ sở" totalAmount="1" costPerHour="0" timetableId="QBP_DEFAULT_TIMETABLE"/><qbp:resource id="Res_SYSTEM" name="Hệ thống tự động" totalAmount="1" costPerHour="0" timetableId="QBP_247_TIMETABLE"/><qbp:resource id="Res_EXTERNAL" name="Phản hồi bên ngoài (giả lập)" totalAmount="100" costPerHour="0" timetableId="QBP_247_TIMETABLE"/></qbp:resources><qbp:elements><qbp:element id="qbp_f07ab5c4-1138-4b5e-9c7b-c6d5300e7d77" elementId="M_SendStatement"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_91b21b84-039a-4905-ab5c-2d39564b24b5" elementId="M_CheckDeposit"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_8722d24f-300f-4b53-a49b-14689e1dfcab" elementId="M_Contract"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_95ab6fac-5645-44e0-971c-0ef9cd7f2404" elementId="M_SaveBooking"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_ff4cc380-cac4-416a-8104-dffe9a053991" elementId="M_CancelRefund"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_f205c2e1-6217-4adb-8354-ad97b63a30f3" elementId="M_WaitDeposit"><qbp:durationDistribution type="FIXED" mean="720" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_b5056790-efdd-447a-bffb-0392ac12733f" elementId="M_WaitSign"><qbp:durationDistribution type="FIXED" mean="480" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_163cb6ac-040a-48bd-8d8d-3039677d0fd6" elementId="M_CreateDeposit"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_715da106-d1f5-4a5e-87eb-7422233665e7" elementId="M_CheckDocs"><qbp:durationDistribution type="FIXED" mean="12" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_11256b1a-fc43-4633-bf95-8012889217d6" elementId="M_SendTerms"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_36b3f10d-dea0-495e-9ac3-1f7db8a7ad9b" elementId="M_RejectNoVehicle"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_12de1fb3-72aa-4aac-b193-b13a3b8c33fc" elementId="M_CheckFleet"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_a72da718-495e-443b-b477-242049b272b4" elementId="M_CheckReturn"><qbp:durationDistribution type="FIXED" mean="720" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_40ec3ff2-65da-4521-a7a7-82857b3e753f" elementId="M_CatchReturn"><qbp:durationDistribution type="FIXED" mean="43320" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_5d666640-ac21-4419-b3fc-0bed61a143bf" elementId="SP1"><qbp:durationDistribution type="FIXED" mean="0" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_5c29bf75-ba56-422e-a2e8-34f18d1d20f8" elementId="GH_GetRequest"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_a0f2fa35-248b-4be4-83bf-c5ebe2c75d79" elementId="GH_Check"><qbp:durationDistribution type="FIXED" mean="12" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_c5294a23-55a9-40ae-be99-1ffc9fd6d49f" elementId="GH_Offer"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_cc733759-0e77-4f63-b62f-ab27b2773a6b" elementId="GH_WaitAccept"><qbp:durationDistribution type="FIXED" mean="540" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_567b3492-e080-4aed-be88-3a78934c8d5a" elementId="GH_Timer"><qbp:durationDistribution type="FIXED" mean="7200" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_54482e96-2298-4ccb-ac52-7b9c7fe6ebc7" elementId="GH_CreateQR"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_ccd405ba-8dc7-4f8f-b051-c833f632289d" elementId="GH_VerifyQR"><qbp:durationDistribution type="FIXED" mean="300" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_84223044-2131-46e9-a14c-2ac3c5b729e2" elementId="GH_TimerPay"><qbp:durationDistribution type="FIXED" mean="1800" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_fa81497c-cf52-4501-99b6-a1d496174911" elementId="GH_Update"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_126ecd91-c65a-42ab-ae6d-ef4646b786a3" elementId="GH_NotifyOK"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_b39c4d39-17d6-4e72-8f76-3bc5c52b500c" elementId="GH_NotifyOld"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_1ac556bd-e409-485b-bf5d-67a6a1f2082c" elementId="M_CatchExtend"><qbp:durationDistribution type="FIXED" mean="43200" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_302eb2d3-b022-4761-9fb2-64adc664b1ba" elementId="M_CatchIncident"><qbp:durationDistribution type="FIXED" mean="43980" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_571c0fa7-9e8a-42a6-b32a-60225b732354" elementId="SP2"><qbp:durationDistribution type="FIXED" mean="0" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_2b8d9db0-41f9-4e5d-a4db-04ca548ca252" elementId="SC_Create"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_c6eed092-6a6b-4c55-8de9-2186b80d47aa" elementId="SC_Select"><qbp:durationDistribution type="FIXED" mean="12" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_4a0f8187-7110-43fa-8b11-a720676e058e" elementId="SC_Dispatch"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_028f2b1b-7df8-40ea-a8e5-41659dd7cf75" elementId="SC_ReceiveAck"><qbp:durationDistribution type="FIXED" mean="600" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_50f13588-dba2-4551-8e5f-555e8f776b06" elementId="SC_AckTimer"><qbp:durationDistribution type="FIXED" mean="900" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_59548b58-4053-4e61-957c-65631c008c88" elementId="SC_TryNext"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_7c524aef-c248-4a38-8c86-65772a493acd" elementId="SC_Track"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_0731e9f7-56ef-4ab4-a68d-79c2e13bccc5" elementId="SC_ReceiveResult"><qbp:durationDistribution type="FIXED" mean="7200" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_16b994df-67e2-4d14-a788-a9440f56cc00" elementId="SC_ResultTimer"><qbp:durationDistribution type="FIXED" mean="7200" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_1504a666-1074-4c5f-ab50-ae1d2c637cd8" elementId="SC_Escalate"><qbp:durationDistribution type="FIXED" mean="300" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_QL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_2457b5e5-f7e5-45ba-8708-a4ea6c6f04f2" elementId="SC_Log"><qbp:durationDistribution type="FIXED" mean="300" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_45012e30-731c-4f4e-a5bc-bd5b8af16a0f" elementId="SC_SendContinue"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_8f033610-bb82-4843-a4a9-0a7ab4e1be9e" elementId="SC_NotifyEarly"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_4663ad83-48ce-468f-8051-639c4612e6cb" elementId="M_CalcFees"><qbp:durationDistribution type="FIXED" mean="12" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_c484829f-e8ef-4d50-bbf8-fdac1c0ef711" elementId="M_VerifyDamage"><qbp:durationDistribution type="FIXED" mean="600" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_0bffdf47-3d16-4ffe-8436-606565f42139" elementId="M_ApproveAdjustment"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_4537d776-0260-42e0-b753-e0f5172fdd0b" elementId="M_NetDeposit"><qbp:durationDistribution type="FIXED" mean="12" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_4e64d768-9027-495b-99c0-b7ecca230cfa" elementId="M_ReceiveReview"><qbp:durationDistribution type="FIXED" mean="420" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_78f1a71b-cffc-48ef-a63e-26eabf27ebd5" elementId="M_Refund"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_b73622af-e985-4cc1-92ed-022cf7505d31" elementId="M_VerifyExtra"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_96fe618c-a917-451a-a734-493f1ad9c9fb" elementId="M_ReceiveExtra"><qbp:durationDistribution type="FIXED" mean="240" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_a537d2d4-53dc-4186-be46-2f32e3c8ed15" elementId="M_PayExtra"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_a44e8dbe-240f-4fe0-8ce6-115c85fc97d6" elementId="M_Settle"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_75fd6783-93cd-4bd0-a349-881c2ad2d3ab" elementId="M_RecordDebt"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_883291d1-ff06-4145-9107-1c05f144a089" elementId="M_ConfirmRefund"><qbp:durationDistribution type="FIXED" mean="360" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_17368ec7-e98e-4f9d-8d21-e3fbf13180b1" elementId="M_ManualExtra"><qbp:durationDistribution type="FIXED" mean="300" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_a162a3e1-9f5d-418e-8f20-ef5b748a96dd" elementId="M_CheckReady"><qbp:durationDistribution type="FIXED" mean="300" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_eea9ed45-3752-4346-ba36-e92e3d4a72b2" elementId="M_Maintenance"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_b9b7da5e-ece7-4f1b-a2e7-68629a2b2724" elementId="M_MarkReady"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_1d60ea96-3cb9-4b59-ae18-e3c7886669b5" elementId="M_Archive"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_1d632036-a3a2-44a2-ad61-c8aa5ec8a541" elementId="M_ManualDeposit"><qbp:durationDistribution type="FIXED" mean="300" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_e3947176-4e55-4d43-9796-ce9901c149d1" elementId="M_Resolve"><qbp:durationDistribution type="FIXED" mean="900" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_QL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_ce25ff88-32b5-4102-b7b6-9d90bb650628" elementId="M_InspectPre"><qbp:durationDistribution type="FIXED" mean="720" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_df756711-cbe2-4ec0-9c90-31d811cffe28" elementId="M_Rework"><qbp:durationDistribution type="FIXED" mean="1200" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_ea58ed53-379d-4107-ab39-0f3d867e628a" elementId="M_ReceiveReturn"><qbp:durationDistribution type="FIXED" mean="240" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_ffc28b72-fb9b-43fa-9521-4561da901faa" elementId="M_EarlyBoundary"><qbp:durationDistribution type="FIXED" mean="0" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_a367dcc1-e328-46b3-8cd1-5486061e1f4d" elementId="M_BoundExtra"><qbp:durationDistribution type="FIXED" mean="1800" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_7d991032-db20-409b-9b79-7db6c12772f9" elementId="M_BoundDeposit"><qbp:durationDistribution type="FIXED" mean="1800" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_b589ef33-b53e-4148-a01b-fa0df23a1b4f" elementId="M_BoundSign"><qbp:durationDistribution type="FIXED" mean="86400" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution></qbp:element><qbp:element id="qbp_52a013a9-3eaf-4abb-affb-f47216189df1" elementId="M_AskDocs"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_2f9d2528-8cc0-4e1a-9cff-08afc89feb4b" elementId="M_Photo"><qbp:durationDistribution type="FIXED" mean="240" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_991f46a4-51c6-4795-9f52-d87ac3274f0d" elementId="M_Handover"><qbp:durationDistribution type="FIXED" mean="300" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Lane_NV</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_8bd8d6c8-7b32-416c-9366-f94adcc1a06e" elementId="M_SetRented"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_6eeee0cf-bd8f-4efe-a9e0-1685c5f7ef18" elementId="Activity_0w8x12e"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_3079dbf6-6195-4633-a6d1-f20a9ad8611d" elementId="Activity_0d0qzp6"><qbp:durationDistribution type="FIXED" mean="480" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_EXTERNAL</qbp:resourceId></qbp:resourceIds></qbp:element><qbp:element id="qbp_8366c68c-cbea-4fc6-ac8a-daaccc544764" elementId="M_DigitalCompare"><qbp:durationDistribution type="FIXED" mean="6" arg1="NaN" arg2="NaN"><qbp:timeUnit>minutes</qbp:timeUnit></qbp:durationDistribution><qbp:resourceIds><qbp:resourceId>Res_SYSTEM</qbp:resourceId></qbp:resourceIds></qbp:element></qbp:elements><qbp:sequenceFlows><qbp:sequenceFlow elementId="Flow_Process_MotoCare_005" executionProbability="0.9"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_003" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_010" executionProbability="0.95"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_008" executionProbability="0.05"/><qbp:sequenceFlow elementId="Flow_1yxvmm4" executionProbability="0.2"/><qbp:sequenceFlow elementId="Flow_1kfvkjh" executionProbability="0.8"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_015" executionProbability="0.98"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_016" executionProbability="0.02"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_018" executionProbability="0.9"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_019" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_026" executionProbability="0.9"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_027" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_0n3rdue" executionProbability="0.95"/><qbp:sequenceFlow elementId="Flow_0h3oqnj" executionProbability="0.05"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_032" executionProbability="0.15"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_035" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_039" executionProbability="0.75"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_045" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_046" executionProbability="0.9"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_054" executionProbability="0.9"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_051" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_056" executionProbability="0.3"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_067" executionProbability="0.6"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_070" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_060" executionProbability="0.97"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_061" executionProbability="0.03"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_064" executionProbability="0.8"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_065" executionProbability="0.2"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_074" executionProbability="0.85"/><qbp:sequenceFlow elementId="Flow_Process_MotoCare_075" executionProbability="0.15"/><qbp:sequenceFlow elementId="Flow_SP1_004" executionProbability="0.8"/><qbp:sequenceFlow elementId="Flow_SP1_005" executionProbability="0.2"/><qbp:sequenceFlow elementId="Flow_SP1_009" executionProbability="0.9"/><qbp:sequenceFlow elementId="Flow_SP1_010" executionProbability="0.1"/><qbp:sequenceFlow elementId="Flow_SP1_011" executionProbability="0.7"/><qbp:sequenceFlow elementId="Flow_SP1_012" executionProbability="0.3"/><qbp:sequenceFlow elementId="Flow_SP2_006" executionProbability="0.8"/><qbp:sequenceFlow elementId="Flow_SP2_007" executionProbability="0.2"/><qbp:sequenceFlow elementId="Flow_SP2_010" executionProbability="0.5"/><qbp:sequenceFlow elementId="Flow_SP2_011" executionProbability="0.5"/><qbp:sequenceFlow elementId="Flow_SP2_016" executionProbability="0.8"/><qbp:sequenceFlow elementId="Flow_SP2_017" executionProbability="0.2"/><qbp:sequenceFlow elementId="Flow_SP2_019" executionProbability="0.9"/><qbp:sequenceFlow elementId="Flow_SP2_020" executionProbability="0.1"/></qbp:sequenceFlows><qbp:statsOptions/></qbp:processSimulationInfo></bpmn:definitions>

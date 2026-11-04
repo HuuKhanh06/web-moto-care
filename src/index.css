@@ -1,0 +1,26 @@
+@import '@fontsource/be-vietnam-pro/300.css';
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/500.css';
+@import '@fontsource/be-vietnam-pro/600.css';
+@import '@fontsource/be-vietnam-pro/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-brand-50: #ECFAF2;
+  --color-brand-100: #D3F3E2;
+  --color-brand-300: #7ADDAB;
+  --color-brand-500: #00A651;
+  --color-brand-600: #00914A;
+  --color-brand-700: #00803F;
+  --color-brand-900: #0B3D26;
+}
+
+body {
+  font-family: 'Be Vietnam Pro', Inter, sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+}
