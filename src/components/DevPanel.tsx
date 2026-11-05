@@ -17,10 +17,10 @@ import {
   Trash2,
   Download,
   Upload,
-  ChevronDown,
   Cpu,
   Timer,
   Database,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +38,25 @@ export function DevPanel() {
       clearInterval(interval);
     };
   }, []);
+
+  // Lắng nghe phím tắt bí mật: Ctrl + Shift + D hoặc Alt + D để mở/đóng DevPanel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCtrlShiftD = (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'D' || e.key === 'd');
+      const isAltD = e.altKey && (e.key === 'D' || e.key === 'd');
+      const isEscape = e.key === 'Escape' && isOpen;
+
+      if (isCtrlShiftD || isAltD) {
+        e.preventDefault();
+        setIsOpen((prev) => !prev);
+      } else if (isEscape) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   // Đọc danh sách Timer đang chờ từ bảng timers
   const activeTimers = useLiveQuery(
@@ -123,38 +142,32 @@ export function DevPanel() {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      {/* Nút thu nhỏ mở DevPanel */}
-      {!isOpen ? (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-900 text-white shadow-xl hover:bg-brand-700 transition-all text-xs font-semibold border border-slate-700 hover:scale-105"
-        >
-          <Cpu className="w-4 h-4 text-brand-400" />
-          <span>Demo DevPanel</span>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        </button>
-      ) : (
-        /* Hộp điều khiển nổi */
-        <div className="w-96 rounded-2xl bg-slate-900 text-white shadow-2xl border border-slate-800 p-4 animate-in slide-in-from-bottom-3 duration-200">
-          {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-brand-400" />
-              <span className="font-bold text-xs uppercase tracking-wider text-slate-200">
-                Bảng điều khiển Giả lập
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
+    <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-3 duration-200">
+      {/* Hộp điều khiển nổi */}
+      <div className="w-96 rounded-2xl bg-slate-900 text-white shadow-2xl border border-slate-800 p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-4 h-4 text-brand-400" />
+            <span className="font-bold text-xs uppercase tracking-wider text-slate-200">
+              Bảng điều khiển Giả lập
+            </span>
+            <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-300 px-1.5 py-0.5 rounded font-mono">
+              Ctrl+Shift+D
+            </span>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Đóng (Esc hoặc Ctrl+Shift+D)"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
           {/* Đồng hồ Demo */}
           <div className="my-3 p-3 rounded-xl bg-slate-800/80 border border-slate-700/60">
@@ -315,7 +328,6 @@ export function DevPanel() {
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
 }
