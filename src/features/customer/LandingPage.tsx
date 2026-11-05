@@ -29,6 +29,7 @@ import {
   Headphones,
   Check,
   X,
+  Menu,
 } from 'lucide-react';
 
 interface FeaturedVehicle {
@@ -302,6 +303,25 @@ export function LandingPage() {
     setCurrentSlide((prev) => (prev - 1 + HERO_BANNER_SLIDES.length) % HERO_BANNER_SLIDES.length);
   };
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Hàm cuộn mượt xuống từng phân mục khi nhấn trên thanh điều hướng
+  const scrollToSection = (sectionId: string) => {
+    const cleanId = sectionId.replace('#', '');
+    const element = document.getElementById(cleanId);
+    if (element) {
+      const headerOffset = 80;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+      setMobileMenuOpen(false);
+    }
+  };
+
   const handleStartBooking = (typeOverride?: string) => {
     const selectedType = typeOverride || bookingVehicleType;
     navigate(`/kh/01?vehicleType=${selectedType}&startAt=${bookingStart}&endAt=${bookingEnd}&pickup=${pickupLocation}`);
@@ -351,24 +371,48 @@ export function LandingPage() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-600">
-            <a href="#fleet" className="hover:text-brand-600 transition-colors">
+            <button
+              type="button"
+              onClick={() => scrollToSection('fleet')}
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+            >
               Đội xe &amp; Bảng giá
-            </a>
-            <a href="#process" className="hover:text-brand-600 transition-colors">
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('process')}
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+            >
               Quy trình thuê xe
-            </a>
-            <a href="#benefits" className="hover:text-brand-600 transition-colors">
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('benefits')}
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+            >
               Cam kết dịch vụ
-            </a>
-            <a href="#stations" className="hover:text-brand-600 transition-colors">
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('stations')}
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+            >
               Trạm xe &amp; Bản đồ
-            </a>
-            <a href="#reviews" className="hover:text-brand-600 transition-colors">
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('reviews')}
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+            >
               Đánh giá khách hàng
-            </a>
-            <a href="#faq" className="hover:text-brand-600 transition-colors">
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('faq')}
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+            >
               Hỏi đáp
-            </a>
+            </button>
           </nav>
 
           <div className="flex items-center gap-2.5">
@@ -416,8 +460,66 @@ export function LandingPage() {
                 </Button>
               </>
             )}
+
+            {/* Nút bật/tắt Menu trên thiết bị di động */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              aria-label="Menu điều hướng"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Menu mở rộng trên thiết bị di động */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-4 py-3 space-y-1 shadow-lg animate-in slide-in-from-top-2 duration-200">
+            <button
+              type="button"
+              onClick={() => scrollToSection('fleet')}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-brand-600 transition-colors cursor-pointer"
+            >
+              Đội xe &amp; Bảng giá
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('process')}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-brand-600 transition-colors cursor-pointer"
+            >
+              Quy trình thuê xe
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('benefits')}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-brand-600 transition-colors cursor-pointer"
+            >
+              Cam kết dịch vụ
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('stations')}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-brand-600 transition-colors cursor-pointer"
+            >
+              Trạm xe &amp; Bản đồ
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('reviews')}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-brand-600 transition-colors cursor-pointer"
+            >
+              Đánh giá khách hàng
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('faq')}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-brand-600 transition-colors cursor-pointer"
+            >
+              Hỏi đáp thường gặp
+            </button>
+          </div>
+        )}
       </header>
 
       {/* 3. HERO SECTION: SLIDER ẢNH QUẢNG CÁO PHONG CÁCH VINFAST / XANH SM + FORM TÌM & ĐẶT XE */}
@@ -478,8 +580,8 @@ export function LandingPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const el = document.querySelector(slide.targetAnchor || '#booking-box');
-                          el?.scrollIntoView({ behavior: 'smooth' });
+                          const target = slide.targetAnchor || 'booking-box';
+                          scrollToSection(target);
                         }}
                         className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-6 py-3 rounded-2xl text-xs sm:text-sm shadow-xl shadow-amber-400/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                       >
@@ -488,12 +590,16 @@ export function LandingPage() {
                       </button>
 
                       {slide.secondaryCtaText && (
-                        <a
-                          href={slide.targetAnchor || '#fleet'}
-                          className="bg-white/15 hover:bg-white/25 text-white border border-white/30 backdrop-blur font-bold px-5 py-3 rounded-2xl text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const target = slide.targetAnchor || 'fleet';
+                            scrollToSection(target);
+                          }}
+                          className="bg-white/15 hover:bg-white/25 text-white border border-white/30 backdrop-blur font-bold px-5 py-3 rounded-2xl text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
                         >
                           {slide.secondaryCtaText}
-                        </a>
+                        </button>
                       )}
                     </div>
 
@@ -566,7 +672,7 @@ export function LandingPage() {
           </div>
 
           {/* KHUNG TÌM & ĐẶT XE NHANH */}
-          <div id="booking-box" className="mt-8 max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-300">
+          <div id="booking-box" className="mt-8 max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-300 scroll-mt-24">
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 font-bold">
@@ -658,7 +764,7 @@ export function LandingPage() {
       </section>
 
       {/* 4. DÀN XE NỔI BẬT (FEATURED FLEET GRID) KÈM FILTER TAB & HOVER EFFECT */}
-      <section id="fleet" className="py-16 bg-white border-t border-slate-200/80">
+      <section id="fleet" className="py-16 bg-white border-t border-slate-200/80 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
@@ -812,7 +918,7 @@ export function LandingPage() {
       </section>
 
       {/* 5. QUY TRÌNH THUÊ XE 4 BƯỚC CÔNG NGHỆ SIÊU TỐC */}
-      <section id="process" className="py-16 bg-slate-50 border-t border-slate-200/80">
+      <section id="process" className="py-16 bg-slate-50 border-t border-slate-200/80 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full">
@@ -883,7 +989,7 @@ export function LandingPage() {
       </section>
 
       {/* 6. LÝ DO LỰA CHỌN MOTO CARE (6 CAM KẾT VÀNG) */}
-      <section id="benefits" className="py-16 bg-white border-t border-slate-200/80">
+      <section id="benefits" className="py-16 bg-white border-t border-slate-200/80 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100/70 px-3 py-1 rounded-full">
@@ -962,7 +1068,7 @@ export function LandingPage() {
       </section>
 
       {/* 7. ĐÁNH GIÁ KHÁCH HÀNG (TESTIMONIALS) */}
-      <section id="reviews" className="py-16 bg-slate-50 border-t border-slate-200/80">
+      <section id="reviews" className="py-16 bg-slate-50 border-t border-slate-200/80 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
@@ -1013,7 +1119,7 @@ export function LandingPage() {
       </section>
 
       {/* 8. MẠNG LƯỚI TRẠM XE & GIỜ PHỤC VỤ (STATIONS & LOCATIONS) */}
-      <section id="stations" className="py-16 bg-white border-t border-slate-200/80">
+      <section id="stations" className="py-16 bg-white border-t border-slate-200/80 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
@@ -1083,7 +1189,7 @@ export function LandingPage() {
       </section>
 
       {/* 9. CẨM NANG THUÊ XE & FAQ (ACCORDION) */}
-      <section id="faq" className="py-16 bg-slate-50 border-t border-slate-200/80">
+      <section id="faq" className="py-16 bg-slate-50 border-t border-slate-200/80 scroll-mt-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
           <div className="text-center space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
@@ -1156,29 +1262,49 @@ export function LandingPage() {
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Đội Xe &amp; Dịch Vụ</h4>
               <ul className="space-y-1.5 text-xs">
                 <li>
-                  <a href="#fleet" className="hover:text-white transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('fleet')}
+                    className="hover:text-white transition-colors cursor-pointer text-left"
+                  >
                     Thuê xe tay ga đời mới
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#fleet" className="hover:text-white transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('fleet')}
+                    className="hover:text-white transition-colors cursor-pointer text-left"
+                  >
                     Thuê xe số tiết kiệm xăng
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#fleet" className="hover:text-white transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('fleet')}
+                    className="hover:text-white transition-colors cursor-pointer text-left"
+                  >
                     Thuê xe côn tay đi phượt
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#stations" className="hover:text-white transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('stations')}
+                    className="hover:text-white transition-colors cursor-pointer text-left"
+                  >
                     Dịch vụ giao xe sân bay miễn phí
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#benefits" className="hover:text-white transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('benefits')}
+                    className="hover:text-white transition-colors cursor-pointer text-left"
+                  >
                     Dịch vụ cứu hộ xe máy 24/7
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
