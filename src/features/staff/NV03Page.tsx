@@ -22,6 +22,10 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import {
+  PendingRequestBar,
+  type PendingRequestSummary,
+} from '@/components/common/PendingRequestBar';
+import {
   Wrench,
   CheckCircle2,
   XCircle,
@@ -49,7 +53,7 @@ interface TechnicalChecklist {
 }
 
 export function NV03Page() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
@@ -59,6 +63,7 @@ export function NV03Page() {
   const [currentNodeId, setCurrentNodeId] = useState<string>('M_InspectPre');
   const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
   const [inspectionsHistory, setInspectionsHistory] = useState<Inspection[]>([]);
+  const [pendingList, setPendingList] = useState<PendingRequestSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,18 +83,48 @@ export function NV03Page() {
   const [selectedNewVehicleId, setSelectedNewVehicleId] = useState('');
 
   const loadData = useCallback(async () => {
-    if (!requestId) return;
     setLoading(true);
     try {
-      const req = await db.rental_requests.get(requestId);
+      // 1. Quét toàn bộ hồ sơ đang ở trạng thái CHO_BAN_GIAO
+      const candidates = await db.rental_requests
+        .filter((r) => r.status === 'CHO_BAN_GIAO')
+        .toArray();
+
+      const pList: PendingRequestSummary[] = [];
+      for (const cand of candidates) {
+        let vName = 'Xe máy';
+        if (cand.vehicle_id) {
+          const veh = await db.vehicles.get(cand.vehicle_id);
+          if (veh) vName = `${veh.model} (${veh.plate})`;
+        }
+        const cust = await db.profiles.get(cand.customer_id);
+        pList.push({
+          id: cand.id,
+          customerName: cust?.full_name,
+          vehicleModel: vName,
+          status: cand.status,
+        });
+      }
+      setPendingList(pList);
+
+      // Xác định ID cần tải
+      const targetId = requestId || (pList.length > 0 ? pList[0].id : null);
+      if (!targetId) {
+        setRequest(null);
+        setVehicle(null);
+        return;
+      }
+
+      const req = await db.rental_requests.get(targetId);
       if (!req) {
         toast.error('Không tìm thấy đơn thuê');
-        navigate('/nv/01');
+        setRequest(null);
+        setVehicle(null);
         return;
       }
       setRequest(req);
 
-      const pState = await db.process_state.get(requestId);
+      const pState = await db.process_state.get(targetId);
       if (pState?.waiting_node_ids?.length) {
         setCurrentNodeId(pState.waiting_node_ids[0]);
       }
@@ -103,7 +138,7 @@ export function NV03Page() {
       // Lấy lịch sử kiểm tra kỹ thuật (PRE_HANDOVER)
       const history = await db.inspections
         .where('request_id')
-        .equals(requestId)
+        .equals(targetId)
         .and((i) => i.kind === 'PRE_HANDOVER')
         .sortBy('attempt_no');
       setInspectionsHistory(history);
@@ -122,7 +157,7 @@ export function NV03Page() {
     } finally {
       setLoading(false);
     }
-  }, [requestId, navigate]);
+  }, [requestId]);
 
   useEffect(() => {
     loadData();
@@ -141,11 +176,18 @@ export function NV03Page() {
 
   if (!request || !vehicle) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <Card className="text-center py-10">
-          <AlertTriangle className="mx-auto h-12 w-12 text-amber-500" />
-          <h2 className="mt-3 text-lg font-bold text-slate-800">Không tìm thấy thông tin xe hoặc hồ sơ</h2>
-          <Button className="mt-4" onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm</Button>
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        <Card className="text-center py-12 px-6 border-slate-200 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <Wrench className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Không có hồ sơ nào chờ kiểm tra kỹ thuật</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            Hiện tại toàn bộ phương tiện đã hoàn tất kiểm tra đạt hoặc chưa có đơn thuê mới ở trạng thái Chờ bàn giao.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+          </div>
         </Card>
       </div>
     );
@@ -228,6 +270,14 @@ export function NV03Page() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+      {/* Thanh chọn nhanh hồ sơ đang chờ kiểm tra */}
+      <PendingRequestBar
+        label="Hồ sơ chờ kiểm tra kỹ thuật"
+        currentRequestId={request.id}
+        pendingList={pendingList}
+        onSelect={(id) => setSearchParams({ requestId: id })}
+      />
+
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>

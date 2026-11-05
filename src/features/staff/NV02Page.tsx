@@ -22,6 +22,10 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import {
+  PendingRequestBar,
+  type PendingRequestSummary,
+} from '@/components/common/PendingRequestBar';
+import {
   ArrowLeft,
   CheckCircle2,
   XCircle,
@@ -33,7 +37,7 @@ import {
 } from 'lucide-react';
 
 export function NV02Page() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
@@ -42,18 +46,49 @@ export function NV02Page() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [customer, setCustomer] = useState<Profile | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [pendingList, setPendingList] = useState<PendingRequestSummary[]>([]);
   const [manualNote, setManualNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!requestId) return;
     setLoading(true);
     try {
-      const req = await db.rental_requests.get(requestId);
+      // 1. Quét toàn bộ hồ sơ đang ở trạng thái CHO_COC
+      const candidates = await db.rental_requests
+        .filter((r) => r.status === 'CHO_COC')
+        .toArray();
+
+      const pList: PendingRequestSummary[] = [];
+      for (const cand of candidates) {
+        let vName = 'Xe máy';
+        if (cand.vehicle_id) {
+          const veh = await db.vehicles.get(cand.vehicle_id);
+          if (veh) vName = `${veh.model} (${veh.plate})`;
+        }
+        const cust = await db.profiles.get(cand.customer_id);
+        pList.push({
+          id: cand.id,
+          customerName: cust?.full_name,
+          vehicleModel: vName,
+          status: cand.status,
+        });
+      }
+      setPendingList(pList);
+
+      const targetId = requestId || (pList.length > 0 ? pList[0].id : null);
+      if (!targetId) {
+        setRequest(null);
+        setPayment(null);
+        setCustomer(null);
+        setVehicle(null);
+        return;
+      }
+
+      const req = await db.rental_requests.get(targetId);
       if (!req) {
         toast.error('Không tìm thấy yêu cầu');
-        navigate('/nv/01');
+        setRequest(null);
         return;
       }
       setRequest(req);
@@ -61,7 +96,7 @@ export function NV02Page() {
       const [p, c, v] = await Promise.all([
         db.payments
           .where('request_id')
-          .equals(requestId)
+          .equals(targetId)
           .and((item) => item.kind === 'DEPOSIT')
           .last(),
         db.profiles.get(req.customer_id),
@@ -80,14 +115,14 @@ export function NV02Page() {
     } finally {
       setLoading(false);
     }
-  }, [requestId, navigate]);
+  }, [requestId]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   const handleDecision = async (decision: 'Có' | 'Chưa') => {
-    if (!requestId || !currentActor) return;
+    if (!request?.id || !currentActor) return;
 
     if (decision === 'Chưa' && !manualNote.trim()) {
       toast.warning('Vui lòng nhập lý do từ chối cọc ngoại lệ vào ô ghi chú');
@@ -97,7 +132,7 @@ export function NV02Page() {
     setSubmitting(true);
     try {
       await engine.complete(
-        requestId,
+        request.id,
         'M_ManualDeposit',
         {
           decision,
@@ -131,7 +166,22 @@ export function NV02Page() {
   }
 
   if (!request) {
-    return null;
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        <Card className="text-center py-12 px-6 border-slate-200 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <Receipt className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Không có giao dịch cọc nào cần phê duyệt</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            Hiện tại không có khoản tiền cọc nào bị lệch hoặc chờ nhân viên duyệt thủ công.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+          </div>
+        </Card>
+      </div>
+    );
   }
 
   const isDepositVerified = payment?.status === 'VERIFIED';
@@ -141,6 +191,14 @@ export function NV02Page() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Thanh chọn nhanh hồ sơ đang chờ duyệt cọc */}
+      <PendingRequestBar
+        label="Hồ sơ chờ duyệt cọc"
+        currentRequestId={request.id}
+        pendingList={pendingList}
+        onSelect={(id) => setSearchParams({ requestId: id })}
+      />
+
       {/* Header & Quay lại */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

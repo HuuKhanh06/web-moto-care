@@ -14,3 +14,4 @@ export const useBpmnModeStore = create<BpmnModeState>((set) => ({
   toggleBpmnMode: () => set((state) => ({ isBpmnMode: !state.isBpmnMode })),
   setBpmnMode: (val) => set({ isBpmnMode: val }),
 }));
+

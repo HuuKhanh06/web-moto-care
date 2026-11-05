@@ -24,3 +24,4 @@ export function BpmnBadge({ nodeId, name, className = '' }: BpmnBadgeProps) {
     </span>
   );
 }
+

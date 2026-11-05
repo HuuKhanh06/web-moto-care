@@ -22,9 +22,12 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import {
+  PendingRequestBar,
+  type PendingRequestSummary,
+} from '@/components/common/PendingRequestBar';
+import {
   Camera,
   CheckCircle2,
-  AlertTriangle,
   ArrowRight,
   Gauge,
   Fuel,
@@ -34,7 +37,7 @@ import {
 } from 'lucide-react';
 
 export function NV04Page() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
@@ -42,6 +45,7 @@ export function NV04Page() {
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [lastPassedInspection, setLastPassedInspection] = useState<Inspection | null>(null);
+  const [pendingList, setPendingList] = useState<PendingRequestSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,13 +61,42 @@ export function NV04Page() {
   const [fuelLevel, setFuelLevel] = useState<string>('100%');
 
   const loadData = useCallback(async () => {
-    if (!requestId) return;
     setLoading(true);
     try {
-      const req = await db.rental_requests.get(requestId);
+      // 1. Quét toàn bộ hồ sơ đang ở trạng thái CHO_BAN_GIAO
+      const candidates = await db.rental_requests
+        .filter((r) => r.status === 'CHO_BAN_GIAO')
+        .toArray();
+
+      const pList: PendingRequestSummary[] = [];
+      for (const cand of candidates) {
+        let vName = 'Xe máy';
+        if (cand.vehicle_id) {
+          const veh = await db.vehicles.get(cand.vehicle_id);
+          if (veh) vName = `${veh.model} (${veh.plate})`;
+        }
+        const cust = await db.profiles.get(cand.customer_id);
+        pList.push({
+          id: cand.id,
+          customerName: cust?.full_name,
+          vehicleModel: vName,
+          status: cand.status,
+        });
+      }
+      setPendingList(pList);
+
+      const targetId = requestId || (pList.length > 0 ? pList[0].id : null);
+      if (!targetId) {
+        setRequest(null);
+        setVehicle(null);
+        return;
+      }
+
+      const req = await db.rental_requests.get(targetId);
       if (!req) {
         toast.error('Không tìm thấy đơn thuê');
-        navigate('/nv/01');
+        setRequest(null);
+        setVehicle(null);
         return;
       }
       setRequest(req);
@@ -76,7 +109,7 @@ export function NV04Page() {
       // Lấy bản ghi PRE_HANDOVER đạt có attempt_no lớn nhất
       const insp = await db.inspections
         .where('request_id')
-        .equals(requestId)
+        .equals(targetId)
         .and((i) => i.kind === 'PRE_HANDOVER' && i.result === 'DAT')
         .last();
 
@@ -95,7 +128,7 @@ export function NV04Page() {
     } finally {
       setLoading(false);
     }
-  }, [requestId, navigate]);
+  }, [requestId]);
 
   useEffect(() => {
     loadData();
@@ -114,11 +147,18 @@ export function NV04Page() {
 
   if (!request || !vehicle) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <Card className="text-center py-10">
-          <AlertTriangle className="mx-auto h-12 w-12 text-amber-500" />
-          <h2 className="mt-3 text-lg font-bold text-slate-800">Không tìm thấy thông tin xe hoặc hồ sơ</h2>
-          <Button className="mt-4" onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm</Button>
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        <Card className="text-center py-12 px-6 border-slate-200 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <Camera className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Không có hồ sơ nào chờ chụp ảnh bàn giao</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            Vui lòng hoàn tất kiểm tra kỹ thuật (NV-03) trước khi thực hiện chụp ảnh lưu trữ biên bản bàn giao.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+          </div>
         </Card>
       </div>
     );
@@ -181,6 +221,14 @@ export function NV04Page() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+      {/* Thanh chọn nhanh hồ sơ đang chờ chụp ảnh */}
+      <PendingRequestBar
+        label="Hồ sơ chờ chụp ảnh bàn giao"
+        currentRequestId={request.id}
+        pendingList={pendingList}
+        onSelect={(id) => setSearchParams({ requestId: id })}
+      />
+
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>

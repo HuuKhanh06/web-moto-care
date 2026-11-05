@@ -121,16 +121,16 @@ export function AiLogPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded">
-              Giai đoạn 8
+              Hệ thống AI
             </span>
-            <span className="text-xs text-slate-500 font-mono">Đặc tả AI Agent OCR • M_CheckDocs</span>
+            <span className="text-xs text-slate-500 font-mono">Bóc tách &amp; Thẩm định hồ sơ</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1 flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-purple-600" />
-            Nhật Ký AI Agent OCR (AI Log)
+            Nhật Ký AI Agent OCR
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Giám sát thời gian thực năng lực trích xuất CCCD &amp; GPLX, điểm tin cậy $m$ và phân nhánh theo 2 ngưỡng $X = 95\%$ và $Y = 80\%$.
+            Giám sát thời gian thực năng lực trích xuất CCCD &amp; GPLX, phân nhánh thẩm định và độ tin cậy bóc tách.
           </p>
         </div>
 
@@ -185,77 +185,67 @@ export function AiLogPage() {
         </Card>
       </div>
 
-      {/* KHUNG THỬ NGHIỆM KỊCH BẢN NHANH (QUICK TEST PRESETS) */}
-      <Card className="p-4 border-purple-200 bg-purple-50/20 space-y-3">
+      {/* KHUNG CÔNG CỤ VẬN HÀNH & KIỂM THỬ AI */}
+      <Card className="p-3.5 border-purple-100 bg-purple-50/20 space-y-2.5">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
             <Cpu className="w-3.5 h-3.5 text-purple-600" />
-            <span>Thử nghiệm 5 kịch bản đặc tả (Quick Presets)</span>
+            <span>Công cụ kiểm thử kết nối &amp; thẩm định nhanh</span>
           </div>
-          <span className="text-[11px] text-slate-500">
-            Mỗi lần chạy sẽ tự động ghi 1 bản ghi vào bảng nhật ký bên dưới
+          <span className="text-[11px] text-slate-400">
+            Hỗ trợ quản trị viên kiểm tra dịch vụ AI trực tiếp
           </span>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
-            onClick={() => handleRunPresetTest('HIGH_CONFIDENCE', 'Kịch bản 1: Độ tin cậy cao')}
+            onClick={() => handleRunPresetTest('HIGH_CONFIDENCE', 'Kiểm thử ảnh chuẩn')}
             loading={isTesting}
             className="text-xs bg-white text-emerald-800 hover:bg-emerald-50 border border-emerald-300 flex items-center gap-1.5"
           >
             <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Kịch bản 1: Tin cậy cao (m = 96% ≥ X)</span>
+            <span>Kiểm thử mẫu hồ sơ đạt chuẩn (96%)</span>
           </Button>
 
           <Button
             size="sm"
-            onClick={() => handleRunPresetTest('MEDIUM_CONFIDENCE', 'Kịch bản 2: Độ tin cậy trung bình')}
+            onClick={() => handleRunPresetTest('MEDIUM_CONFIDENCE', 'Kiểm thử độ tin cậy vừa')}
             loading={isTesting}
             className="text-xs bg-white text-amber-800 hover:bg-amber-50 border border-amber-300 flex items-center gap-1.5"
           >
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-            <span>Kịch bản 2: Tin cậy vừa (m = 87% &lt; X)</span>
+            <span>Kiểm thử độ tin cậy trung bình (87%)</span>
           </Button>
 
           <Button
             size="sm"
-            onClick={() => handleRunPresetTest('LOW_CONFIDENCE', 'Kịch bản 3: Độ tin cậy thấp')}
+            onClick={() => handleRunPresetTest('LOW_CONFIDENCE', 'Kiểm thử ảnh mờ/lỗi')}
             loading={isTesting}
             className="text-xs bg-white text-red-800 hover:bg-red-50 border border-red-300 flex items-center gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5 text-red-600" />
-            <span>Kịch bản 3: Tin cậy thấp (m = 65% &lt; Y)</span>
+            <span>Kiểm thử ảnh mờ (Yêu cầu nạp lại)</span>
           </Button>
 
           <Button
             size="sm"
-            onClick={() => handleRunPresetTest('NAME_MISMATCH', 'Kịch bản 4: Lệch tên giữa CCCD & GPLX')}
+            onClick={() => handleRunPresetTest('NAME_MISMATCH', 'Kiểm thử lệch tên')}
             loading={isTesting}
             className="text-xs bg-white text-amber-800 hover:bg-amber-50 border border-amber-300 flex items-center gap-1.5"
           >
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-            <span>Kịch bản 4: Lệch tên 2 giấy tờ</span>
+            <span>Kiểm thử lệch tên giữa CCCD &amp; GPLX</span>
           </Button>
 
           <Button
             size="sm"
-            onClick={() => handleRunPresetTest('BLURRY_IMAGE', 'Kịch bản 5: Ảnh mờ')}
-            loading={isTesting}
-            className="text-xs bg-white text-red-800 hover:bg-red-50 border border-red-300 flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-red-600" />
-            <span>Kịch bản 5: Ảnh mờ</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => handleRunPresetTest('NETWORK_ERROR', 'Kịch bản 6: Lỗi mạng')}
+            onClick={() => handleRunPresetTest('NETWORK_ERROR', 'Kiểm thử mất mạng')}
             loading={isTesting}
             className="text-xs bg-white text-purple-800 hover:bg-purple-50 border border-purple-300 flex items-center gap-1.5"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-            <span>Kịch bản 6: Sập mạng / Fallback</span>
+            <span>Kiểm thử Fallback thủ công</span>
           </Button>
         </div>
       </Card>
@@ -313,7 +303,7 @@ export function AiLogPage() {
               {!logs || logs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-400">
-                    Chưa có nhật ký AI OCR nào. Hãy bấm các nút "Thử nghiệm kịch bản nhanh" ở trên.
+                    Chưa ghi nhận sự kiện AI OCR nào. Hệ thống sẽ tự động cập nhật nhật ký khi có hồ sơ thẩm định giấy tờ.
                   </td>
                 </tr>
               ) : (

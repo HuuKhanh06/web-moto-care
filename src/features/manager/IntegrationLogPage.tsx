@@ -159,15 +159,15 @@ export function IntegrationLogPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Giai đoạn 7
+              Cổng tích hợp
             </span>
-            <span className="text-xs text-slate-500 font-mono">Bằng chứng tích hợp ngoài</span>
+            <span className="text-xs text-slate-500 font-mono">Dịch vụ kết nối ngoài API</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">
-            Nhật Ký Tích Hợp Bên Ngoài (Integration Log)
+            Nhật Ký Cổng Tích Hợp Bên Ngoài
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Theo dõi thời gian thực các lần gọi: <strong>Email Notifier</strong>, <strong>VietQR Payment API</strong> và <strong>No-Code Workflow Webhook</strong>.
+            Theo dõi thời gian thực các lần kết nối: <strong>Email Notifier</strong>, <strong>VietQR Payment Gateway</strong> và <strong>Webhook Tự động hóa</strong>.
           </p>
         </div>
 
@@ -409,9 +409,9 @@ export function IntegrationLogPage() {
         ) : (
           <div className="p-8 text-center text-slate-500 text-xs bg-slate-50 rounded-lg">
             <Activity className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-            <p className="font-semibold text-slate-700">Chưa có nhật ký tích hợp nào được ghi nhận.</p>
+            <p className="font-semibold text-slate-700">Chưa ghi nhận sự kiện kết nối API nào.</p>
             <p className="text-slate-500 mt-0.5">
-              Bấm các nút "Thử nghiệm kết nối nhanh" ở trên hoặc thực hiện quy trình thuê xe để sinh bản ghi.
+              Hệ thống sẽ tự động cập nhật nhật ký khi có giao dịch tạo VietQR, gửi Email thông báo hoặc Webhook đồng bộ.
             </p>
           </div>
         )}

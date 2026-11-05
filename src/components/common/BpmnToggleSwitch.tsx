@@ -39,3 +39,4 @@ export function BpmnToggleSwitch({ className = '', isDark = false }: BpmnToggleS
     </button>
   );
 }
+

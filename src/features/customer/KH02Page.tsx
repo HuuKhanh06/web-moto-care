@@ -15,6 +15,7 @@ import {
   Card,
   Button,
   Badge,
+  Input,
   Stepper,
   toast,
   OcrScanningSkeleton,
@@ -36,6 +37,8 @@ import {
   Bot,
   Cpu,
   RefreshCw,
+  CheckCircle2,
+  UserCheck,
 } from 'lucide-react';
 
 export function KH02Page() {
@@ -51,6 +54,14 @@ export function KH02Page() {
   const [submitting, setSubmitting] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrResult, setOcrResult] = useState<AiOcrResponse | null>(null);
+  const [extractedProfile, setExtractedProfile] = useState({
+    fullName: '',
+    idNumber: '',
+    dob: '',
+    licenseClass: '',
+    address: '',
+  });
+  const [isAppliedToProfile, setIsAppliedToProfile] = useState(false);
 
   const [agreeTerms, setAgreeTerms] = useState(true);
 
@@ -103,6 +114,22 @@ export function KH02Page() {
         scenarioPreset: preset || 'HIGH_CONFIDENCE',
       });
       setOcrResult(res);
+
+      const cName = res.documents.cccd?.full_name?.value || res.documents.gplx?.full_name?.value || 'NGUYỄN VĂN AN';
+      const cId = res.documents.cccd?.id_number?.value || '079095012345';
+      const cDob = res.documents.cccd?.date_of_birth?.value || '1995-05-12';
+      const cLic = res.documents.gplx?.license_class?.value || 'A1';
+      const cAddr = 'TP. Hồ Chí Minh';
+
+      setExtractedProfile({
+        fullName: cName,
+        idNumber: cId,
+        dob: cDob,
+        licenseClass: cLic,
+        address: cAddr,
+      });
+      setIsAppliedToProfile(false);
+
       toast.success(`AI OCR bóc tách thành công: ${res.routing.action} (Độ tin cậy m = ${((res.minimum_required_confidence || 0) * 100).toFixed(0)}%)`);
     } catch (err: unknown) {
       console.error('Lỗi AI OCR:', err);
@@ -126,9 +153,32 @@ export function KH02Page() {
       if (gplxDoc) {
         await db.customer_documents.update(gplxDoc.id, {
           is_valid: ocrResult.checks.name_consistency === 'PASS',
-          check_note: `Hạng ${ocrResult.documents.gplx?.license_class?.value || 'A1'} - Khớp tên định danh`,
+          check_note: `Hạng ${extractedProfile.licenseClass || ocrResult.documents.gplx?.license_class?.value || 'A1'} - Khớp tên định danh`,
         });
       }
+
+      // Cập nhật họ tên vào Profile khách hàng trong CSDL IndexedDB
+      if (currentActor?.id && extractedProfile.fullName) {
+        await db.profiles.update(currentActor.id, {
+          full_name: extractedProfile.fullName,
+        });
+      }
+
+      // Đồng bộ vào variables của quy trình BPMN để hợp đồng KH-04 và bàn giao NV-05 sử dụng
+      const pState = await db.process_state.get(requestId);
+      if (pState) {
+        await db.process_state.update(requestId, {
+          variables: {
+            ...pState.variables,
+            customer_full_name: extractedProfile.fullName,
+            customer_id_number: extractedProfile.idNumber,
+            customer_license_class: extractedProfile.licenseClass,
+            customer_address: extractedProfile.address,
+          },
+        });
+      }
+
+      setIsAppliedToProfile(true);
       toast.success('Đã áp dụng thông tin trích xuất từ AI vào hồ sơ!');
       await loadData();
     } catch (err) {
@@ -449,18 +499,106 @@ export function KH02Page() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="primary"
-                  onClick={handleAcceptAi}
-                  className="bg-purple-700 hover:bg-purple-600 text-white"
-                  data-testid="ai-accept"
-                >
-                  <Bot className="w-3.5 h-3.5 mr-1.5" />
-                  Chấp nhận gợi ý AI
-                </Button>
+              {/* Form xác nhận thông tin bóc tách đưa lên giao diện FE */}
+              <div className="mt-3 pt-3 border-t border-purple-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4 text-purple-600" />
+                    Thông tin định danh bóc tách lên giao diện (AI Auto-fill)
+                  </span>
+                  {isAppliedToProfile && (
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Đã lưu vào hồ sơ
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Họ và tên (CCCD/GPLX)
+                    </label>
+                    <Input
+                      value={extractedProfile.fullName}
+                      onChange={(e) =>
+                        setExtractedProfile((p) => ({ ...p, fullName: e.target.value }))
+                      }
+                      placeholder="Họ và tên khách hàng"
+                      className="text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Số Căn cước công dân (CCCD)
+                    </label>
+                    <Input
+                      value={extractedProfile.idNumber}
+                      onChange={(e) =>
+                        setExtractedProfile((p) => ({ ...p, idNumber: e.target.value }))
+                      }
+                      placeholder="Số CCCD 12 số"
+                      className="text-xs font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Ngày sinh
+                    </label>
+                    <Input
+                      value={extractedProfile.dob}
+                      onChange={(e) =>
+                        setExtractedProfile((p) => ({ ...p, dob: e.target.value }))
+                      }
+                      placeholder="YYYY-MM-DD"
+                      className="text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Hạng Giấy phép lái xe
+                    </label>
+                    <Input
+                      value={extractedProfile.licenseClass}
+                      onChange={(e) =>
+                        setExtractedProfile((p) => ({ ...p, licenseClass: e.target.value }))
+                      }
+                      placeholder="A1 / A2 / B2"
+                      className="text-xs font-bold uppercase text-purple-700"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Nơi thường trú
+                    </label>
+                    <Input
+                      value={extractedProfile.address}
+                      onChange={(e) =>
+                        setExtractedProfile((p) => ({ ...p, address: e.target.value }))
+                      }
+                      placeholder="Địa chỉ thường trú"
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={handleAcceptAi}
+                    className="bg-purple-700 hover:bg-purple-600 text-white shadow-xs"
+                    data-testid="ai-accept"
+                  >
+                    <Bot className="w-3.5 h-3.5 mr-1.5" />
+                    Áp dụng & Lưu vào hồ sơ cá nhân
+                  </Button>
+                </div>
               </div>
             </div>
           )}
