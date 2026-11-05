@@ -2,7 +2,7 @@
 // Trang chủ thương hiệu (Landing Page) chuyên nghiệp dành cho Khách hàng & Công chúng
 // Giữ nguyên 100% kết nối với quy trình BPMN lõi (M_START -> KH-01)
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { Logo } from '@/components/common/Logo';
@@ -21,6 +21,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Award,
   Zap,
   HelpCircle,
@@ -183,6 +185,79 @@ const FAQS = [
   },
 ];
 
+interface HeroBannerSlide {
+  id: number;
+  badge: string;
+  badgeColor: string;
+  title: string;
+  highlightText: string;
+  description: string;
+  primaryCtaText: string;
+  secondaryCtaText?: string;
+  imageUrl: string;
+  footnote?: string;
+  targetAnchor?: string;
+}
+
+const HERO_BANNER_SLIDES: HeroBannerSlide[] = [
+  {
+    id: 1,
+    badge: 'RA MẮT DỊCH VỤ THUÊ XE DU LỊCH 4.0',
+    badgeColor: 'bg-emerald-400 text-slate-950 font-black',
+    title: 'MOTO CARE TRAVEL',
+    highlightText: 'Khám Phá Việt Nam Tự Do & Tiện Lợi',
+    description:
+      'Giao nhận xe tận nơi tại Sân bay, Ga tàu & Khách sạn. Thủ tục 100% số hóa, không giữ CCCD/Hộ chiếu gốc.',
+    primaryCtaText: 'ĐẶT XE NGAY',
+    secondaryCtaText: 'Xem đội xe',
+    imageUrl: '/images/banners/banner-1.jpg',
+    footnote: '(*) Miễn phí giao nhận xe trong bán kính 10km cho chuyến đi từ 2 ngày.',
+    targetAnchor: '#booking-box',
+  },
+  {
+    id: 2,
+    badge: 'ĐỘI XE THẾ HỆ MỚI 2023 - 2024',
+    badgeColor: 'bg-amber-400 text-slate-950 font-black',
+    title: '100% XE MỚI ÊM ÁI',
+    highlightText: 'Kiểm Định An Toàn 6 Bước Nghiêm Ngặt',
+    description:
+      'Đa dạng các mẫu xe: Honda Vision 2023 Smartkey, Air Blade 125, Wave Alpha, Future 125, Winner X, Yamaha Exciter 155.',
+    primaryCtaText: 'CHỌN DÒNG XE',
+    secondaryCtaText: 'Bảng giá niêm yết',
+    imageUrl: '/images/banners/banner-2.jpg',
+    footnote: '(*) Trang bị sẵn 2 nón bảo hiểm đạt chuẩn an toàn & 2 áo mưa tiện lợi.',
+    targetAnchor: '#fleet',
+  },
+  {
+    id: 3,
+    badge: 'THỦ TỤC THÔNG MINH SIÊU TỐC',
+    badgeColor: 'bg-cyan-400 text-slate-950 font-black',
+    title: 'NHẬN XE SAU 5 PHÚT',
+    highlightText: 'Hợp Đồng Điện Tử Xác Thực Minh Bạch',
+    description:
+      'Quy trình số hóa toàn diện từ chọn xe, xác minh thông tin, thanh toán đặt cọc qua VietQR đến ký hợp đồng bảo mật.',
+    primaryCtaText: 'TRẢI NGHIỆM NGAY',
+    secondaryCtaText: 'Xem quy trình',
+    imageUrl: '/images/banners/banner-3.jpg',
+    footnote: '(*) Tự động đối soát chuyển khoản ngân hàng 24/7 không cần chờ đợi.',
+    targetAnchor: '#process',
+  },
+  {
+    id: 4,
+    badge: 'ĐỒNG HÀNH TRỌN VẸN HÀNH TRÌNH',
+    badgeColor: 'bg-rose-500 text-white font-bold',
+    title: 'CỨU HỘ 24/7 TOÀN QUỐC',
+    highlightText: 'Mạng Lưới Đối Tác Kỹ Thuật Đa Tỉnh Thành',
+    description:
+      'Hotline cứu hộ khẩn cấp 1900 6868 luôn sẵn sàng 24/7. Hỗ trợ kỹ thuật tận nơi và đổi xe thay thế nhanh chóng nếu gặp sự cố.',
+    primaryCtaText: 'GỌI CỨU HỘ 1900 6868',
+    secondaryCtaText: 'Mạng lưới trạm xe',
+    imageUrl: '/images/banners/banner-4.jpg',
+    footnote: '(*) Đội ngũ kỹ thuật viên lưu động chuyên nghiệp túc trực tại các địa bàn du lịch.',
+    targetAnchor: '#stations',
+  },
+];
+
 export function LandingPage() {
   const navigate = useNavigate();
   const { currentActor, isAuthenticated } = useAuthStore();
@@ -206,6 +281,26 @@ export function LandingPage() {
   const [bookingEnd, setBookingEnd] = useState(toInputDate(dayAfter));
   const [pickupLocation, setPickupLocation] = useState('san_bay');
   const [showSosModal, setShowSosModal] = useState(false);
+
+  // Trạng thái Banner Slider phong cách VinFast / Xanh SM
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSlidePaused, setIsSlidePaused] = useState(false);
+
+  useEffect(() => {
+    if (isSlidePaused) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_BANNER_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isSlidePaused]);
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % HERO_BANNER_SLIDES.length);
+  };
+
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + HERO_BANNER_SLIDES.length) % HERO_BANNER_SLIDES.length);
+  };
 
   const handleStartBooking = (typeOverride?: string) => {
     const selectedType = typeOverride || bookingVehicleType;
@@ -325,44 +420,153 @@ export function LandingPage() {
         </div>
       </header>
 
-      {/* 3. HERO SECTION + FORM TÌM & ĐẶT XE NHANH */}
-      <section className="relative overflow-hidden pt-8 pb-16 lg:pt-14 lg:pb-24 bg-gradient-to-b from-brand-50/60 via-slate-50 to-white">
+      {/* 3. HERO SECTION: SLIDER ẢNH QUẢNG CÁO PHONG CÁCH VINFAST / XANH SM + FORM TÌM & ĐẶT XE */}
+      <section className="relative overflow-hidden pt-4 pb-16 lg:pt-6 lg:pb-24 bg-gradient-to-b from-brand-50/40 via-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="text-center max-w-3xl mx-auto space-y-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-brand-100/80 border border-brand-200 text-brand-900 text-xs font-bold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-brand-700" />
-              <span>NỀN TẢNG THUÊ XE MÁY THẾ HỆ MỚI</span>
+          {/* BANNER CAROUSEL 4 ẢNH TRƯỢT THAM KHẢO VINFAST / XANH SM */}
+          <div
+            className="group relative w-full h-[360px] sm:h-[440px] lg:h-[490px] rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 bg-slate-900 select-none"
+            onMouseEnter={() => setIsSlidePaused(true)}
+            onMouseLeave={() => setIsSlidePaused(false)}
+          >
+            {HERO_BANNER_SLIDES.map((slide, idx) => {
+              const isActive = idx === currentSlide;
+              return (
+                <div
+                  key={slide.id}
+                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                    isActive ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+                  }`}
+                >
+                  {/* Ảnh nền Full-width */}
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.title}
+                    className="w-full h-full object-cover object-center transform scale-100 transition-transform duration-1000 ease-out"
+                  />
+
+                  {/* Lớp phủ Gradient chuẩn phong cách VinFast / Xanh SM để chữ hiển thị rõ nét */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/70 to-transparent sm:w-3/4 lg:w-3/5" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent sm:hidden" />
+
+                  {/* Nội dung Banner */}
+                  <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-12 lg:px-16 max-w-2xl text-left z-20 space-y-3 sm:space-y-4">
+                    {/* Badge */}
+                    <div className="inline-flex items-center gap-1.5 self-start">
+                      <span className={`px-3 py-1 rounded-full text-[10px] sm:text-xs font-black tracking-wider uppercase shadow-md ${slide.badgeColor}`}>
+                        {slide.badge}
+                      </span>
+                    </div>
+
+                    {/* Tiêu đề & Highlight */}
+                    <div>
+                      <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-none uppercase drop-shadow-md">
+                        {slide.title}
+                      </h1>
+                      <span className="text-lg sm:text-2xl lg:text-3xl font-extrabold text-amber-300 sm:text-emerald-300 block mt-1.5 drop-shadow-sm">
+                        {slide.highlightText}
+                      </span>
+                    </div>
+
+                    {/* Mô tả */}
+                    <p className="text-slate-200 text-xs sm:text-sm lg:text-base leading-relaxed line-clamp-2 sm:line-clamp-3 max-w-xl drop-shadow">
+                      {slide.description}
+                    </p>
+
+                    {/* Nút Kêu gọi Hành động (CTA) */}
+                    <div className="pt-2 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const el = document.querySelector(slide.targetAnchor || '#booking-box');
+                          el?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-6 py-3 rounded-2xl text-xs sm:text-sm shadow-xl shadow-amber-400/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                      >
+                        <span>{slide.primaryCtaText}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+
+                      {slide.secondaryCtaText && (
+                        <a
+                          href={slide.targetAnchor || '#fleet'}
+                          className="bg-white/15 hover:bg-white/25 text-white border border-white/30 backdrop-blur font-bold px-5 py-3 rounded-2xl text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all"
+                        >
+                          {slide.secondaryCtaText}
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Chú thích chân ảnh */}
+                    {slide.footnote && (
+                      <p className="text-[10px] text-white/60 italic pt-1">
+                        {slide.footnote}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* NÚT ĐIỀU HƯỚNG TRÁI / PHẢI (PREV / NEXT ARROWS) */}
+            <button
+              type="button"
+              onClick={handlePrevSlide}
+              className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 sm:opacity-80 hover:scale-110 active:scale-90 cursor-pointer"
+              aria-label="Ảnh trước"
+            >
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNextSlide}
+              className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md border border-white/20 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 sm:opacity-80 hover:scale-110 active:scale-90 cursor-pointer"
+              aria-label="Ảnh tiếp theo"
+            >
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+
+            {/* CHẤM ĐIỀU HƯỚNG DOTS (VINFAST / XANH SM STYLE) */}
+            <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15">
+              {HERO_BANNER_SLIDES.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`transition-all duration-300 rounded-full cursor-pointer ${
+                    idx === currentSlide
+                      ? 'w-8 h-2.5 bg-emerald-400 shadow-md'
+                      : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/80'
+                  }`}
+                  aria-label={`Chuyển đến ảnh ${idx + 1}`}
+                />
+              ))}
             </div>
+          </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tight leading-tight">
-              Thuê Xe Máy Du Lịch &amp; Công Tác Đời Mới{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-emerald-600 block mt-1">
-                Tự Do Khám Phá Mọi Cung Đường
-              </span>
-            </h1>
-
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-              Thủ tục AI duyệt giấy tờ trong <strong>60 giây</strong> &mdash; <strong>Không giữ CCCD/Hộ chiếu gốc</strong>. Đội xe đời 2023&ndash;2024 kiểm định 6 bước nghiêm ngặt, hợp đồng điện tử bảo mật &amp; cứu hộ 24/7 trọn hành trình.
-            </p>
-
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-600 font-semibold">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-600" />
-                <span>100% Xe đời mới bảo dưỡng định kỳ</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-brand-600" />
-                <span>Không giữ giấy tờ tùy thân gốc</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>4.9/5 (2.800+ khách hài lòng)</span>
-              </div>
+          {/* DÒNG TIÊU CHÍ NHANH */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-8 text-xs text-slate-600 font-semibold">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-brand-600" />
+              <span>100% Xe đời 2023 - 2024 bảo dưỡng định kỳ</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-brand-600" />
+              <span>Không giữ CCCD / Hộ chiếu gốc</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span>4.9/5 (2.800+ khách hài lòng)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-emerald-600" />
+              <span>Nhận xe siêu tốc chỉ sau 5 phút</span>
             </div>
           </div>
 
           {/* KHUNG TÌM & ĐẶT XE NHANH */}
-          <div className="mt-10 max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-300">
+          <div id="booking-box" className="mt-8 max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-7 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 font-bold">
