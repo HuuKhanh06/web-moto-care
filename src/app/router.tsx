@@ -11,6 +11,7 @@ import { StaffLayout } from '@/components/layout/StaffLayout';
 import { ManagerLayout } from '@/components/layout/ManagerLayout';
 
 // Pages
+import { LandingPage } from '@/features/customer/LandingPage';
 import { AuthPage } from '@/features/auth/AuthPage';
 import { KH01Page } from '@/features/customer/KH01Page';
 import { KH02Page } from '@/features/customer/KH02Page';
@@ -56,7 +57,7 @@ function RootRedirect() {
   }
 
   if (!isAuthenticated || !currentActor) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (currentActor.role === 'khach_hang') {
@@ -142,8 +143,8 @@ function AiLogWrapper() {
 export function AppRouter() {
   return (
     <Routes>
-      {/* Trang gốc */}
-      <Route path="/" element={<RootRedirect />} />
+      {/* Trang chủ thương hiệu (Landing Page công chúng) */}
+      <Route path="/" element={<LandingPage />} />
 
       {/* AUTH-01: Đăng nhập / Đăng ký */}
       <Route path="/login" element={<AuthPage />} />

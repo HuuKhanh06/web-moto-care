@@ -2,7 +2,7 @@
 // Màn hình KH-01: Khởi tạo yêu cầu thuê (M_START, M_CheckFleet)
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
@@ -27,6 +27,7 @@ import {
 
 export function KH01Page() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const currentActor = useAuthStore((s) => s.currentActor);
 
   const tomorrow = new Date();
@@ -39,9 +40,13 @@ export function KH01Page() {
 
   const toInputDate = (d: Date) => d.toISOString().slice(0, 16);
 
-  const [vehicleType, setVehicleType] = useState('tay_ga');
-  const [startAt, setStartAt] = useState(toInputDate(tomorrow));
-  const [endAt, setEndAt] = useState(toInputDate(dayAfter));
+  const paramType = searchParams.get('vehicleType') || searchParams.get('type');
+  const paramStart = searchParams.get('startAt');
+  const paramEnd = searchParams.get('endAt');
+
+  const [vehicleType, setVehicleType] = useState(paramType || 'tay_ga');
+  const [startAt, setStartAt] = useState(paramStart || toInputDate(tomorrow));
+  const [endAt, setEndAt] = useState(paramEnd || toInputDate(dayAfter));
   const [hasCccd, setHasCccd] = useState(true);
   const [hasGplx, setHasGplx] = useState(true);
   const [loading, setLoading] = useState(false);
