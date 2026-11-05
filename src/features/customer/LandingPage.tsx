@@ -370,46 +370,46 @@ export function LandingPage() {
             <Logo />
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-600">
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold text-slate-700 whitespace-nowrap shrink-0">
             <button
               type="button"
               onClick={() => scrollToSection('fleet')}
-              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1 whitespace-nowrap shrink-0"
             >
               Đội xe &amp; Bảng giá
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('process')}
-              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1 whitespace-nowrap shrink-0"
             >
               Quy trình thuê xe
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('benefits')}
-              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1 whitespace-nowrap shrink-0"
             >
               Cam kết dịch vụ
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('stations')}
-              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1 whitespace-nowrap shrink-0"
             >
               Trạm xe &amp; Bản đồ
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('reviews')}
-              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1 whitespace-nowrap shrink-0"
             >
               Đánh giá khách hàng
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('faq')}
-              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1"
+              className="hover:text-brand-600 transition-colors font-semibold cursor-pointer py-1 whitespace-nowrap shrink-0"
             >
               Hỏi đáp
             </button>

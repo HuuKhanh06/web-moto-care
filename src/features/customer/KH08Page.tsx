@@ -36,11 +36,12 @@ import {
   ShieldCheck,
   ArrowRight,
   Navigation,
+  PlusCircle,
 } from 'lucide-react';
 
 export function KH08Page() {
   const [searchParams] = useSearchParams();
-  const requestId = searchParams.get('requestId');
+  const rawRequestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
 
@@ -55,17 +56,54 @@ export function KH08Page() {
 
   // Truy vấn dữ liệu thời gian thực (Live Query) từ Dexie
   const liveData = useLiveQuery(async () => {
-    if (!requestId) return null;
+    let targetId = rawRequestId;
+
+    // Nếu không có requestId trên URL, tự động liên kết hợp đồng của khách hàng
+    if (!targetId && currentActor) {
+      // 1. Tìm đơn đang xử lý sự cố hoặc đang thuê
+      const activeReq = await db.rental_requests
+        .where('customer_id')
+        .equals(currentActor.id)
+        .and((r) => r.status === 'DANG_XU_LY_SU_CO' || r.status === 'DANG_THUE')
+        .first();
+
+      if (activeReq) {
+        targetId = activeReq.id;
+      } else {
+        // 2. Tìm đơn gần nhất của khách
+        const list = await db.rental_requests
+          .where('customer_id')
+          .equals(currentActor.id)
+          .reverse()
+          .sortBy('created_at');
+        if (list.length > 0) {
+          targetId = list[0].id;
+        }
+      }
+    }
+
+    // 3. Fallback cho dữ liệu mô phỏng demo
+    if (!targetId) {
+      const demoActive = await db.rental_requests
+        .where('status')
+        .equals('DANG_THUE')
+        .first();
+      if (demoActive) {
+        targetId = demoActive.id;
+      }
+    }
+
+    if (!targetId) return null;
 
     const [req, pState] = await Promise.all([
-      db.rental_requests.get(requestId),
-      db.process_state.get(requestId),
+      db.rental_requests.get(targetId),
+      db.process_state.get(targetId),
     ]);
     if (!req) return null;
 
     const [v, inc] = await Promise.all([
       req.vehicle_id ? db.vehicles.get(req.vehicle_id) : Promise.resolve(undefined),
-      db.incidents.where('request_id').equals(requestId).reverse().first(),
+      db.incidents.where('request_id').equals(targetId).reverse().first(),
     ]);
 
     let partner = undefined;
@@ -83,6 +121,7 @@ export function KH08Page() {
     }
 
     return {
+      targetId,
       request: req,
       vehicle: v,
       processState: pState,
@@ -90,7 +129,7 @@ export function KH08Page() {
       partner,
       lastDispatch,
     };
-  }, [requestId]);
+  }, [rawRequestId, currentActor]);
 
   // Lấy tọa độ GPS tự động từ trình duyệt
   const handleGetLocation = () => {
@@ -129,8 +168,9 @@ export function KH08Page() {
 
   // Gửi sự cố tại cổng M_EG (SC_Create)
   const handleSubmitIncident = async () => {
-    if (!currentActor || !requestId) {
-      toast.error('Vui lòng đăng nhập lại');
+    const targetId = liveData?.targetId || rawRequestId;
+    if (!currentActor || !targetId) {
+      toast.error('Vui lòng đăng nhập và chọn chuyến đi cần cứu hộ');
       return;
     }
 
@@ -142,7 +182,7 @@ export function KH08Page() {
     setSubmitting(true);
     try {
       await engine.complete(
-        requestId,
+        targetId,
         'M_EG',
         {
           event_type: 'INCIDENT',
@@ -164,12 +204,104 @@ export function KH08Page() {
     }
   };
 
-  if (!liveData) {
+  // Đang truy vấn dữ liệu từ IndexedDB / Dexie
+  if (liveData === undefined) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-          <p className="mt-3 text-sm text-slate-500">Đang tải thông tin theo dõi sự cố...</p>
+          <p className="mt-3 text-sm text-slate-500">Đang kiểm tra thông tin cứu hộ...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Khách hàng chưa có hợp đồng nào đang thuê cần cứu hộ trực tiếp
+  if (liveData === null) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-rose-100 text-rose-600 mb-2 shadow-inner">
+            <PhoneCall className="w-8 h-8 animate-bounce" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            Tổng Đài Cứu Hộ Khẩn Cấp 24/7
+          </h1>
+          <p className="text-slate-600 max-w-lg mx-auto text-sm sm:text-base">
+            Đội ngũ hỗ trợ kỹ thuật và cứu hộ đường bộ của MOTO CARE luôn túc trực 24/7 để đồng hành cùng bạn trên mọi nẻo đường.
+          </p>
+        </div>
+
+        {/* Thẻ Hotline Khẩn Cấp */}
+        <Card className="p-6 sm:p-8 border-2 border-rose-300 bg-linear-to-br from-rose-50/70 to-amber-50/50 shadow-md text-center space-y-4">
+          <div className="text-xs font-bold uppercase tracking-wider text-rose-700">
+            Hotline Hỗ Trợ Kỹ Thuật Toàn Quốc
+          </div>
+          <a
+            href="tel:19006868"
+            className="inline-flex items-center justify-center gap-3 text-3xl sm:text-4xl font-extrabold text-rose-600 hover:text-rose-700 hover:scale-105 transition-transform"
+          >
+            <PhoneCall className="w-8 h-8" />
+            <span>1900 6868</span>
+          </a>
+          <p className="text-xs text-slate-500">
+            (Miễn phí cước cuộc gọi &bull; Tiếp nhận trong vòng 15 giây &bull; Hoạt động 24/7)
+          </p>
+        </Card>
+
+        {/* Hướng dẫn khi gặp sự cố */}
+        <Card className="p-6 space-y-4 border-slate-200">
+          <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            3 bước xử lý nhanh khi gặp sự cố trên đường
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+              <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold inline-flex items-center justify-center text-xs">
+                1
+              </span>
+              <p className="font-bold text-slate-900">Bảo đảm an toàn</p>
+              <p className="text-slate-500 text-xs">
+                Dắt xe vào lề đường an toàn, bật đèn cảnh báo nếu trời tối hoặc sương mù.
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+              <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold inline-flex items-center justify-center text-xs">
+                2
+              </span>
+              <p className="font-bold text-slate-900">Gọi Hotline 1900 6868</p>
+              <p className="text-slate-500 text-xs">
+                Cung cấp vị trí và tình trạng xe để điều phối đối tác cứu hộ gần nhất.
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+              <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold inline-flex items-center justify-center text-xs">
+                3
+              </span>
+              <p className="font-bold text-slate-900">Theo dõi trực tiếp</p>
+              <p className="text-slate-500 text-xs">
+                Hệ thống tự động liên kết hợp đồng của bạn để cập nhật vị trí xe cứu hộ theo thời gian thực.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Nút hành động */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/kh/06')}
+            className="w-full sm:w-auto font-bold text-xs"
+          >
+            Xem chuyến đi của tôi
+          </Button>
+          <Button
+            onClick={() => navigate('/kh/01')}
+            className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm"
+          >
+            <PlusCircle className="w-4 h-4 mr-1.5" />
+            Đặt xe máy mới
+          </Button>
         </div>
       </div>
     );

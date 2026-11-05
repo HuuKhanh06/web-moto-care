@@ -54,25 +54,25 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
     <div className="min-h-screen bg-slate-50/70 flex flex-col pb-16 md:pb-0">
       {/* Top Header chuẩn phong cách VinFast / Green SM Platform */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
           {/* Cụm Logo bên trái */}
           <div className="flex items-center gap-3 shrink-0">
             <Link to="/" className="flex items-center gap-2 group">
               <Logo size="md" />
             </Link>
-            <span className="hidden xl:inline-block px-2.5 py-0.5 text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200/60 rounded-full">
+            <span className="hidden xl:inline-block px-2.5 py-0.5 text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200/60 rounded-full whitespace-nowrap">
               Khách hàng
             </span>
           </div>
 
-          {/* Thanh Menu điều hướng trung tâm (Phong cách VinFast / Green SM) */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold text-slate-700">
+          {/* Thanh Menu điều hướng trung tâm (Phong cách VinFast / Green SM: 1 hàng ngang, không xuống dòng) */}
+          <nav className="hidden lg:flex items-center gap-7 xl:gap-9 text-[15px] xl:text-base font-semibold text-slate-700 whitespace-nowrap shrink-0">
             {/* 1. Giới thiệu / Trang chủ */}
             <NavLink
               to="/"
               className={({ isActive }) =>
                 cn(
-                  'transition-colors py-2',
+                  'whitespace-nowrap shrink-0 transition-colors py-2 px-1 text-[15px] xl:text-base font-semibold tracking-tight',
                   isActive && location.pathname === '/' ? 'text-brand-600 font-bold' : 'text-slate-700 hover:text-brand-600'
                 )
               }
@@ -81,7 +81,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
             </NavLink>
 
             {/* 2. Dòng xe & Bảng giá (Dropdown VinFast Style) */}
-            <div className="relative" ref={fleetMenuRef}>
+            <div className="relative shrink-0" ref={fleetMenuRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -89,12 +89,12 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
                   setPolicyMenuOpen(false);
                 }}
                 className={cn(
-                  'flex items-center gap-1.5 py-2 transition-colors cursor-pointer',
+                  'whitespace-nowrap shrink-0 flex items-center gap-1.5 py-2 px-1 text-[15px] xl:text-base font-semibold tracking-tight transition-colors cursor-pointer',
                   location.pathname.startsWith('/kh/01') || fleetMenuOpen ? 'text-brand-600 font-bold' : 'text-slate-700 hover:text-brand-600'
                 )}
               >
                 <span>Dòng xe</span>
-                <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', fleetMenuOpen && 'rotate-180 text-brand-600')} />
+                <ChevronDown className={cn('w-4 h-4 transition-transform duration-200', fleetMenuOpen && 'rotate-180 text-brand-600')} />
               </button>
 
               {fleetMenuOpen && (
@@ -104,7 +104,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
                     onClick={() => setFleetMenuOpen(false)}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-brand-50/60 transition-colors group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-brand-100/70 text-brand-700 flex items-center justify-center font-bold text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-brand-100/70 text-brand-700 flex items-center justify-center font-bold text-xs shrink-0">
                       <Bike className="w-4 h-4" />
                     </div>
                     <div>
@@ -118,7 +118,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
                     onClick={() => setFleetMenuOpen(false)}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-brand-50/60 transition-colors group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100/70 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100/70 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
                       <Zap className="w-4 h-4" />
                     </div>
                     <div>
@@ -132,7 +132,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
                     onClick={() => setFleetMenuOpen(false)}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-brand-50/60 transition-colors group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-amber-100/70 text-amber-700 flex items-center justify-center font-bold text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100/70 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
@@ -149,7 +149,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
               to="/kh/06"
               className={({ isActive }) =>
                 cn(
-                  'transition-colors py-2',
+                  'whitespace-nowrap shrink-0 transition-colors py-2 px-1 text-[15px] xl:text-base font-semibold tracking-tight',
                   isActive ? 'text-brand-600 font-bold' : 'text-slate-700 hover:text-brand-600'
                 )
               }
@@ -158,7 +158,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
             </NavLink>
 
             {/* 4. Chính sách & Tiện ích (Dropdown VinFast Style) */}
-            <div className="relative" ref={policyMenuRef}>
+            <div className="relative shrink-0" ref={policyMenuRef}>
               <button
                 type="button"
                 onClick={() => {
@@ -166,19 +166,19 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
                   setFleetMenuOpen(false);
                 }}
                 className={cn(
-                  'flex items-center gap-1.5 py-2 transition-colors cursor-pointer',
+                  'whitespace-nowrap shrink-0 flex items-center gap-1.5 py-2 px-1 text-[15px] xl:text-base font-semibold tracking-tight transition-colors cursor-pointer',
                   policyMenuOpen ? 'text-brand-600 font-bold' : 'text-slate-700 hover:text-brand-600'
                 )}
               >
                 <span>Chính sách</span>
-                <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', policyMenuOpen && 'rotate-180 text-brand-600')} />
+                <ChevronDown className={cn('w-4 h-4 transition-transform duration-200', policyMenuOpen && 'rotate-180 text-brand-600')} />
               </button>
 
               {policyMenuOpen && (
                 <div className="absolute top-full left-0 mt-2 w-64 rounded-2xl bg-white shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="p-2.5 rounded-xl hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
-                      <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />
+                      <ShieldCheck className="w-3.5 h-3.5 text-brand-600 shrink-0" />
                       <span>Không giữ giấy tờ tùy thân gốc</span>
                     </div>
                     <div className="text-[10px] text-slate-500 mt-0.5">Xác thực số hóa &mdash; Bảo mật danh tính</div>
@@ -186,7 +186,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
 
                   <div className="p-2.5 rounded-xl hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
-                      <Zap className="w-3.5 h-3.5 text-emerald-600" />
+                      <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>Giao nhận xe tận nơi</span>
                     </div>
                     <div className="text-[10px] text-slate-500 mt-0.5">Sân bay, ga tàu &amp; khách sạn 24/7</div>
@@ -197,7 +197,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
                     onClick={() => setPolicyMenuOpen(false)}
                     className="flex items-center gap-2 p-2.5 rounded-xl hover:bg-amber-50/70 transition-colors text-amber-900"
                   >
-                    <PhoneCall className="w-3.5 h-3.5 text-amber-600" />
+                    <PhoneCall className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                     <div>
                       <div className="text-xs font-bold">Cứu hộ khẩn cấp 1900 6868</div>
                       <div className="text-[10px] text-slate-500">Báo sự cố trên đường đi</div>
@@ -212,24 +212,24 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
               to="/kh/08"
               className={({ isActive }) =>
                 cn(
-                  'transition-colors py-2 flex items-center gap-1.5',
+                  'whitespace-nowrap shrink-0 transition-colors py-2 px-1 text-[15px] xl:text-base font-semibold tracking-tight flex items-center gap-1.5',
                   isActive ? 'text-amber-600 font-bold' : 'text-slate-700 hover:text-amber-600'
                 )
               }
             >
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
               <span>Cứu hộ 24/7</span>
             </NavLink>
           </nav>
 
           {/* Cụm Hành động & Tài khoản người dùng bên phải */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             {/* Nút Đặt xe ngay chuẩn VinFast */}
             <NavLink
               to="/kh/01"
-              className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-full text-xs shadow-sm shadow-brand-500/25 flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
+              className="whitespace-nowrap shrink-0 bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm shadow-sm shadow-brand-500/25 flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
             >
-              <PlusCircle className="w-3.5 h-3.5" />
+              <PlusCircle className="w-4 h-4 shrink-0" />
               <span>Đặt xe ngay</span>
             </NavLink>
 
@@ -237,18 +237,18 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
             <NotificationBell />
 
             {/* Thông tin tài khoản người dùng */}
-            <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200">
-              <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs ring-2 ring-brand-500/20 shadow-xs">
+            <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs ring-2 ring-brand-500/20 shadow-xs shrink-0">
                 {currentUser?.full_name?.slice(0, 1) || 'K'}
               </div>
-              <span className="hidden sm:inline-block text-xs font-bold text-slate-800 max-w-[120px] truncate">
+              <span className="hidden sm:inline-block text-xs font-bold text-slate-800 max-w-[130px] truncate whitespace-nowrap">
                 {currentUser?.full_name}
               </span>
 
               <button
                 type="button"
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-1 cursor-pointer shrink-0"
                 title="Đăng xuất tài khoản"
               >
                 <LogOut className="w-4 h-4" />
