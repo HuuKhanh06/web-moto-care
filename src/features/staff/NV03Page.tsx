@@ -21,6 +21,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import {
   PendingRequestBar,
   type PendingRequestSummary,
@@ -307,8 +308,12 @@ export function NV03Page() {
       <Card className="p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-              <Wrench className="h-6 w-6" />
+            <div className="flex h-16 w-20 items-center justify-center rounded-xl bg-slate-50 border border-slate-100 p-1 shrink-0 overflow-hidden">
+              <img
+                src={getVehicleImageUrl(vehicle.model)}
+                alt={vehicle.model}
+                className="h-full w-full object-contain filter drop-shadow-2xs"
+              />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-800 sm:text-lg">

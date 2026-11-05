@@ -22,6 +22,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   Bike,
@@ -279,13 +280,26 @@ export function KH06Page() {
                 )}
 
                 {/* Chi tiết xe & thời gian */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 text-xs">
-                  <div>
-                    <span className="text-slate-500 block">Phương tiện thuê:</span>
-                    <strong className="text-slate-900 text-sm flex items-center gap-1.5 mt-0.5">
-                      <Bike className="w-4 h-4 text-brand-600" />
-                      {veh ? `${veh.model} (${veh.plate})` : 'Chưa phân bổ xe'}
-                    </strong>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 text-xs items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                      <img
+                        src={getVehicleImageUrl(veh?.model)}
+                        alt={veh?.model || 'Xe'}
+                        className="h-full w-full object-contain filter drop-shadow-2xs"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Phương tiện thuê:</span>
+                      <strong className="text-slate-900 text-sm flex items-center gap-1.5 mt-0.5">
+                        {veh ? `${veh.model}` : 'Chưa phân bổ xe'}
+                      </strong>
+                      {veh && (
+                        <span className="text-[11px] font-mono text-slate-500 font-bold">
+                          {veh.plate}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div>

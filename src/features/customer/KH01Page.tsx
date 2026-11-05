@@ -168,6 +168,7 @@ export function KH01Page() {
                 price: 120000,
                 tag: 'Tiết kiệm xăng',
                 desc: 'Phù hợp di chuyển linh hoạt, đi xa',
+                image: '/images/vehicles/honda-wave-alpha.png',
               },
               {
                 id: 'tay_ga',
@@ -176,6 +177,7 @@ export function KH01Page() {
                 price: 160000,
                 tag: 'Được chuộng nhất',
                 desc: 'Êm ái, cốp rộng, dễ điều khiển',
+                image: '/images/vehicles/honda-vision.jpg',
               },
               {
                 id: 'xe_con',
@@ -184,6 +186,7 @@ export function KH01Page() {
                 price: 200000,
                 tag: 'Mạnh mẽ',
                 desc: 'Động cơ thể thao, thích hợp phượt',
+                image: '/images/vehicles/honda-winner-x.png',
               },
             ].map((item) => {
               const isSelected = vehicleType === item.id;
@@ -211,7 +214,17 @@ export function KH01Page() {
                     )}
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-baseline justify-between">
+                  {/* Ảnh thực tế của dòng xe */}
+                  <div className="h-28 my-2 rounded-xl bg-slate-50/80 flex items-center justify-center overflow-hidden p-2">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="h-full w-full object-contain filter drop-shadow-xs hover:scale-105 transition-transform"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-baseline justify-between">
                     <span className="font-extrabold text-brand-700 text-base">
                       {formatCurrency(item.price)}
                     </span>

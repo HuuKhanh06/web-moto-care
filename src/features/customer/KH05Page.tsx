@@ -20,6 +20,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
@@ -30,7 +31,6 @@ import {
   Camera,
   Gauge,
   Fuel,
-  Bike,
   Check,
   Eye,
 } from 'lucide-react';
@@ -204,8 +204,12 @@ export function KH05Page() {
       {vehicle && (
         <Card className="p-5 border-slate-200/80 glass-surface shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 shrink-0 border border-brand-100 shadow-xs">
-              <Bike className="h-6 w-6" />
+            <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 flex items-center justify-center p-1 shadow-xs">
+              <img
+                src={getVehicleImageUrl(vehicle.model)}
+                alt={vehicle.model}
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-slate-900 text-base sm:text-lg">

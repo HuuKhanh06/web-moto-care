@@ -24,6 +24,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import { CUSTOMER_EXTENSION_STEPS } from './constants';
 import {
   Calendar,
@@ -34,7 +35,6 @@ import {
   ArrowRight,
   ShieldCheck,
   CreditCard,
-  Bike,
   Sparkles,
 } from 'lucide-react';
 
@@ -293,8 +293,12 @@ export function KH07Page() {
       {vehicle && (
         <Card className="p-4 bg-brand-50/30 border-brand-200">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shrink-0">
-              <Bike className="h-5 w-5" />
+            <div className="h-12 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-brand-200/60 p-1 flex items-center justify-center shadow-xs">
+              <img
+                src={getVehicleImageUrl(vehicle.model)}
+                alt={vehicle.model}
+                className="h-full w-full object-contain"
+              />
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-sm sm:text-base">

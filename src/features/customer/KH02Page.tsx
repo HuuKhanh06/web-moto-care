@@ -26,6 +26,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
@@ -328,14 +329,25 @@ export function KH02Page() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
-          <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100">
-            <span className="text-slate-500 block mb-1">Mẫu xe & Biển số</span>
-            <span className="font-extrabold text-slate-900 text-sm block">
-              {vehicle?.model || 'Đang phân bổ'}
-            </span>
-            <span className="text-brand-700 font-mono font-semibold text-xs">
-              {vehicle?.plate || 'Chờ gán'}
-            </span>
+          <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 flex items-center gap-3">
+            {vehicle && (
+              <div className="h-12 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200/60 p-1 flex items-center justify-center shadow-xs">
+                <img
+                  src={getVehicleImageUrl(vehicle.model)}
+                  alt={vehicle.model}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <span className="text-slate-500 block mb-0.5 text-[11px]">Mẫu xe & Biển số</span>
+              <span className="font-extrabold text-slate-900 text-sm block truncate">
+                {vehicle?.model || 'Đang phân bổ'}
+              </span>
+              <span className="text-brand-700 font-mono font-semibold text-xs">
+                {vehicle?.plate || 'Chờ gán'}
+              </span>
+            </div>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100">

@@ -20,6 +20,7 @@ import {
   getStatusLabel,
   formatDateTime,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import {
   PendingRequestBar,
   type PendingRequestSummary,
@@ -27,7 +28,6 @@ import {
 import {
   KeyRound,
   CheckCircle2,
-  Bike,
   User,
   Check,
   Sparkles,
@@ -266,8 +266,12 @@ export function NV05Page() {
         {/* Xe máy */}
         <Card className="p-4 sm:p-5">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 shrink-0">
-              <Bike className="h-5 w-5" />
+            <div className="flex h-16 w-20 items-center justify-center rounded-xl bg-slate-50 border border-slate-100 p-1 shrink-0 overflow-hidden">
+              <img
+                src={getVehicleImageUrl(vehicle.model)}
+                alt={vehicle.model}
+                className="h-full w-full object-contain filter drop-shadow-2xs"
+              />
             </div>
             <div>
               <p className="text-xs text-slate-400">Phương tiện bàn giao</p>

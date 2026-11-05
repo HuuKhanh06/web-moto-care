@@ -21,6 +21,7 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import {
   ClipboardList,
   Search,
@@ -364,18 +365,26 @@ export function NV01Page() {
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       {/* Cột thông tin */}
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                            #{task.requestId.slice(0, 8)}
-                          </span>
-                          <BpmnBadge nodeId={task.nodeId} />
-                          {req && (
-                            <Badge variant={getStatusBadgeVariant(req.status)} size="sm">
-                              {getStatusLabel(req.status)}
-                            </Badge>
-                          )}
+                      <div className="flex items-start gap-3">
+                        <div className="w-16 h-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                          <img
+                            src={getVehicleImageUrl(veh?.model || task.vehicleType)}
+                            alt={veh?.model || 'Xe'}
+                            className="h-full w-full object-contain filter drop-shadow-2xs"
+                          />
                         </div>
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                              #{task.requestId.slice(0, 8)}
+                            </span>
+                            <BpmnBadge nodeId={task.nodeId} />
+                            {req && (
+                              <Badge variant={getStatusBadgeVariant(req.status)} size="sm">
+                                {getStatusLabel(req.status)}
+                              </Badge>
+                            )}
+                          </div>
 
                         <div className="text-base font-bold text-slate-900 flex items-center gap-2">
                           <span>{task.nodeName}</span>
@@ -393,6 +402,7 @@ export function NV01Page() {
                               Nhận: {formatDateTime(req.start_at)}
                             </span>
                           )}
+                        </div>
                         </div>
                       </div>
 

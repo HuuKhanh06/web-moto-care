@@ -21,6 +21,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import {
   PendingRequestBar,
   type PendingRequestSummary,
@@ -258,11 +259,24 @@ export function NV02Page() {
             <Bike className="w-4 h-4 text-brand-600" />
             <span>Phương tiện thuê</span>
           </div>
-          <div className="text-sm font-bold text-slate-900">
-            {vehicle ? `${vehicle.model} (${vehicle.plate})` : 'Xe đang phân bổ'}
-          </div>
-          <div className="text-xs text-slate-500">
-            Thời gian: {formatDateTime(request.start_at)} &rarr; {formatDateTime(request.end_at)}
+          <div className="flex items-center gap-3">
+            {vehicle && (
+              <div className="h-10 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-50 border border-slate-200/80 p-0.5 flex items-center justify-center">
+                <img
+                  src={getVehicleImageUrl(vehicle.model)}
+                  alt={vehicle.model}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold text-slate-900 truncate">
+                {vehicle ? `${vehicle.model} (${vehicle.plate})` : 'Xe đang phân bổ'}
+              </div>
+              <div className="text-xs text-slate-500">
+                Thời gian: {formatDateTime(request.start_at)} &rarr; {formatDateTime(request.end_at)}
+              </div>
+            </div>
           </div>
         </Card>
       </div>

@@ -41,6 +41,7 @@ interface FeaturedVehicle {
   badge: string;
   badgeColor: 'brand' | 'amber' | 'blue';
   features: string[];
+  imageUrl: string;
 }
 
 const FEATURED_VEHICLES: FeaturedVehicle[] = [
@@ -55,6 +56,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp 16L tiện lợi',
     badge: 'Phổ biến nhất',
     badgeColor: 'brand',
+    imageUrl: '/images/vehicles/honda-vision.jpg',
     features: ['Khóa thông minh Smartkey', 'Tiết kiệm xăng', 'Dễ lái cho nữ & gia đình'],
   },
   {
@@ -68,6 +70,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp lớn 23.2L',
     badge: 'Êm ái & Mạnh mẽ',
     badgeColor: 'brand',
+    imageUrl: '/images/vehicles/honda-airblade.png',
     features: ['Cổng sạc USB tiện lợi', 'Phanh đĩa an toàn', 'Vận hành đầm chắc'],
   },
   {
@@ -81,6 +84,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp nhỏ vừa áo mưa',
     badge: 'Tiết kiệm chi phí',
     badgeColor: 'blue',
+    imageUrl: '/images/vehicles/honda-wave-alpha.png',
     features: ['Siêu tiết kiệm xăng', 'Dễ dàng leo dốc / đèo', 'Chi phí thuê tối ưu nhất'],
   },
   {
@@ -94,6 +98,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp U-Box chứa nón',
     badge: 'Động cơ bốc & êm',
     badgeColor: 'blue',
+    imageUrl: '/images/vehicles/honda-future.png',
     features: ['Đèn pha LED siêu sáng', 'Bình xăng 4.6L lớn', 'Chạy đường trường tuyệt vời'],
   },
   {
@@ -107,6 +112,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Balo kèm phụ kiện',
     badge: 'Phanh ABS Thể thao',
     badgeColor: 'amber',
+    imageUrl: '/images/vehicles/honda-winner-x.png',
     features: ['Phanh chống bó cứng ABS', 'Côn tay nhẹ bốc', 'Chuyên phượt đường dài'],
   },
   {
@@ -120,6 +126,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp siêu rộng 27L',
     badge: 'Smartkey & Hybrid',
     badgeColor: 'brand',
+    imageUrl: '/images/vehicles/yamaha-grande.png',
     features: ['Trợ lực điện Hybrid êm ru', 'Cốp chứa 2 nón bảo hiểm', 'Nắp bình xăng phía trước'],
   },
 ];
@@ -532,11 +539,14 @@ export function LandingPage() {
                     </span>
                   </div>
 
-                  <div className="h-44 rounded-2xl bg-gradient-to-tr from-slate-100 via-slate-50 to-brand-50/40 border border-slate-100 flex items-center justify-center relative overflow-hidden group-hover:scale-[1.02] transition-transform duration-300">
-                    <div className="w-20 h-20 rounded-full bg-white shadow-xs flex items-center justify-center text-brand-600 group-hover:text-brand-700 transition-colors">
-                      <Bike className="w-10 h-10" />
-                    </div>
-                    <span className="absolute bottom-2 right-2 text-[10px] font-bold text-slate-400 bg-white/80 px-2 py-0.5 rounded-md">
+                  <div className="h-48 rounded-2xl bg-white border border-slate-100 flex items-center justify-center relative overflow-hidden p-3 group-hover:border-brand-200 transition-all duration-300">
+                    <img
+                      src={bike.imageUrl}
+                      alt={bike.name}
+                      className="h-full w-full object-contain filter drop-shadow-sm group-hover:scale-108 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    <span className="absolute bottom-2 right-2 text-[10px] font-bold text-slate-500 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-md border border-slate-200/60 shadow-2xs">
                       Đời 2023 - 2024
                     </span>
                   </div>

@@ -19,6 +19,7 @@ import {
   toast,
 } from '@/components/ui';
 import { formatCurrency } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import {
   Plus,
   Edit2,
@@ -372,7 +373,16 @@ export function AD01Page() {
                           {v.plate}
                         </td>
                         <td className="py-3 px-4 font-medium text-slate-800">
-                          {v.model}
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-8 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 p-0.5">
+                              <img
+                                src={getVehicleImageUrl(v.model)}
+                                alt={v.model}
+                                className="h-full w-full object-contain filter drop-shadow-2xs"
+                              />
+                            </div>
+                            <span>{v.model}</span>
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <span className="px-2 py-0.5 rounded bg-slate-100 font-medium text-slate-700">

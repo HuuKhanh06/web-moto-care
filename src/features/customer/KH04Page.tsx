@@ -23,6 +23,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
@@ -353,10 +354,21 @@ export function KH04Page() {
         {/* Điều khoản 1: Đối tượng & Thời gian */}
         <div className="space-y-2 font-sans text-xs text-slate-800">
           <strong className="block font-bold text-slate-900 text-[12px]">ĐIỀU 1: ĐỐI TƯỢNG VÀ THỜI HẠN THUÊ</strong>
-          <div className="pl-3 space-y-1">
-            <div>- Phương tiện: <strong>{vehicle ? `${vehicle.model} (Biển số: ${vehicle.plate})` : 'Phân khúc xe máy Moto Care'}</strong></div>
-            <div>- Thời gian nhận xe: <strong>{formatDateTime(request.start_at)}</strong></div>
-            <div>- Thời gian trả xe dự kiến: <strong>{formatDateTime(request.end_at)}</strong></div>
+          <div className="pl-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div>- Phương tiện: <strong>{vehicle ? `${vehicle.model} (Biển số: ${vehicle.plate})` : 'Phân khúc xe máy Moto Care'}</strong></div>
+              <div>- Thời gian nhận xe: <strong>{formatDateTime(request.start_at)}</strong></div>
+              <div>- Thời gian trả xe dự kiến: <strong>{formatDateTime(request.end_at)}</strong></div>
+            </div>
+            {vehicle && (
+              <div className="w-24 h-16 rounded-xl bg-slate-50 border border-slate-200/80 p-1 shrink-0 overflow-hidden flex items-center justify-center">
+                <img
+                  src={getVehicleImageUrl(vehicle.model)}
+                  alt={vehicle.model}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            )}
           </div>
         </div>
 

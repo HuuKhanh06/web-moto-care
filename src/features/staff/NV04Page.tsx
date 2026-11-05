@@ -21,13 +21,13 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import {
   PendingRequestBar,
   type PendingRequestSummary,
 } from '@/components/common/PendingRequestBar';
 import {
   Camera,
-  CheckCircle2,
   ArrowRight,
   Gauge,
   Fuel,
@@ -166,13 +166,13 @@ export function NV04Page() {
 
   // Tự động điền ảnh mẫu nhanh nếu nhân viên demo
   const handleFillDemoPhotos = () => {
-    const demoImg = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="%2300A651" width="400" height="300"/><text fill="%23ffffff" font-family="sans-serif" font-size="24" dy="10.5" font-weight="bold" x="50%" y="50%" text-anchor="middle">Ảnh chụp thực tế xe</text></svg>';
-    setFrontPhoto(demoImg);
-    setRearPhoto(demoImg);
-    setLeftPhoto(demoImg);
-    setRightPhoto(demoImg);
-    setOdometerPhoto(demoImg);
-    toast.success('Đã nạp 5 ảnh mẫu xe thực tế');
+    const realImg = getVehicleImageUrl(vehicle?.model);
+    setFrontPhoto(realImg);
+    setRearPhoto(realImg);
+    setLeftPhoto(realImg);
+    setRightPhoto(realImg);
+    setOdometerPhoto(realImg);
+    toast.success('Đã nạp 5 ảnh chụp thực tế của xe');
   };
 
   const allPhotosUploaded = Boolean(
@@ -258,15 +258,19 @@ export function NV04Page() {
       <Card className="p-4 sm:p-5 bg-brand-50/40 border-brand-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shrink-0">
-              <CheckCircle2 className="h-5 w-5" />
+            <div className="flex h-14 w-18 items-center justify-center rounded-xl bg-white border border-brand-200 p-1 shrink-0 overflow-hidden">
+              <img
+                src={getVehicleImageUrl(vehicle?.model)}
+                alt={vehicle?.model || 'Xe'}
+                className="h-full w-full object-contain filter drop-shadow-2xs"
+              />
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                Biên bản kỹ thuật đạt chuẩn (Lần #{lastPassedInspection?.attempt_no || 1})
+                {vehicle?.model} &bull; {vehicle?.plate}
               </h3>
               <p className="text-xs text-slate-600">
-                Các hạng mục phanh, đèn, lốp, còi, gương đã được kiểm tra đạt yêu cầu.
+                Biên bản kỹ thuật đạt chuẩn (Lần #{lastPassedInspection?.attempt_no || 1}) &bull; Sẵn sàng chụp ảnh lưu trữ
               </p>
             </div>
           </div>
