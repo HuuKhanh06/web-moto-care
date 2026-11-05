@@ -60,9 +60,6 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
             <Link to="/" className="flex items-center gap-2 group">
               <Logo size="md" />
             </Link>
-            <span className="hidden xl:inline-block px-2.5 py-0.5 text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200/60 rounded-full whitespace-nowrap">
-              Khách hàng
-            </span>
           </div>
 
           {/* Thanh Menu điều hướng trung tâm (Phong cách VinFast / Green SM: 1 hàng ngang, không xuống dòng) */}
