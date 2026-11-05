@@ -63,3 +63,4 @@ export function getVehicleImageUrl(modelOrType?: string | null): string {
   // Fallback mặc định xe tay ga Vision
   return '/images/vehicles/honda-vision.jpg';
 }
+

@@ -331,7 +331,7 @@ export function LandingPage() {
           <div className="text-center max-w-3xl mx-auto space-y-4">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-brand-100/80 border border-brand-200 text-brand-900 text-xs font-bold tracking-wide">
               <Sparkles className="w-3.5 h-3.5 text-brand-700" />
-              <span>NỀN TẢNG THUÊ XE MÁY THẾ HỆ MỚI • ỨNG DỤNG AI OCR DUYỆT 60 GIÂY</span>
+              <span>NỀN TẢNG THUÊ XE MÁY THẾ HỆ MỚI</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tight leading-tight">
