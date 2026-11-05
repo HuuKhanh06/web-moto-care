@@ -76,8 +76,8 @@ export function IntegrationLogPage() {
         recipientEmail: configForm.notificationEmail || 'khach@motocare.vn',
         recipientName: 'Khách hàng Demo',
         template: 'QUOTE',
-        subject: '[Test Moto Care] Thử nghiệm gửi thông báo hệ thống',
-        content: 'Đây là email thử nghiệm kết nối dịch vụ Notifier của đồ án Moto Care.',
+        subject: '[Moto Care] Thử nghiệm gửi thông báo hệ thống',
+        content: 'Đây là thông báo kiểm tra kết nối dịch vụ Notifier của hệ thống Moto Care.',
         requestId: 'TEST-REQ-' + Date.now().toString().slice(-4),
         bpmnNodeId: 'M_SendTerms',
       });
@@ -223,7 +223,7 @@ export function IntegrationLogPage() {
         <div className="flex items-center justify-between">
           <div className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
             <Send className="w-3.5 h-3.5 text-brand-600" />
-            <span>Thử nghiệm kết nối nhanh (Demo Test Actions)</span>
+            <span>Kiểm tra đường truyền dịch vụ ngoại vi</span>
           </div>
           <span className="text-[11px] text-slate-500">
             Tự động ghi nhận vào nhật ký bên dưới

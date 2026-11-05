@@ -14,7 +14,6 @@ import {
   Building2,
   Bike,
   LogOut,
-  Palette,
   Inbox,
   Activity,
   Sparkles,
@@ -39,7 +38,6 @@ export function ManagerLayout({ children }: { children?: React.ReactNode }) {
     { to: '/ad/01', label: 'Quản trị đội xe & Dữ liệu', badge: 'AD-01', icon: Bike },
     { to: '/integration-log', label: 'Nhật ký tích hợp ngoài', icon: Activity },
     { to: '/ai-log', label: 'Nhật ký AI Agent OCR', icon: Sparkles },
-    { to: '/style', label: 'Bộ Design System & Style', icon: Palette },
   ];
 
   return (

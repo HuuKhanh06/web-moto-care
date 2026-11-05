@@ -1,31 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { HashRouter } from 'react-router-dom';
-import { HomePage } from '@/features/customer/HomePage';
-import { StyleGuidePage } from '@/features/customer/StyleGuidePage';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Logo } from '@/components/common/Logo';
 
-describe('Giai đoạn 0: Kiểm tra Giao diện & Linh kiện cơ sở', () => {
-  it('Trang chủ hiển thị đúng tiêu đề MOTO CARE', () => {
-    render(
-      <HashRouter>
-        <HomePage />
-      </HashRouter>
-    );
-
-    const titleElement = screen.getByText('MOTO CARE');
-    expect(titleElement).toBeInTheDocument();
+describe('Kiểm tra Linh kiện cơ sở & Thương hiệu (Core UI Components)', () => {
+  it('Component Logo hiển thị đúng thương hiệu MOTO CARE', () => {
+    render(<Logo />);
+    expect(screen.getByText('MOTO')).toBeInTheDocument();
+    expect(screen.getByText('CARE')).toBeInTheDocument();
   });
 
-  it('Trang /style hiển thị đầy đủ bảng kiểu và hệ thống màu', () => {
+  it('Component Button và Badge hiển thị đúng nội dung và trạng thái', () => {
     render(
-      <HashRouter>
-        <StyleGuidePage />
-      </HashRouter>
+      <div>
+        <Button variant="primary">Tiếp tục thanh toán</Button>
+        <Badge variant="completed">Đã hoàn tất</Badge>
+      </div>
     );
 
-    expect(screen.getByText(/Bảng Kiểu Mẫu Giao Diện/i)).toBeInTheDocument();
-    expect(screen.getByText('brand-500')).toBeInTheDocument();
-    expect(screen.getByText('brand-700')).toBeInTheDocument();
+    expect(screen.getByText('Tiếp tục thanh toán')).toBeInTheDocument();
+    expect(screen.getByText('Đã hoàn tất')).toBeInTheDocument();
   });
 });
-

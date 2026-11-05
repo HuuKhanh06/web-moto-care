@@ -293,7 +293,7 @@ export function AiLogPage() {
               <tr>
                 <th className="py-2.5 px-3">Thời điểm</th>
                 <th className="py-2.5 px-3">Mã hồ sơ</th>
-                <th className="py-2.5 px-3">Điểm m (Min Confidence)</th>
+                <th className="py-2.5 px-3">Độ tin cậy trích xuất</th>
                 <th className="py-2.5 px-3">Quyết định chuyển nhánh</th>
                 <th className="py-2.5 px-3">Tóm tắt đầu vào</th>
                 <th className="py-2.5 px-3 text-right">Chi tiết</th>

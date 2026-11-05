@@ -12,7 +12,6 @@ import { ManagerLayout } from '@/components/layout/ManagerLayout';
 
 // Pages
 import { AuthPage } from '@/features/auth/AuthPage';
-import { StyleGuidePage } from '@/features/customer/StyleGuidePage';
 import { KH01Page } from '@/features/customer/KH01Page';
 import { KH02Page } from '@/features/customer/KH02Page';
 import { KH03Page } from '@/features/customer/KH03Page';
@@ -148,9 +147,6 @@ export function AppRouter() {
 
       {/* AUTH-01: Đăng nhập / Đăng ký */}
       <Route path="/login" element={<AuthPage />} />
-
-      {/* Bảng kiểu giao diện tham khảo */}
-      <Route path="/style" element={<StyleGuidePage />} />
 
       {/* ============================================================== */}
       {/* PHÂN HỆ KHÁCH HÀNG (khach_hang)                                 */}

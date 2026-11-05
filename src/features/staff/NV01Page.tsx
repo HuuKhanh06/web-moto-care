@@ -20,6 +20,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   ClipboardList,
   Search,
@@ -274,12 +275,10 @@ export function NV01Page() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-mono text-xs font-bold text-slate-800">
-                          {request.id.slice(0, 8)}...
+                          #{request.id.slice(0, 8)}
                         </span>
-                        <Badge variant="danger">CONG_NO (Đã ghi nợ)</Badge>
-                        <span className="text-xs text-slate-500">
-                          BPMN Node: <code className="font-mono text-red-700">M_END_DEBT</code>
-                        </span>
+                        <Badge variant="danger">Công nợ tồn đọng</Badge>
+                        <BpmnBadge nodeId="M_END_DEBT" />
                       </div>
                       <div className="text-sm font-semibold text-slate-900">
                         {customer?.full_name || 'Khách vãng lai'} &bull; {customer?.phone || 'Chưa cập nhật SĐT'}
@@ -368,11 +367,9 @@ export function NV01Page() {
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                            {task.requestId.slice(0, 8)}...
+                            #{task.requestId.slice(0, 8)}
                           </span>
-                          <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
-                            {task.nodeId}
-                          </span>
+                          <BpmnBadge nodeId={task.nodeId} />
                           {req && (
                             <Badge variant={getStatusBadgeVariant(req.status)} size="sm">
                               {getStatusLabel(req.status)}
