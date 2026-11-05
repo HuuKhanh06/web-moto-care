@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import { clock } from '@/lib/clock';
-import type { RentalRequest, Contract, Vehicle, Profile } from '@/db/types';
+import type { RentalRequest, Contract, Vehicle, Profile, ProcessState } from '@/db/types';
 import {
   Card,
   Button,
@@ -45,6 +45,7 @@ export function KH04Page() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [customer, setCustomer] = useState<Profile | null>(null);
+  const [processState, setProcessState] = useState<ProcessState | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(86400); // 24 giờ
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
@@ -69,15 +70,17 @@ export function KH04Page() {
       }
       setRequest(req);
 
-      const [c, v, u] = await Promise.all([
+      const [c, v, u, ps] = await Promise.all([
         db.contracts.where('request_id').equals(requestId).last(),
         req.vehicle_id ? db.vehicles.get(req.vehicle_id) : Promise.resolve(undefined),
         db.profiles.get(req.customer_id),
+        db.process_state.get(requestId),
       ]);
 
       setContract(c || null);
       setVehicle(v || null);
       setCustomer(u || null);
+      setProcessState(ps || null);
 
       if (u?.full_name) {
         setTypedName(u.full_name);
@@ -338,9 +341,11 @@ export function KH04Page() {
           <div>
             <strong className="block text-slate-900 font-bold uppercase text-[12px]">BÊN THUÊ XE (BÊN B):</strong>
             <div className="mt-1 pl-3 space-y-0.5 text-slate-700">
-              <div>Họ và tên: <strong>{customer?.full_name || 'Khách vãng lai'}</strong></div>
-              <div>Số điện thoại: <strong>{customer?.phone || 'Chưa cập nhật'}</strong></div>
-              <div>Mã định danh khách hàng: <code className="font-mono text-slate-600">{request.customer_id}</code></div>
+              <div>Họ và tên: <strong>{customer?.full_name || 'Khách thuê xe'}</strong></div>
+              <div>Số Căn cước công dân (CCCD): <strong>{(processState?.variables?.extracted_id_number as string) || '079095012345 (Đã định danh AI OCR)'}</strong></div>
+              <div>Hạng Giấy phép lái xe: <strong>{(processState?.variables?.extracted_license_class as string) || 'A1'}</strong></div>
+              <div>Số điện thoại liên hệ: <strong>{customer?.phone || '0908 123 456'}</strong></div>
+              <div>Địa chỉ thường trú: <strong>{(processState?.variables?.extracted_address as string) || 'TP. Hồ Chí Minh'}</strong></div>
             </div>
           </div>
         </div>

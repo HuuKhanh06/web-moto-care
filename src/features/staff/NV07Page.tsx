@@ -21,6 +21,10 @@ import {
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
+import {
+  PendingRequestBar,
+  type PendingRequestSummary,
+} from '@/components/common/PendingRequestBar';
 
 interface DamageItemForm {
   id: string;
@@ -32,21 +36,53 @@ interface DamageItemForm {
 }
 
 export function NV07Page() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const requestId = searchParams.get('requestId') || '';
   const currentActor = useAuthStore((s) => s.currentActor);
 
+  const [pendingList, setPendingList] = useState<PendingRequestSummary[]>([]);
+  const [effectiveRequestId, setEffectiveRequestId] = useState<string>(requestId);
+  const activeId = requestId || effectiveRequestId;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    async function loadPending() {
+      const candidates = await db.rental_requests
+        .filter((r) => r.status === 'CHO_DANH_GIA_XE')
+        .toArray();
+      const pList: PendingRequestSummary[] = [];
+      for (const cand of candidates) {
+        let vName = 'Xe máy';
+        if (cand.vehicle_id) {
+          const veh = await db.vehicles.get(cand.vehicle_id);
+          if (veh) vName = `${veh.model} (${veh.plate})`;
+        }
+        const cust = await db.profiles.get(cand.customer_id);
+        pList.push({
+          id: cand.id,
+          customerName: cust?.full_name,
+          vehicleModel: vName,
+          status: cand.status,
+        });
+      }
+      setPendingList(pList);
+      if (!requestId && pList.length > 0) {
+        setEffectiveRequestId(pList[0].id);
+      }
+    }
+    loadPending();
+  }, [requestId]);
 
   // Live queries
   const rentalReq = useLiveQuery(
-    () => (requestId ? db.rental_requests.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.rental_requests.get(activeId) : undefined),
+    [activeId]
   );
   const processState = useLiveQuery(
-    () => (requestId ? db.process_state.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.process_state.get(activeId) : undefined),
+    [activeId]
   );
   const vehicle = useLiveQuery(
     () => (rentalReq?.vehicle_id ? db.vehicles.get(rentalReq.vehicle_id) : undefined),
@@ -59,14 +95,14 @@ export function NV07Page() {
 
   // Lấy biên bản trả xe RETURN gần nhất
   const returnInsp = useLiveQuery(async () => {
-    if (!requestId) return undefined;
+    if (!activeId) return undefined;
     return await db.inspections
       .where('request_id')
-      .equals(requestId)
+      .equals(activeId)
       .and((i) => i.kind === 'RETURN')
       .reverse()
       .first();
-  }, [requestId]);
+  }, [activeId]);
 
   const [damages, setDamages] = useState<DamageItemForm[]>([]);
 
@@ -131,7 +167,7 @@ export function NV07Page() {
 
   // Submit M_VerifyDamage
   const handleSubmitVerifyDamage = async () => {
-    if (!currentActor) return;
+    if (!currentActor || !activeId) return;
     if (damages.length === 0) {
       toast.error('Cần ít nhất 1 khoản hư hại được xác minh hoặc bấm bỏ qua nếu không phát sinh chi phí');
       return;
@@ -140,7 +176,7 @@ export function NV07Page() {
     try {
       setIsSubmitting(true);
       await engine.complete(
-        requestId,
+        activeId,
         'M_VerifyDamage',
         {
           damages: damages.map((d) => ({
@@ -165,12 +201,20 @@ export function NV07Page() {
     }
   };
 
-  if (!requestId) {
+  if (!activeId) {
     return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 text-center">
-        <Card className="p-8">
-          <p className="text-slate-600 mb-4">Không tìm thấy mã hồ sơ để xác minh hư hại.</p>
-          <Button onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm (NV-01)</Button>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 text-center">
+        <Card className="py-12 px-6 border-slate-200 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Không có xe nào cần xác minh hư hại</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            Hiện tại các xe trả đều ở tình trạng đạt chuẩn hoặc chưa có biên bản kiểm tra cần lập báo giá bồi thường.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+          </div>
         </Card>
       </div>
     );
@@ -178,6 +222,14 @@ export function NV07Page() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Thanh chọn nhanh hồ sơ chờ xác minh hư hại */}
+      <PendingRequestBar
+        label="Hồ sơ chờ xác minh hư hại"
+        currentRequestId={activeId}
+        pendingList={pendingList}
+        onSelect={(id) => setSearchParams({ requestId: id })}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -185,7 +237,7 @@ export function NV07Page() {
             <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
               Màn hình NV-07
             </span>
-            <span className="text-xs font-mono text-slate-500">Mã đơn #{requestId.slice(0, 8)}</span>
+            <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">
             Xác Minh Hư Hỏng &amp; Ước Tính Bồi Thường

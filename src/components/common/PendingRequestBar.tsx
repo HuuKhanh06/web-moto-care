@@ -71,9 +71,11 @@ export function PendingRequestBar({
             >
               {isSelected ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Clock className="w-3 h-3 text-slate-400 shrink-0" />}
               <span className="font-mono font-bold">#{item.id.slice(0, 8)}</span>
-              {item.vehicleModel && (
-                <span className={`text-[11px] truncate max-w-[120px] ${isSelected ? 'text-white/90' : 'text-slate-500'}`}>
-                  {item.vehicleModel}
+              {(item.customerName || item.vehicleModel) && (
+                <span className={`text-[11px] truncate max-w-[180px] ${isSelected ? 'text-white/90' : 'text-slate-500'}`}>
+                  {item.customerName ? `${item.customerName}` : ''}
+                  {item.customerName && item.vehicleModel ? ' • ' : ''}
+                  {item.vehicleModel || ''}
                 </span>
               )}
             </button>

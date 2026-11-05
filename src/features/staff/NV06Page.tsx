@@ -21,6 +21,10 @@ import {
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
+import {
+  PendingRequestBar,
+  type PendingRequestSummary,
+} from '@/components/common/PendingRequestBar';
 
 interface ChecklistRow {
   key: string;
@@ -32,22 +36,54 @@ interface ChecklistRow {
 }
 
 export function NV06Page() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const requestId = searchParams.get('requestId') || '';
   const currentActor = useAuthStore((s) => s.currentActor);
 
+  const [pendingList, setPendingList] = useState<PendingRequestSummary[]>([]);
+  const [effectiveRequestId, setEffectiveRequestId] = useState<string>(requestId);
+  const activeId = requestId || effectiveRequestId;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
+  useEffect(() => {
+    async function loadPending() {
+      const candidates = await db.rental_requests
+        .filter((r) => r.status === 'CHO_NHAN_XE_TRA' || r.status === 'DANG_THUE')
+        .toArray();
+      const pList: PendingRequestSummary[] = [];
+      for (const cand of candidates) {
+        let vName = 'Xe máy';
+        if (cand.vehicle_id) {
+          const veh = await db.vehicles.get(cand.vehicle_id);
+          if (veh) vName = `${veh.model} (${veh.plate})`;
+        }
+        const cust = await db.profiles.get(cand.customer_id);
+        pList.push({
+          id: cand.id,
+          customerName: cust?.full_name,
+          vehicleModel: vName,
+          status: cand.status,
+        });
+      }
+      setPendingList(pList);
+      if (!requestId && pList.length > 0) {
+        setEffectiveRequestId(pList[0].id);
+      }
+    }
+    loadPending();
+  }, [requestId]);
+
   // Đọc dữ liệu từ IndexedDB bằng live query
   const rentalReq = useLiveQuery(
-    () => (requestId ? db.rental_requests.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.rental_requests.get(activeId) : undefined),
+    [activeId]
   );
   const processState = useLiveQuery(
-    () => (requestId ? db.process_state.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.process_state.get(activeId) : undefined),
+    [activeId]
   );
   const vehicle = useLiveQuery(
     () => (rentalReq?.vehicle_id ? db.vehicles.get(rentalReq.vehicle_id) : undefined),
@@ -60,14 +96,14 @@ export function NV06Page() {
 
   // Lấy biên bản PRE_HANDOVER đạt có attempt_no lớn nhất để làm chuẩn so sánh
   const preHandoverInsp = useLiveQuery(async () => {
-    if (!requestId) return undefined;
+    if (!activeId) return undefined;
     return await db.inspections
       .where('request_id')
-      .equals(requestId)
+      .equals(activeId)
       .and((i) => i.kind === 'PRE_HANDOVER' && i.result === 'DAT')
       .reverse()
       .first();
-  }, [requestId]);
+  }, [activeId]);
 
   // Checklist kiểm tra đối chiếu
   const [checklistRows, setChecklistRows] = useState<ChecklistRow[]>([
@@ -168,10 +204,10 @@ export function NV06Page() {
 
   // 1. Thao tác M_ReceiveReturn
   const handleConfirmReceive = async () => {
-    if (!currentActor) return;
+    if (!currentActor || !activeId) return;
     try {
       setIsSubmitting(true);
-      await engine.complete(requestId, 'M_ReceiveReturn', {}, currentActor);
+      await engine.complete(activeId, 'M_ReceiveReturn', {}, currentActor);
       toast.success('Xác nhận đã tiếp nhận xe trả thành công. Chuyển sang kiểm tra checklist.');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Có lỗi khi xác nhận nhận xe');
@@ -182,7 +218,7 @@ export function NV06Page() {
 
   // 2. Thao tác M_CheckReturn
   const handleCompleteCheckReturn = async () => {
-    if (!currentActor) return;
+    if (!currentActor || !activeId) return;
     try {
       setIsSubmitting(true);
 
@@ -204,7 +240,7 @@ export function NV06Page() {
       });
 
       await engine.complete(
-        requestId,
+        activeId,
         'M_CheckReturn',
         {
           vehicle_id: rentalReq?.vehicle_id,
@@ -216,11 +252,11 @@ export function NV06Page() {
       );
 
       // Kiểm tra nút tiếp theo từ state
-      const nextState = await db.process_state.get(requestId);
+      const nextState = await db.process_state.get(activeId);
       if (nextState?.waiting_node_ids.includes('M_VerifyDamage')) {
         toast.success('Phát hiện sai lệch! Chuyển sang bước NV-07 Xác minh hư hỏng.');
         setTimeout(() => {
-          navigate(`/nv/07?requestId=${requestId}`);
+          navigate(`/nv/07?requestId=${activeId}`);
         }, 800);
       } else {
         toast.success('Xe không có hư hỏng, hệ thống đã tự động tính phí và gửi bảng kê đến khách.');
@@ -235,12 +271,20 @@ export function NV06Page() {
     }
   };
 
-  if (!requestId) {
+  if (!activeId) {
     return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 text-center">
-        <Card className="p-8">
-          <p className="text-slate-600 mb-4">Không tìm thấy mã hồ sơ thuê xe để kiểm tra trả xe.</p>
-          <Button onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm (NV-01)</Button>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 text-center">
+        <Card className="py-12 px-6 border-slate-200 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <Car className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Không có xe nào đang chờ tiếp nhận trả xe</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            Hiện tại các đơn thuê đang lưu thông bình thường hoặc chưa đến thời hạn tiếp nhận bàn giao trả xe.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+          </div>
         </Card>
       </div>
     );
@@ -250,6 +294,14 @@ export function NV06Page() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Thanh chọn nhanh hồ sơ đang chờ tiếp nhận trả xe */}
+      <PendingRequestBar
+        label="Hồ sơ chờ nhận xe trả"
+        currentRequestId={activeId}
+        pendingList={pendingList}
+        onSelect={(id) => setSearchParams({ requestId: id })}
+      />
+
       {/* Tiêu đề & Thông tin chung */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -257,7 +309,7 @@ export function NV06Page() {
             <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
               Màn hình NV-06
             </span>
-            <span className="text-xs font-mono text-slate-500">Mã đơn #{requestId.slice(0, 8)}</span>
+            <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">
             Nhận &amp; Kiểm Tra Xe Trả (Đối Chiếu)

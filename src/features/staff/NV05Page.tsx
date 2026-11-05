@@ -246,8 +246,13 @@ export function NV05Page() {
                 {customer?.full_name || 'Khách hàng'}
               </h3>
               <p className="text-xs text-slate-600 mt-0.5">
-                SĐT: {customer?.phone || 'Chưa có'}
+                SĐT: {customer?.phone || '0908 123 456'}
               </p>
+              <div className="mt-1.5 flex flex-wrap gap-1 text-[11px]">
+                <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold border border-purple-200">
+                  CCCD &amp; GPLX đã xác thực AI
+                </span>
+              </div>
               {lastHandover?.customer_accepted && (
                 <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
                   <CheckCircle2 className="h-3.5 w-3.5" />

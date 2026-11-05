@@ -1,7 +1,7 @@
 // src/features/staff/NV08Page.tsx
 // Màn hình NV-08: Xử lý khoản chưa thanh toán (M_ManualExtra, M_GExtraDecision)
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
@@ -20,12 +20,20 @@ import {
   FileText,
   DollarSign,
 } from 'lucide-react';
+import {
+  PendingRequestBar,
+  type PendingRequestSummary,
+} from '@/components/common/PendingRequestBar';
 
 export function NV08Page() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const requestId = searchParams.get('requestId') || '';
   const currentActor = useAuthStore((s) => s.currentActor);
+
+  const [pendingList, setPendingList] = useState<PendingRequestSummary[]>([]);
+  const [effectiveRequestId, setEffectiveRequestId] = useState<string>(requestId);
+  const activeId = requestId || effectiveRequestId;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [note, setNote] = useState('');
@@ -33,14 +41,42 @@ export function NV08Page() {
     'Tiếp tục thanh toán'
   );
 
+  useEffect(() => {
+    async function loadPending() {
+      const candidates = await db.rental_requests
+        .filter((r) => r.status === 'CHO_THU_THEM' || r.status === 'CONG_NO')
+        .toArray();
+      const pList: PendingRequestSummary[] = [];
+      for (const cand of candidates) {
+        let vName = 'Xe máy';
+        if (cand.vehicle_id) {
+          const veh = await db.vehicles.get(cand.vehicle_id);
+          if (veh) vName = `${veh.model} (${veh.plate})`;
+        }
+        const cust = await db.profiles.get(cand.customer_id);
+        pList.push({
+          id: cand.id,
+          customerName: cust?.full_name,
+          vehicleModel: vName,
+          status: cand.status,
+        });
+      }
+      setPendingList(pList);
+      if (!requestId && pList.length > 0) {
+        setEffectiveRequestId(pList[0].id);
+      }
+    }
+    loadPending();
+  }, [requestId]);
+
   // Live query dữ liệu
   const rentalReq = useLiveQuery(
-    () => (requestId ? db.rental_requests.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.rental_requests.get(activeId) : undefined),
+    [activeId]
   );
   const processState = useLiveQuery(
-    () => (requestId ? db.process_state.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.process_state.get(activeId) : undefined),
+    [activeId]
   );
   const vehicle = useLiveQuery(
     () => (rentalReq?.vehicle_id ? db.vehicles.get(rentalReq.vehicle_id) : undefined),
@@ -51,26 +87,26 @@ export function NV08Page() {
     [rentalReq?.customer_id]
   );
   const settlement = useLiveQuery(
-    () => (requestId ? db.settlements.where('request_id').equals(requestId).reverse().first() : undefined),
-    [requestId]
+    () => (activeId ? db.settlements.where('request_id').equals(activeId).reverse().first() : undefined),
+    [activeId]
   );
   const extraPayment = useLiveQuery(
     () =>
-      requestId
+      activeId
         ? db.payments
             .where('request_id')
-            .equals(requestId)
+            .equals(activeId)
             .and((p) => p.kind === 'EXTRA')
             .reverse()
             .first()
         : undefined,
-    [requestId]
+    [activeId]
   );
 
   const isWaitingManualExtra = processState?.waiting_node_ids?.includes('M_ManualExtra');
 
   const handleSubmitDecision = async () => {
-    if (!currentActor) return;
+    if (!currentActor || !activeId) return;
     if (!note.trim()) {
       toast.error('Vui lòng nhập ghi chú kết quả liên hệ khách hàng');
       return;
@@ -79,7 +115,7 @@ export function NV08Page() {
     try {
       setIsSubmitting(true);
       await engine.complete(
-        requestId,
+        activeId,
         'M_ManualExtra',
         {
           decision,
@@ -108,12 +144,20 @@ export function NV08Page() {
     }
   };
 
-  if (!requestId) {
+  if (!activeId) {
     return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 text-center">
-        <Card className="p-8">
-          <p className="text-slate-600 mb-4">Không tìm thấy mã hồ sơ để xử lý khoản chưa thanh toán.</p>
-          <Button onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm (NV-01)</Button>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 text-center">
+        <Card className="py-12 px-6 border-slate-200 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <DollarSign className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Không có khoản thu thêm nào cần xử lý</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            Hiện tại các khoản cọc và quyết toán đã được cân bằng hoặc không có đơn nợ quá hạn.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+          </div>
         </Card>
       </div>
     );
@@ -121,6 +165,14 @@ export function NV08Page() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Thanh chọn nhanh hồ sơ chờ thu thêm */}
+      <PendingRequestBar
+        label="Hồ sơ cần thu thêm"
+        currentRequestId={activeId}
+        pendingList={pendingList}
+        onSelect={(id) => setSearchParams({ requestId: id })}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -128,7 +180,7 @@ export function NV08Page() {
             <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
               Màn hình NV-08
             </span>
-            <span className="text-xs font-mono text-slate-500">Mã đơn #{requestId.slice(0, 8)}</span>
+            <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">
             Xử Lý Khoản Chưa Thanh Toán / Quá Hạn Thu Thêm

@@ -18,6 +18,10 @@ import {
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
+import {
+  PendingRequestBar,
+  type PendingRequestSummary,
+} from '@/components/common/PendingRequestBar';
 
 interface EditableItem {
   name: string;
@@ -25,23 +29,55 @@ interface EditableItem {
 }
 
 export function QL01Page() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const requestId = searchParams.get('requestId') || '';
   const currentActor = useAuthStore((s) => s.currentActor);
+
+  const [pendingList, setPendingList] = useState<PendingRequestSummary[]>([]);
+  const [effectiveRequestId, setEffectiveRequestId] = useState<string>(requestId);
+  const activeId = requestId || effectiveRequestId;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resolutionNote, setResolutionNote] = useState('');
   const [items, setItems] = useState<EditableItem[]>([]);
 
+  useEffect(() => {
+    async function loadPending() {
+      const candidates = await db.rental_requests
+        .filter((r) => r.status === 'CHO_KHACH_XAC_NHAN_BANG_KE')
+        .toArray();
+      const pList: PendingRequestSummary[] = [];
+      for (const cand of candidates) {
+        let vName = 'Xe máy';
+        if (cand.vehicle_id) {
+          const veh = await db.vehicles.get(cand.vehicle_id);
+          if (veh) vName = `${veh.model} (${veh.plate})`;
+        }
+        const cust = await db.profiles.get(cand.customer_id);
+        pList.push({
+          id: cand.id,
+          customerName: cust?.full_name,
+          vehicleModel: vName,
+          status: cand.status,
+        });
+      }
+      setPendingList(pList);
+      if (!requestId && pList.length > 0) {
+        setEffectiveRequestId(pList[0].id);
+      }
+    }
+    loadPending();
+  }, [requestId]);
+
   // Live queries
   const rentalReq = useLiveQuery(
-    () => (requestId ? db.rental_requests.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.rental_requests.get(activeId) : undefined),
+    [activeId]
   );
   const processState = useLiveQuery(
-    () => (requestId ? db.process_state.get(requestId) : undefined),
-    [requestId]
+    () => (activeId ? db.process_state.get(activeId) : undefined),
+    [activeId]
   );
   const vehicle = useLiveQuery(
     () => (rentalReq?.vehicle_id ? db.vehicles.get(rentalReq.vehicle_id) : undefined),
@@ -52,12 +88,12 @@ export function QL01Page() {
     [rentalReq?.customer_id]
   );
   const statement = useLiveQuery(
-    () => (requestId ? db.statements.where('request_id').equals(requestId).reverse().first() : undefined),
-    [requestId]
+    () => (activeId ? db.statements.where('request_id').equals(activeId).reverse().first() : undefined),
+    [activeId]
   );
   const damages = useLiveQuery(
-    () => (requestId ? db.damage_findings.where('request_id').equals(requestId).toArray() : []),
-    [requestId]
+    () => (activeId ? db.damage_findings.where('request_id').equals(activeId).toArray() : []),
+    [activeId]
   );
 
   useEffect(() => {
@@ -90,7 +126,7 @@ export function QL01Page() {
     try {
       setIsSubmitting(true);
       await engine.complete(
-        requestId,
+        activeId,
         'M_Resolve',
         {
           resolution_note: resolutionNote.trim(),
@@ -111,12 +147,20 @@ export function QL01Page() {
     }
   };
 
-  if (!requestId) {
+  if (!activeId) {
     return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 text-center">
-        <Card className="p-8">
-          <p className="text-slate-600 mb-4">Không tìm thấy mã hồ sơ để xử lý bất đồng bảng kê.</p>
-          <Button onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm (NV-01)</Button>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 text-center">
+        <Card className="py-12 px-6 border-slate-200 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <Gavel className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Không có khiếu nại bảng kê nào cần giải quyết</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            Hiện tại khách hàng đã xác nhận đồng thuận toàn bộ bảng kê thanh lý hoặc không có tranh chấp phát sinh.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+          </div>
         </Card>
       </div>
     );
@@ -124,6 +168,14 @@ export function QL01Page() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* Thanh chọn nhanh hồ sơ đang có bất đồng / khiếu nại */}
+      <PendingRequestBar
+        label="Hồ sơ khiếu nại cần xử lý"
+        currentRequestId={activeId}
+        pendingList={pendingList}
+        onSelect={(id) => setSearchParams({ requestId: id })}
+      />
+
       {/* Tiêu đề & Thông tin chung */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -131,7 +183,7 @@ export function QL01Page() {
             <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
               Màn hình QL-01
             </span>
-            <span className="text-xs font-mono text-slate-500">Mã đơn #{requestId.slice(0, 8)}</span>
+            <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
             {statement && (
               <span className="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
                 Bảng kê v{statement.version}
