@@ -9,19 +9,31 @@
 @tailwind utilities;
 
 :root {
-  --color-brand-50: #ECFAF2;
-  --color-brand-100: #D3F3E2;
-  --color-brand-300: #7ADDAB;
-  --color-brand-500: #00A651;
-  --color-brand-600: #00914A;
-  --color-brand-700: #00803F;
-  --color-brand-900: #0B3D26;
+  /* Primary Cyan #1EC1CB & Hover #17A8B1 */
+  --color-primary: #1EC1CB;
+  --color-primary-hover: #17A8B1;
+  --color-primary-light: #DDF5F7;
+  --color-primary-dark: #12868E;
+
+  /* Secondary / Dark Deep Navy #1C1C28 */
+  --color-navy: #1C1C28;
+  --color-navy-light: #282838;
+  --color-navy-dark: #13131C;
+
+  /* Brand CSS Variables tương thích */
+  --color-brand-50: #F0FAFB;
+  --color-brand-100: #DDF5F7;
+  --color-brand-300: #8AE1E7;
+  --color-brand-500: #1EC1CB;
+  --color-brand-600: #17A8B1;
+  --color-brand-700: #12868E;
+  --color-brand-900: #09454A;
 }
 
 body {
   font-family: 'Be Vietnam Pro', Inter, sans-serif;
   background-color: #f8fafc;
-  color: #1e293b;
+  color: #1C1C28; /* Deep Navy cho màu chữ chính của toàn bộ website */
   min-height: 100vh;
 }
 
