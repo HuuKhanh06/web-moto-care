@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { formatCurrency } from '@/lib/format';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
+import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   Bike,
   ArrowRight,
@@ -125,8 +126,9 @@ export function KH01Page() {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
-              Bước 1 &bull; Chọn xe & Thời gian
+              Bước 1 &bull; Chọn xe &amp; Thời gian
             </span>
+            <BpmnBadge nodeId="M_START" name="Khởi tạo yêu cầu" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Đặt thuê xe máy trực tuyến

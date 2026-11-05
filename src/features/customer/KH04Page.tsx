@@ -24,6 +24,7 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
+import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   Clock,
   Printer,
@@ -229,6 +230,7 @@ export function KH04Page() {
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
               Bước 4 &bull; Ký hợp đồng điện tử
             </span>
+            <BpmnBadge nodeId="M_Contract" name="Ký số" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ký hợp đồng thuê xe</h1>
           </div>
           <p className="text-sm text-slate-500">

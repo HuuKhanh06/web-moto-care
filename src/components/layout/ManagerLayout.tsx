@@ -6,6 +6,7 @@ import { useAuthStore } from '@/features/auth/authStore';
 import { NotificationBell } from './NotificationBell';
 import { SyncStatus } from '@/components/common/SyncStatus';
 import { Logo } from '@/components/common/Logo';
+import { BpmnToggleSwitch } from '@/components/common/BpmnToggleSwitch';
 import { cn } from '@/lib/utils';
 import {
   FileCheck2,
@@ -131,6 +132,7 @@ export function ManagerLayout({ children }: { children?: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
+            <BpmnToggleSwitch isDark />
             <SyncStatus />
             <NotificationBell />
             <button

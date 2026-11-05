@@ -6,6 +6,7 @@ import { useAuthStore } from '@/features/auth/authStore';
 import { NotificationBell } from './NotificationBell';
 import { SyncStatus } from '@/components/common/SyncStatus';
 import { Logo } from '@/components/common/Logo';
+import { BpmnToggleSwitch } from '@/components/common/BpmnToggleSwitch';
 import { cn } from '@/lib/utils';
 import {
   Bike,
@@ -66,6 +67,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
 
           {/* User profile & Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <BpmnToggleSwitch />
             <SyncStatus />
             <NotificationBell />
 

@@ -21,6 +21,7 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
+import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -180,6 +181,7 @@ export function KH05Page() {
             <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700 border border-brand-200/80 shadow-xs">
               Bước 5 • Xác nhận xe
             </span>
+            <BpmnBadge nodeId="Activity_0d0qzp6" name="Khách xác nhận" />
             <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
               Kiểm tra & Nhận bàn giao xe
             </h1>

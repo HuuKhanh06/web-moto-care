@@ -26,6 +26,7 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
+import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   Clock,
   Building2,
@@ -219,6 +220,7 @@ export function KH03Page() {
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
               Bước 3 &bull; Đặt cọc giữ xe
             </span>
+            <BpmnBadge nodeId="M_CreateDeposit" name="Cọc VietQR" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Thanh toán tiền đặt cọc</h1>
           </div>
           <p className="text-sm text-slate-500">

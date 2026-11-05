@@ -22,6 +22,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
 } from '@/lib/format';
+import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   Bike,
   PlusCircle,
@@ -136,6 +137,7 @@ export function KH06Page() {
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
               Chuyến đi
             </span>
+            <BpmnBadge nodeId="M_EG" name="Cổng sự kiện thuê" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Chuyến đi của tôi</h1>
           </div>
           <p className="text-sm text-slate-500">

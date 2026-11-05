@@ -26,6 +26,7 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
+import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   FileText,
   ArrowRight,
@@ -226,8 +227,9 @@ export function KH02Page() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
-              Bước 2 &bull; Xác thực hồ sơ & Báo giá
+              Bước 2 &bull; Xác thực hồ sơ &amp; Báo giá
             </span>
+            <BpmnBadge nodeId="M_CheckDocs" name="AI OCR & Thẩm định" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Xác thực hồ sơ & Báo giá
