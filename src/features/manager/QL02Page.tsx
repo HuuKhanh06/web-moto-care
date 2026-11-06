@@ -144,13 +144,11 @@ export function QL02Page() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Xử lý sự cố vượt SLA / Hết đối tác cứu hộ
-            </h1>
-          </div>
-          <p className="text-sm text-slate-500">
-            Khu vực can thiệp của Quản lý khi mạng lưới đối tác từ chối hết hoặc xử lý quá hạn định mức.
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+            Điều phối cứu hộ khẩn cấp
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Can thiệp và điều phối cứu hộ khi có sự cố cần hỗ trợ đặc biệt từ Quản lý
           </p>
         </div>
 

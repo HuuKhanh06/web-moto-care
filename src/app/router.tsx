@@ -41,6 +41,7 @@ import { TracePage } from '@/features/manager/TracePage';
 import { IntegrationLogPage } from '@/features/manager/IntegrationLogPage';
 import { AiLogPage } from '@/features/manager/AiLogPage';
 import { TimelinePage } from '@/features/manager/TimelinePage';
+import { DashboardPage } from '@/features/manager/DashboardPage';
 
 /**
  * Điều hướng thông minh từ đường dẫn gốc '/'
@@ -62,6 +63,10 @@ function RootRedirect() {
 
   if (currentActor.role === 'khach_hang') {
     return <Navigate to="/kh/06" replace />;
+  }
+
+  if (currentActor.role === 'quan_ly') {
+    return <Navigate to="/ql/dashboard" replace />;
   }
 
   return <Navigate to="/nv/01" replace />;
@@ -208,10 +213,23 @@ export function AppRouter() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/nv/01" replace />} />
+        <Route index element={<Navigate to="/ql/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
         <Route path="01" element={<QL01Page />} />
         <Route path="02" element={<QL02Page />} />
       </Route>
+
+      {/* Đội xe vận hành cho Nhân viên */}
+      <Route
+        path="/fleet"
+        element={
+          <ProtectedRoute allowedRoles={['nhan_vien', 'quan_ly']}>
+            <StaffLayout>
+              <AD01Page />
+            </StaffLayout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* DT-01: Giả lập đối tác (Quản lý/Nhân viên thao tác mô phỏng) */}
       <Route

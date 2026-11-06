@@ -179,26 +179,18 @@ export function QL01Page() {
       {/* Tiêu đề & Thông tin chung */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
-            {statement && (
-              <span className="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                Bảng kê v{statement.version}
-              </span>
-            )}
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 mt-1">
-            Xử Lý Bất Đồng Bảng Kê Thanh Lý
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+            Xử lý khiếu nại bảng kê
           </h1>
-          <p className="text-sm text-slate-600 mt-0.5">
-            Xem xét phản hồi của khách hàng và ban hành bảng kê quyết toán điều chỉnh
+          <p className="text-sm text-slate-500 mt-1">
+            Xem xét ý kiến của khách hàng và điều chỉnh chi phí thanh lý phù hợp
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Badge variant="waiting" className="flex items-center gap-1">
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Khiếu nại lần {disputeCount + 1}</span>
+            <span>Lần {disputeCount + 1}</span>
           </Badge>
         </div>
       </div>

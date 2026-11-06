@@ -264,13 +264,10 @@ export function AD01Page() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
-              AD-01
-            </span>
-            <h1 className="text-2xl font-bold text-slate-900">Quản lý Xe & Người dùng</h1>
-          </div>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+            Quản trị đội xe & Dữ liệu
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
             Cấu hình danh mục xe, đối tác cứu hộ ngoại vi và quản trị cơ sở dữ liệu hệ thống.
           </p>
         </div>
