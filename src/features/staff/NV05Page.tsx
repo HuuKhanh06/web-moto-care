@@ -5,7 +5,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import type { RentalRequest, Vehicle, Profile, Handover } from '@/db/types';
@@ -50,7 +49,6 @@ export function NV05Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
-  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -155,7 +153,7 @@ export function NV05Page() {
             Hiện tại chưa có đơn thuê nào cần bàn giao hoặc khách hàng chưa hoàn tất thủ tục ký hợp đồng.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -213,9 +211,6 @@ export function NV05Page() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-md bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-800">
-              NV-05
-            </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
               Bàn giao xe &amp; Phụ kiện
             </h1>
@@ -228,11 +223,6 @@ export function NV05Page() {
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          {isBpmnMode && (
-            <Badge variant="neutral" className="text-slate-600 font-mono">
-              BPMN: M_Handover
-            </Badge>
-          )}
         </div>
       </div>
 
@@ -260,7 +250,7 @@ export function NV05Page() {
               {lastHandover?.customer_accepted && (
                 <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Khách đã duyệt nhận xe ở KH-05
+                  Khách hàng đã duyệt nhận xe trên ứng dụng
                 </div>
               )}
             </div>

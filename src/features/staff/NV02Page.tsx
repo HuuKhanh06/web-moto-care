@@ -178,7 +178,7 @@ export function NV02Page() {
             Hiện tại không có khoản tiền cọc nào bị lệch hoặc chờ nhân viên duyệt thủ công.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -213,9 +213,6 @@ export function NV02Page() {
               <ArrowLeft className="w-4 h-4" />
               <span>Hộp việc</span>
             </Button>
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
-              NV-02
-            </span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Kiểm tra cọc ngoại lệ</h1>
           <p className="text-xs text-slate-500">

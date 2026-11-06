@@ -231,13 +231,13 @@ export function NV01Page() {
               onChange={(e) => setFilterType(e.target.value)}
               options={[
                 { value: 'all', label: `Tất cả việc cần làm (${tasks.length})` },
-                { value: 'deposit', label: 'Cọc ngoại lệ (NV-02)' },
-                { value: 'pre_inspect', label: 'Kiểm tra kỹ thuật & Khắc phục (NV-03)' },
-                { value: 'handover', label: 'Checklist ảnh & Bàn giao (NV-04, 05)' },
-                { value: 'return', label: 'Nhận xe & Xác minh hư hỏng (NV-06, 07)' },
-                { value: 'settle', label: 'Chưa thanh toán & Đánh giá xe (NV-08, 09)' },
-                { value: 'incident', label: 'Xử lý sự cố (NV-10)' },
-                ...(isManager ? [{ value: 'manager', label: 'Việc của Quản lý (QL-01, QL-02)' }] : []),
+                { value: 'deposit', label: 'Cọc ngoại lệ' },
+                { value: 'pre_inspect', label: 'Kiểm tra kỹ thuật & Khắc phục' },
+                { value: 'handover', label: 'Checklist ảnh & Bàn giao' },
+                { value: 'return', label: 'Nhận xe & Xác minh hư hỏng' },
+                { value: 'settle', label: 'Chưa thanh toán & Đánh giá xe' },
+                { value: 'incident', label: 'Xử lý sự cố' },
+                ...(isManager ? [{ value: 'manager', label: 'Việc của Quản lý' }] : []),
                 { value: 'debt', label: `Hồ sơ công nợ (${debtRequests.length})` },
               ]}
             />

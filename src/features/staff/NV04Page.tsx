@@ -5,7 +5,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import type { RentalRequest, Vehicle, Inspection } from '@/db/types';
@@ -42,7 +41,6 @@ export function NV04Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
-  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -156,10 +154,10 @@ export function NV04Page() {
           </div>
           <h2 className="text-lg font-bold text-slate-900">Không có hồ sơ nào chờ chụp ảnh bàn giao</h2>
           <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
-            Vui lòng hoàn tất kiểm tra kỹ thuật (NV-03) trước khi thực hiện chụp ảnh lưu trữ biên bản bàn giao.
+            Vui lòng hoàn tất kiểm tra kỹ thuật trước khi thực hiện chụp ảnh lưu trữ biên bản bàn giao.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -235,9 +233,6 @@ export function NV04Page() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-md bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-800">
-              NV-04
-            </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
               Checklist &amp; Ảnh bàn giao xe
             </h1>
@@ -250,11 +245,6 @@ export function NV04Page() {
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          {isBpmnMode && (
-            <Badge variant="neutral" className="text-slate-600 font-mono">
-              BPMN: M_Photo
-            </Badge>
-          )}
         </div>
       </div>
 
@@ -426,7 +416,7 @@ export function NV04Page() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <ImageIcon className="h-4 w-4 text-brand-600 shrink-0" />
-          Ảnh và chỉ số bàn giao sẽ được gửi tới khách hàng để kiểm tra qua ứng dụng (KH-05).
+          Ảnh và chỉ số bàn giao sẽ được gửi tới khách hàng để kiểm tra và xác nhận.
         </div>
 
         <Button

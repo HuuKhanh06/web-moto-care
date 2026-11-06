@@ -373,7 +373,7 @@ export function KH09Page() {
       {!isWaitingCustomerReview && !isWaitingManagerResolve && (
         <div className="text-center pt-2">
           <Button variant="outline" onClick={() => navigate('/kh/06')}>
-            Quay về danh sách yêu cầu của tôi (KH-06)
+            Quay về danh sách yêu cầu của tôi
           </Button>
         </div>
       )}

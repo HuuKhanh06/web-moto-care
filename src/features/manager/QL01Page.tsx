@@ -180,9 +180,6 @@ export function QL01Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Màn hình QL-01
-            </span>
             <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
             {statement && (
               <span className="text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">

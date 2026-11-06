@@ -5,7 +5,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import type { RentalRequest, Vehicle, Inspection } from '@/db/types';
@@ -59,7 +58,6 @@ export function NV03Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
-  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -189,7 +187,7 @@ export function NV03Page() {
             Hiện tại toàn bộ phương tiện đã hoàn tất kiểm tra đạt hoặc chưa có đơn thuê mới ở trạng thái Chờ bàn giao.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -285,9 +283,6 @@ export function NV03Page() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-md bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-800">
-              NV-03
-            </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
               Kiểm tra kỹ thuật xe & Khắc phục
             </h1>
@@ -300,11 +295,6 @@ export function NV03Page() {
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          {isBpmnMode && (
-            <Badge variant="neutral" className="text-slate-600 font-mono">
-              BPMN: {currentNodeId}
-            </Badge>
-          )}
         </div>
       </div>
 

@@ -283,7 +283,7 @@ export function NV06Page() {
             Hiện tại các đơn thuê đang lưu thông bình thường hoặc chưa đến thời hạn tiếp nhận bàn giao trả xe.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -306,18 +306,13 @@ export function NV06Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Màn hình NV-06
-            </span>
             <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">
             Nhận &amp; Kiểm Tra Xe Trả (Đối Chiếu)
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Quy trình BPMN: <code className="font-mono text-brand-700 font-semibold">M_ReceiveReturn</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_CheckReturn</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_DigitalCompare</code>
+            Tiếp nhận xe hoàn trả và đối chiếu tình trạng thực tế
           </p>
         </div>
 

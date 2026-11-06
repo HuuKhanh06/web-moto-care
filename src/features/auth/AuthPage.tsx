@@ -114,18 +114,6 @@ export function AuthPage() {
     }
   };
 
-  const handleResetSeed = async () => {
-    setLoading(true);
-    try {
-      await seedDatabase();
-      toast.success('Đã nạp lại toàn bộ dữ liệu mẫu mặc định!');
-    } catch (err) {
-      toast.error('Không thể nạp dữ liệu: ' + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFillDemo = (email: string) => {
     setActiveTab('login');
     setLoginEmail(email);
@@ -271,14 +259,6 @@ export function AuthPage() {
                 <Sparkles className="w-4 h-4 text-brand-600" />
                 Tài khoản trải nghiệm mẫu (Mật khẩu: password123)
               </h4>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={handleResetSeed}
-                className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 hover:underline cursor-pointer"
-              >
-                Làm mới dữ liệu mẫu
-              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">

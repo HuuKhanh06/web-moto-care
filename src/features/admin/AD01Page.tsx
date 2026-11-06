@@ -443,7 +443,7 @@ export function AD01Page() {
       {activeTab === 'partners' && (
         <div className="space-y-4">
           <div className="text-xs text-slate-500">
-            Danh sách gara và đội cứu hộ phục vụ sub-process SP2 (Sự cố ngoài ý muốn). Quản lý có thể Bật/Tắt trạng thái tiếp nhận để thử nghiệm luồng từ chối/thử lại (`SC_GAccept`, `SC_GRetry`).
+            Danh sách đối tác cứu hộ hỗ trợ khi có sự cố trên đường. Quản lý có thể Bật/Tắt trạng thái tiếp nhận để thử nghiệm điều phối.
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

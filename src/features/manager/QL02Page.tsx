@@ -145,9 +145,6 @@ export function QL02Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
-              QL-02
-            </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
               Xử lý sự cố vượt SLA / Hết đối tác cứu hộ
             </h1>

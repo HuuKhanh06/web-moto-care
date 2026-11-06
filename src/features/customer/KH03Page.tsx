@@ -193,7 +193,7 @@ export function KH03Page() {
         navigate(`/kh/04?requestId=${requestId}`);
       } else {
         toast.warning(
-          'Số tiền hoặc nội dung chưa khớp chuẩn. Đơn đã được chuyển cho Nhân viên kiểm tra cọc ngoại lệ (NV-02).'
+          'Số tiền hoặc nội dung chưa khớp chuẩn. Đơn đã được chuyển cho nhân viên đối soát kiểm tra.'
         );
         await loadData();
       }
@@ -280,7 +280,7 @@ export function KH03Page() {
             onClick={() => navigate(`/kh/04?requestId=${requestId}`)}
             className="flex items-center gap-1.5 whitespace-nowrap shadow-sm"
           >
-            <span>Đến trang Ký hợp đồng (KH-04)</span>
+            <span>Đến trang Ký hợp đồng</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </Card>

@@ -213,7 +213,7 @@ export function NV07Page() {
             Hiện tại các xe trả đều ở tình trạng đạt chuẩn hoặc chưa có biên bản kiểm tra cần lập báo giá bồi thường.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -234,9 +234,6 @@ export function NV07Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Màn hình NV-07
-            </span>
             <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">

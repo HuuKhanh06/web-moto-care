@@ -176,7 +176,7 @@ export function KH10Page() {
     try {
       setIsSubmitting(true);
       await engine.triggerTimer(requestId, 'M_BoundExtra');
-      toast.warning('Đã kích hoạt sự kiện quá hạn 30 phút. Khoản thu thêm chuyển sang NV-08 để liên hệ khách.');
+      toast.warning('Đã kích hoạt sự kiện quá hạn 30 phút. Khoản thu thêm chuyển sang nhân viên hỗ trợ để liên hệ khách.');
       setTimeout(() => {
         navigate('/kh/06');
       }, 800);
@@ -423,7 +423,7 @@ export function KH10Page() {
           </p>
           <div className="pt-2">
             <Button onClick={() => navigate('/kh/06')} className="bg-brand-600 hover:bg-brand-700 text-white">
-              Về trang chủ yêu cầu của tôi (KH-06)
+              Về trang chủ yêu cầu của tôi
             </Button>
           </div>
         </Card>
@@ -439,8 +439,8 @@ export function KH10Page() {
           <div className="p-3 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 space-y-1">
             <div className="font-bold text-slate-800">Kiểm thử 3 trường hợp đối soát giao dịch:</div>
             <div>• <strong>ĐỦ:</strong> Nhập đúng số tiền {formatCurrency(extraPayment?.amount || 0)} &rarr; Tất toán thành công.</div>
-            <div>• <strong>THIẾU:</strong> Nhập số tiền nhỏ hơn &rarr; Chuyển NV-08 xử lý khoản chưa thanh toán.</div>
-            <div>• <strong>SAI:</strong> Nhập sai số tiền hoặc mã giao dịch &rarr; Chuyển NV-08 xử lý ngoại lệ.</div>
+            <div>• <strong>THIẾU:</strong> Nhập số tiền nhỏ hơn &rarr; Chuyển nhân viên hỗ trợ xử lý khoản chưa thanh toán.</div>
+            <div>• <strong>SAI:</strong> Nhập sai số tiền hoặc mã giao dịch &rarr; Chuyển nhân viên đối soát xử lý ngoại lệ.</div>
           </div>
 
           <Input

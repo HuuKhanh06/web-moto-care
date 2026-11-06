@@ -156,7 +156,7 @@ export function NV08Page() {
             Hiện tại các khoản cọc và quyết toán đã được cân bằng hoặc không có đơn nợ quá hạn.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -177,9 +177,6 @@ export function NV08Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Màn hình NV-08
-            </span>
             <span className="text-xs font-mono text-slate-500">Mã đơn #{activeId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">
@@ -355,7 +352,7 @@ export function NV08Page() {
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => navigate('/nv/01')}>
-              Về danh sách việc cần làm (NV-01)
+              Về danh sách việc cần làm
             </Button>
           </div>
         </Card>

@@ -98,7 +98,7 @@ export function NV09Page() {
       <div className="max-w-4xl mx-auto p-4 sm:p-6 text-center">
         <Card className="p-8">
           <p className="text-slate-600 mb-4">Không tìm thấy mã hồ sơ để đánh giá xe sau trả.</p>
-          <Button onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm (NV-01)</Button>
+          <Button onClick={() => navigate('/nv/01')}>Về danh sách việc cần làm</Button>
         </Card>
       </div>
     );
@@ -110,9 +110,6 @@ export function NV09Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Màn hình NV-09
-            </span>
             <span className="text-xs font-mono text-slate-500">Mã đơn #{requestId.slice(0, 8)}</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">

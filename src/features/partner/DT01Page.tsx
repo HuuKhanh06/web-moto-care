@@ -176,7 +176,7 @@ export function DT01Page() {
         <Card className="p-8">
           <EmptyState
             title="Hiện không có yêu cầu cứu hộ nào đang chờ phản hồi"
-            description="Khi khách hàng gửi báo cáo sự cố tại màn hình KH-08, hệ thống sẽ tự động điều phối tới đối tác cứu hộ gần nhất theo phân vùng."
+            description="Khi khách hàng gửi báo cáo sự cố qua ứng dụng, hệ thống sẽ tự động điều phối tới đối tác cứu hộ gần nhất theo phân vùng."
             icon={<Wrench className="w-8 h-8 text-slate-400" />}
           />
         </Card>

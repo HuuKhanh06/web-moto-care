@@ -426,7 +426,7 @@ export function KH06Page() {
                             onClick={() => navigate(`/kh/02?requestId=${req.id}`)}
                             className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Nộp hồ sơ (KH-02)</span>
+                            <span>Nộp hồ sơ</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -437,7 +437,7 @@ export function KH06Page() {
                             onClick={() => navigate(`/kh/03?requestId=${req.id}`)}
                             className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Thanh toán cọc QR (KH-03)</span>
+                            <span>Thanh toán cọc QR</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -448,7 +448,7 @@ export function KH06Page() {
                             onClick={() => navigate(`/kh/04?requestId=${req.id}`)}
                             className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Ký hợp đồng (KH-04)</span>
+                            <span>Ký hợp đồng</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -459,7 +459,7 @@ export function KH06Page() {
                             onClick={() => navigate(`/kh/05?requestId=${req.id}`)}
                             className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Xác nhận nhận xe (KH-05)</span>
+                            <span>Xác nhận nhận xe</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -470,7 +470,7 @@ export function KH06Page() {
                             onClick={() => navigate(`/kh/10?requestId=${req.id}`)}
                             className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Nhận tiền hoàn cọc (KH-10)</span>
+                            <span>Nhận tiền hoàn cọc</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -481,7 +481,7 @@ export function KH06Page() {
                             onClick={() => navigate(`/kh/09?requestId=${req.id}`)}
                             className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Xem bảng kê thanh lý (KH-09)</span>
+                            <span>Xem bảng kê thanh lý</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Button>
                         )}
@@ -492,7 +492,7 @@ export function KH06Page() {
                             onClick={() => navigate(`/kh/10?requestId=${req.id}`)}
                             className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Thanh toán bổ sung (KH-10)</span>
+                            <span>Thanh toán bổ sung</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </Button>
                         )}

@@ -1374,7 +1374,7 @@ export function LandingPage() {
                   to="/kh/08"
                   className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
                 >
-                  <span>Báo sự cố trên app (KH-08)</span>
+                  <span>Báo sự cố trên app</span>
                 </Link>
               ) : null}
             </div>
