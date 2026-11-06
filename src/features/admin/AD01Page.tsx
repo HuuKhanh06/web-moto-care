@@ -62,8 +62,12 @@ export function AD01Page() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [vList, pList, uList, aList] = await Promise.all([
-        db.vehicles.toArray(),
+      let vList = await db.vehicles.toArray();
+      if (vList.length < 30) {
+        await seedDatabase();
+        vList = await db.vehicles.toArray();
+      }
+      const [pList, uList, aList] = await Promise.all([
         db.partners.toArray(),
         db.profiles.toArray(),
         db.auth_accounts.toArray(),
