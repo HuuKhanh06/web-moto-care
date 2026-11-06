@@ -65,6 +65,19 @@ CREATE TABLE IF NOT EXISTS profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 2.1b auth_accounts: Tài khoản đăng nhập & Mật khẩu băm an toàn PBKDF2 Web Crypto
+CREATE TABLE IF NOT EXISTS auth_accounts (
+    user_id VARCHAR(64) PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    failed_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_accounts_email ON auth_accounts(email);
+
 -- 2.2 vehicles: Danh sách phương tiện (Có xe đệm ảo DUMP như GOODBIKE)
 CREATE TABLE IF NOT EXISTS vehicles (
     id VARCHAR(64) PRIMARY KEY,
@@ -437,6 +450,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Thiết lập Row Level Security (RLS) mở quyền cho demo / dev
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rental_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customer_documents ENABLE ROW LEVEL SECURITY;

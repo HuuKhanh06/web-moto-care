@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { clock } from '@/lib/clock';
 import { seedDatabase } from '@/db/seed';
 import { hashPassword, verifyPassword, validatePasswordStrength } from './crypto';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Actor, Profile, AuthAccount } from '@/db/types';
 
 const SESSION_STORAGE_KEY = 'motocare_session';
@@ -44,11 +45,40 @@ export const useAuthStore = create<AuthState>((set) => ({
       let account = await db.auth_accounts.where('email').equalsIgnoreCase(normalizedEmail).first();
 
       if (!account) {
+        // Tra cứu tài khoản từ Supabase Cloud nếu trên máy cục bộ chưa có
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const { data: cloudAcc } = await supabase
+              .from('auth_accounts')
+              .select('*')
+              .ilike('email', normalizedEmail)
+              .maybeSingle();
+
+            if (cloudAcc) {
+              const { data: cloudProf } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', cloudAcc.user_id)
+                .maybeSingle();
+
+              if (cloudProf) {
+                await db.profiles.put(cloudProf);
+                await db.auth_accounts.put(cloudAcc);
+                account = cloudAcc;
+              }
+            }
+          } catch (cloudErr) {
+            console.warn('[Supabase] Tra cứu tài khoản từ đám mây gặp sự cố:', cloudErr);
+          }
+        }
+
         // Tự động nạp dữ liệu mẫu nếu DB đang rỗng (lần đầu mở app trên trình duyệt)
-        const totalAccounts = await db.auth_accounts.count();
-        if (totalAccounts === 0) {
-          await seedDatabase();
-          account = await db.auth_accounts.where('email').equalsIgnoreCase(normalizedEmail).first();
+        if (!account) {
+          const totalAccounts = await db.auth_accounts.count();
+          if (totalAccounts === 0) {
+            await seedDatabase();
+            account = await db.auth_accounts.where('email').equalsIgnoreCase(normalizedEmail).first();
+          }
         }
       }
 
@@ -177,6 +207,18 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       await db.profiles.add(newProfile);
       await db.auth_accounts.add(newAccount);
+
+      // Đồng bộ tức thời lên Supabase Cloud nếu đã cấu hình
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await Promise.all([
+            supabase.from('profiles').upsert(newProfile, { onConflict: 'id' }),
+            supabase.from('auth_accounts').upsert(newAccount, { onConflict: 'user_id' }),
+          ]);
+        } catch (cloudErr) {
+          console.warn('[Supabase] Không thể đồng bộ tài khoản mới lên đám mây:', cloudErr);
+        }
+      }
 
       // Không tự động đăng nhập - người dùng cần đăng nhập lại ở bước tiếp theo
       return { success: true };

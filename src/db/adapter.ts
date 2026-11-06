@@ -81,30 +81,85 @@ class DataAdapter {
     return db.rental_requests.toArray();
   }
 
-  // --- 3. ĐỒNG BỘ HAI CHIỀU (SYNC) KHI CẦN ---
+  // --- 3. ĐỒNG BỘ TOÀN DIỆN LÊN CLOUD SUPABASE (SYNC) ---
   public async syncLocalToCloud(): Promise<{ success: boolean; message: string }> {
     if (!isSupabaseConfigured || !supabase) {
       return { success: false, message: 'Chưa cấu hình Supabase URL và Anon Key trong .env' };
     }
 
     try {
-      const [vehicles, rentals, profiles] = await Promise.all([
+      const [
+        profiles,
+        auth_accounts,
+        vehicles,
+        rentals,
+        documents,
+        payments,
+        contracts,
+        schedules,
+        inspections,
+        handovers,
+        findings,
+        statements,
+        settlements,
+        extensions,
+        partners,
+        incidents,
+        dispatches,
+        maintenance,
+        notifications,
+        events,
+      ] = await Promise.all([
+        db.profiles.toArray(),
+        db.auth_accounts.toArray(),
         db.vehicles.toArray(),
         db.rental_requests.toArray(),
-        db.profiles.toArray(),
+        db.customer_documents.toArray(),
+        db.payments.toArray(),
+        db.contracts.toArray(),
+        db.vehicle_schedule.toArray(),
+        db.inspections.toArray(),
+        db.handovers.toArray(),
+        db.damage_findings.toArray(),
+        db.statements.toArray(),
+        db.settlements.toArray(),
+        db.extension_requests.toArray(),
+        db.partners.toArray(),
+        db.incidents.toArray(),
+        db.incident_dispatches.toArray(),
+        db.maintenance_orders.toArray(),
+        db.notifications.toArray(),
+        db.process_events.toArray(),
       ]);
 
-      if (profiles.length > 0) {
-        await supabase.from('profiles').upsert(profiles, { onConflict: 'id' });
-      }
-      if (vehicles.length > 0) {
-        await supabase.from('vehicles').upsert(vehicles, { onConflict: 'id' });
-      }
-      if (rentals.length > 0) {
-        await supabase.from('rental_requests').upsert(rentals, { onConflict: 'id' });
-      }
+      const syncOps = [];
+      if (profiles.length > 0) syncOps.push(supabase.from('profiles').upsert(profiles, { onConflict: 'id' }));
+      if (auth_accounts.length > 0) syncOps.push(supabase.from('auth_accounts').upsert(auth_accounts, { onConflict: 'user_id' }));
+      if (vehicles.length > 0) syncOps.push(supabase.from('vehicles').upsert(vehicles, { onConflict: 'id' }));
+      if (rentals.length > 0) syncOps.push(supabase.from('rental_requests').upsert(rentals, { onConflict: 'id' }));
+      if (documents.length > 0) syncOps.push(supabase.from('customer_documents').upsert(documents, { onConflict: 'id' }));
+      if (payments.length > 0) syncOps.push(supabase.from('payments').upsert(payments, { onConflict: 'id' }));
+      if (contracts.length > 0) syncOps.push(supabase.from('contracts').upsert(contracts, { onConflict: 'id' }));
+      if (schedules.length > 0) syncOps.push(supabase.from('vehicle_schedule').upsert(schedules, { onConflict: 'id' }));
+      if (inspections.length > 0) syncOps.push(supabase.from('inspections').upsert(inspections, { onConflict: 'id' }));
+      if (handovers.length > 0) syncOps.push(supabase.from('handovers').upsert(handovers, { onConflict: 'id' }));
+      if (findings.length > 0) syncOps.push(supabase.from('damage_findings').upsert(findings, { onConflict: 'id' }));
+      if (statements.length > 0) syncOps.push(supabase.from('statements').upsert(statements, { onConflict: 'id' }));
+      if (settlements.length > 0) syncOps.push(supabase.from('settlements').upsert(settlements, { onConflict: 'id' }));
+      if (extensions.length > 0) syncOps.push(supabase.from('extension_requests').upsert(extensions, { onConflict: 'id' }));
+      if (partners.length > 0) syncOps.push(supabase.from('partners').upsert(partners, { onConflict: 'id' }));
+      if (incidents.length > 0) syncOps.push(supabase.from('incidents').upsert(incidents, { onConflict: 'id' }));
+      if (dispatches.length > 0) syncOps.push(supabase.from('incident_dispatches').upsert(dispatches, { onConflict: 'id' }));
+      if (maintenance.length > 0) syncOps.push(supabase.from('maintenance_orders').upsert(maintenance, { onConflict: 'id' }));
+      if (notifications.length > 0) syncOps.push(supabase.from('notifications').upsert(notifications, { onConflict: 'id' }));
+      if (events.length > 0) syncOps.push(supabase.from('process_events').upsert(events, { onConflict: 'id' }));
 
-      return { success: true, message: `Đã đồng bộ thành công ${rentals.length} đơn và ${vehicles.length} xe lên Supabase Cloud!` };
+      await Promise.all(syncOps);
+
+      return {
+        success: true,
+        message: `Đã đồng bộ toàn diện dữ liệu lên Supabase Cloud (${rentals.length} đơn, ${profiles.length} tài khoản, ${vehicles.length} xe)!`,
+      };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       return { success: false, message: `Lỗi đồng bộ: ${msg}` };

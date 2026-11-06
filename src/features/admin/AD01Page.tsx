@@ -6,6 +6,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from '@/db';
 import { seedDatabase } from '@/db/seed';
 import { downloadDatabaseBackup, importDatabase } from '@/db/backup';
+import { dataAdapter } from '@/db/adapter';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { useAuthStore } from '@/features/auth/authStore';
 import type { Vehicle, Partner, Profile, VehicleStatus } from '@/db/types';
 import {
@@ -29,6 +31,7 @@ import {
   Database,
   Search,
   Eye,
+  Cloud,
 } from 'lucide-react';
 
 interface EnrichedProfile extends Profile {
@@ -49,6 +52,10 @@ export function AD01Page() {
   // Modal thêm / sửa xe
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Partial<Vehicle> | null>(null);
+
+  // Trạng thái Cloud Supabase
+  const [syncingCloud, setSyncingCloud] = useState(false);
+  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,6 +137,29 @@ export function AD01Page() {
       toast.error('Không thể đọc file sao lưu');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Đồng bộ lên Supabase Cloud
+  const handleSyncSupabase = async () => {
+    if (!isManager) return;
+    if (!isSupabaseConfigured) {
+      setShowSupabaseModal(true);
+      return;
+    }
+    setSyncingCloud(true);
+    try {
+      const res = await dataAdapter.syncLocalToCloud();
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi khi đồng bộ lên Supabase Cloud');
+    } finally {
+      setSyncingCloud(false);
     }
   };
 
@@ -282,6 +312,22 @@ export function AD01Page() {
               >
                 <Database className="w-4 h-4" />
                 <span>Nạp dữ liệu mẫu</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncSupabase}
+                loading={syncingCloud}
+                className={`flex items-center gap-1.5 ${
+                  isSupabaseConfigured
+                    ? 'border-emerald-300 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+                title="Đồng bộ toàn bộ dữ liệu lên Cơ sở dữ liệu đám mây Supabase Cloud"
+              >
+                <Cloud className={`w-4 h-4 ${isSupabaseConfigured ? 'text-emerald-600' : 'text-slate-500'}`} />
+                <span>{isSupabaseConfigured ? 'Đồng bộ Supabase' : 'Cấu hình Supabase'}</span>
               </Button>
             </>
           )}
@@ -618,6 +664,47 @@ export function AD01Page() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* MODAL HƯỚNG DẪN CẤU HÌNH SUPABASE CLOUD */}
+      <Modal
+        isOpen={showSupabaseModal}
+        onClose={() => setShowSupabaseModal(false)}
+        title="Thiết lập Cơ sở dữ liệu đám mây Supabase (PostgreSQL)"
+      >
+        <div className="space-y-4 text-xs text-slate-600">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900">
+            <strong>Chưa phát hiện cấu hình Supabase trong môi trường:</strong>
+            <p className="mt-1">
+              Hệ thống hiện đang chạy với cơ sở dữ liệu cục bộ IndexedDB trên trình duyệt. Để dữ liệu người dùng đổ về máy chủ trung tâm bạn kiểm soát, hãy hoàn tất các bước sau:
+            </p>
+          </div>
+
+          <ol className="list-decimal pl-4 space-y-2">
+            <li>
+              Tạo tài khoản và 1 Project mới miễn phí tại <strong>https://supabase.com</strong>.
+            </li>
+            <li>
+              Vào mục <strong>SQL Editor</strong> &rarr; dán toàn bộ mã nguồn file <code>supabase/schema.sql</code> và bấm <strong>Run</strong> để khởi tạo 20 bảng và phân quyền RLS.
+            </li>
+            <li>
+              Vào <strong>Project Settings &gt; API</strong> &rarr; lấy 2 thông số:
+              <ul className="list-disc pl-4 mt-1 space-y-0.5 text-slate-700 font-mono">
+                <li>Project URL: <code>VITE_SUPABASE_URL</code></li>
+                <li>anon / public key: <code>VITE_SUPABASE_ANON_KEY</code></li>
+              </ul>
+            </li>
+            <li>
+              Thêm 2 biến này vào file <code>.env</code> (nếu chạy local) hoặc thêm vào <strong>Environment Variables</strong> trên Vercel / GitHub Secrets để web tự động đồng bộ.
+            </li>
+          </ol>
+
+          <div className="pt-2 flex justify-end">
+            <Button size="sm" onClick={() => setShowSupabaseModal(false)}>
+              Đã hiểu
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
