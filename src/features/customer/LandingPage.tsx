@@ -523,7 +523,7 @@ export function LandingPage() {
       </header>
 
       {/* 3. HERO SECTION: SLIDER ẢNH QUẢNG CÁO PHONG CÁCH VINFAST / XANH SM + FORM TÌM & ĐẶT XE */}
-      <section className="relative overflow-hidden pt-4 pb-16 lg:pt-6 lg:pb-24 bg-gradient-to-b from-brand-50/40 via-slate-50 to-white">
+      <section className="relative overflow-hidden pt-4 pb-6 lg:pt-6 lg:pb-8 bg-gradient-to-b from-brand-50/40 via-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
           {/* BANNER CAROUSEL 4 ẢNH TRƯỢT THAM KHẢO VINFAST / XANH SM */}
           <div
@@ -764,7 +764,7 @@ export function LandingPage() {
       </section>
 
       {/* 4. DÀN XE NỔI BẬT (FEATURED FLEET GRID) KÈM FILTER TAB & HOVER EFFECT */}
-      <section id="fleet" className="py-16 bg-white border-t border-slate-200/80 scroll-mt-20">
+      <section id="fleet" className="pt-4 pb-16 bg-white scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
