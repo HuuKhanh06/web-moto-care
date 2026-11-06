@@ -1,7 +1,5 @@
 // src/features/customer/KH06Page.tsx
-// Màn hình KH-06: Yêu cầu thuê của tôi (Trang chủ Khách hàng)
-// Hiển thị danh sách đơn thuê, thông báo từ chối hết xe (M_RejectNoVehicle),
-// và 3 nút sự kiện BPMN khi đang thuê (M_EG) với khóa tương hỗ (chỉ một sự kiện hoạt động).
+// Màn hình chuyến đi của tôi (Khách hàng)
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,30 +10,22 @@ import type { RentalRequest, Vehicle } from '@/db/types';
 import {
   Card,
   Button,
-  Badge,
   EmptyState,
+  StatusChip,
   toast,
 } from '@/components/ui';
-import {
-  formatCurrency,
-  formatDateTime,
-  getStatusBadgeVariant,
-  getStatusLabel,
-} from '@/lib/format';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
-import { BpmnBadge } from '@/components/common/BpmnBadge';
+import { COPY } from '@/copy';
 import {
   Bike,
   PlusCircle,
   RotateCcw,
-  ArrowRight,
-  AlertTriangle,
   Calendar,
   Wrench,
   KeyRound,
-  CheckCircle2,
-  Clock,
-  ShieldAlert,
+  ArrowRight,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface EnrichedRequest {
@@ -76,7 +66,7 @@ export function KH06Page() {
       }
       setRequests(enriched);
     } catch (err) {
-      console.error('Lỗi khi tải danh sách đơn thuê:', err);
+      console.error('Lỗi khi tải danh sách chuyến đi:', err);
     } finally {
       setLoading(false);
     }
@@ -86,14 +76,13 @@ export function KH06Page() {
     loadRequests();
   }, [loadRequests]);
 
-  // Xử lý sự kiện trả xe tại cổng M_EG
   const handleReturnVehicle = async (requestId: string) => {
     if (!currentActor) {
       toast.error('Vui lòng đăng nhập lại');
       return;
     }
 
-    if (!window.confirm('Bạn có chắc chắn muốn yêu cầu trả xe và tiến hành đối soát, quyết toán hợp đồng?')) {
+    if (!window.confirm('Bạn có chắc chắn muốn kết thúc chuyến đi và yêu cầu trả xe?')) {
       return;
     }
 
@@ -106,11 +95,11 @@ export function KH06Page() {
         currentActor
       );
 
-      toast.success('Đã gửi yêu cầu trả xe! Nhân viên sẽ tiến hành kiểm tra phương tiện.');
+      toast.success('Đã gửi yêu cầu trả xe. Kỹ thuật viên sẽ hỗ trợ kiểm tra xe ngay.');
       await loadRequests();
     } catch (err: unknown) {
       console.error('Lỗi khi yêu cầu trả xe:', err);
-      toast.error(err instanceof Error ? err.message : 'Không thể kích hoạt yêu cầu trả xe');
+      toast.error(err instanceof Error ? err.message : 'Không thể gửi yêu cầu trả xe');
     } finally {
       setProcessingReturnId(null);
     }
@@ -121,7 +110,18 @@ export function KH06Page() {
       return ['DANG_THUE', 'DANG_GIA_HAN', 'DANG_XU_LY_SU_CO'].includes(req.status);
     }
     if (filterTab === 'PENDING') {
-      return ['MOI', 'CHO_HO_SO', 'CHO_COC', 'CHO_KY', 'CHO_BAN_GIAO', 'CHO_KHACH_NHAN', 'CHO_NHAN_XE_TRA', 'CHO_KHACH_XAC_NHAN_BANG_KE', 'CHO_THU_THEM', 'CONG_NO'].includes(req.status);
+      return [
+        'MOI',
+        'CHO_HO_SO',
+        'CHO_COC',
+        'CHO_KY',
+        'CHO_BAN_GIAO',
+        'CHO_KHACH_NHAN',
+        'CHO_NHAN_XE_TRA',
+        'CHO_KHACH_XAC_NHAN_BANG_KE',
+        'CHO_THU_THEM',
+        'CONG_NO',
+      ].includes(req.status);
     }
     if (filterTab === 'DONE') {
       return ['HOAN_TAT', 'DA_HUY', 'TU_CHOI'].includes(req.status);
@@ -129,54 +129,56 @@ export function KH06Page() {
     return true;
   });
 
+  const getStatusDisplay = (req: RentalRequest) => {
+    if (req.status === 'DANG_THUE') return { status: 'success' as const, label: COPY.STATUS.ACTIVE };
+    if (req.status === 'HOAN_TAT') return { status: 'success' as const, label: COPY.STATUS.DONE };
+    if (req.status === 'TU_CHOI' || req.status === 'DA_HUY') return { status: 'error' as const, label: 'Đã kết thúc' };
+    if (req.status === 'DANG_GIA_HAN') return { status: 'pending' as const, label: 'Đang gia hạn' };
+    if (req.status === 'DANG_XU_LY_SU_CO') return { status: 'pending' as const, label: 'Đang hỗ trợ sự cố' };
+    if (req.status === 'CHO_KHACH_NHAN') return { status: 'pending' as const, label: 'Chờ nhận xe' };
+    if (req.status === 'CHO_COC') return { status: 'pending' as const, label: 'Chờ đặt cọc' };
+    if (req.status === 'CHO_KY') return { status: 'pending' as const, label: 'Chờ ký số' };
+    return { status: 'pending' as const, label: COPY.STATUS.PENDING };
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto px-4 py-6">
-      {/* Header */}
+    <div className="space-y-6 max-w-4xl mx-auto px-4 py-6 pb-24 md:pb-8">
+      {/* Tiêu đề & Nút thuê xe mới */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/80 shadow-xs">
-              Chuyến đi
-            </span>
-            <BpmnBadge nodeId="M_EG" name="Cổng sự kiện thuê" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Chuyến đi của tôi</h1>
-          </div>
-          <p className="text-sm text-slate-500">
-            Quản lý hợp đồng đang thuê, yêu cầu gia hạn, cứu hộ khẩn cấp hoặc làm thủ tục trả xe
-          </p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+            {COPY.TITLES.TRIPS}
+          </h1>
         </div>
-
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={loadRequests}
-            loading={loading}
-            className="flex items-center gap-1.5 shadow-xs"
+            title="Làm mới danh sách"
           >
-            <RotateCcw className="w-4 h-4" />
-            Làm mới
+            <RotateCcw className="w-4 h-4 mr-1.5" />
+            <span>Làm mới</span>
           </Button>
-
           <Button
+            variant="primary"
             size="sm"
             onClick={() => navigate('/kh/01')}
-            className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md"
           >
-            <PlusCircle className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4 mr-1.5" />
             <span>Thuê xe mới</span>
           </Button>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2 overflow-x-auto text-xs font-semibold">
+      {/* Tabs lọc trạng thái */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
         <button
           type="button"
           onClick={() => setFilterTab('ALL')}
-          className={`px-3 py-1.5 rounded-xl transition-all ${
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0 cursor-pointer ${
             filterTab === 'ALL'
-              ? 'bg-brand-700 text-white shadow-xs'
+              ? 'bg-teal-700 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -185,319 +187,287 @@ export function KH06Page() {
         <button
           type="button"
           onClick={() => setFilterTab('ACTIVE')}
-          className={`px-3 py-1.5 rounded-xl transition-all ${
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0 cursor-pointer ${
             filterTab === 'ACTIVE'
-              ? 'bg-brand-700 text-white shadow-xs'
+              ? 'bg-teal-700 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Đang thuê ({requests.filter(r => ['DANG_THUE', 'DANG_GIA_HAN', 'DANG_XU_LY_SU_CO'].includes(r.request.status)).length})
+          Đang thuê (
+          {
+            requests.filter((r) =>
+              ['DANG_THUE', 'DANG_GIA_HAN', 'DANG_XU_LY_SU_CO'].includes(r.request.status)
+            ).length
+          }
+          )
         </button>
         <button
           type="button"
           onClick={() => setFilterTab('PENDING')}
-          className={`px-3 py-1.5 rounded-xl transition-all ${
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0 cursor-pointer ${
             filterTab === 'PENDING'
-              ? 'bg-brand-700 text-white shadow-xs'
+              ? 'bg-teal-700 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Chờ xử lý ({requests.filter(r => ['MOI', 'CHO_HO_SO', 'CHO_COC', 'CHO_KY', 'CHO_BAN_GIAO', 'CHO_KHACH_NHAN', 'CHO_NHAN_XE_TRA', 'CHO_KHACH_XAC_NHAN_BANG_KE', 'CHO_THU_THEM', 'CONG_NO'].includes(r.request.status)).length})
+          Chờ xử lý (
+          {
+            requests.filter((r) =>
+              [
+                'MOI',
+                'CHO_HO_SO',
+                'CHO_COC',
+                'CHO_KY',
+                'CHO_BAN_GIAO',
+                'CHO_KHACH_NHAN',
+                'CHO_NHAN_XE_TRA',
+                'CHO_KHACH_XAC_NHAN_BANG_KE',
+                'CHO_THU_THEM',
+                'CONG_NO',
+              ].includes(r.request.status)
+            ).length
+          }
+          )
         </button>
         <button
           type="button"
           onClick={() => setFilterTab('DONE')}
-          className={`px-3 py-1.5 rounded-xl transition-all ${
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0 cursor-pointer ${
             filterTab === 'DONE'
-              ? 'bg-brand-700 text-white shadow-xs'
+              ? 'bg-teal-700 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Hoàn tất / Đã hủy ({requests.filter(r => ['HOAN_TAT', 'DA_HUY', 'TU_CHOI'].includes(r.request.status)).length})
+          Lịch sử (
+          {
+            requests.filter((r) =>
+              ['HOAN_TAT', 'DA_HUY', 'TU_CHOI'].includes(r.request.status)
+            ).length
+          }
+          )
         </button>
       </div>
 
-      {/* Danh sách các yêu cầu thuê */}
-      {filteredRequests.length === 0 ? (
-        <Card className="p-10 border-slate-200/80 text-center glass-surface shadow-sm">
-          <EmptyState
-            title={filterTab === 'ALL' ? 'Bạn chưa có yêu cầu thuê xe nào' : 'Không có yêu cầu phù hợp bộ lọc'}
-            description="Hãy bắt đầu hành trình của bạn bằng cách gửi yêu cầu thuê xe mới với thủ tục trực tuyến nhanh chóng."
-            actionLabel="Đặt xe ngay"
-            onAction={() => navigate('/kh/01')}
-            icon={<Bike className="w-10 h-10 text-brand-600" />}
-          />
-        </Card>
+      {/* Danh sách các chuyến đi */}
+      {loading ? (
+        <div className="py-16 text-center text-slate-500">
+          <Bike className="w-8 h-8 mx-auto animate-pulse text-teal-600 mb-2" />
+          <span className="text-sm font-normal">Đang tải danh sách chuyến đi...</span>
+        </div>
+      ) : filteredRequests.length === 0 ? (
+        <EmptyState
+          title={COPY.EMPTY.NO_TRIPS}
+          description="Bạn chưa có chuyến đi nào trong danh mục này. Hãy đặt xe ngay để trải nghiệm nhé!"
+          action={{
+            label: COPY.ACTIONS.SELECT_VEHICLE,
+            onClick: () => navigate('/kh/01'),
+          }}
+        />
       ) : (
         <div className="space-y-4">
-          {filteredRequests.map(({ request: req, vehicle: veh, processState: pState }) => {
-            const isRejectedNoVehicle =
-              req.status === 'TU_CHOI' && req.closed_reason === 'HET_XE';
-            const isRenting = req.status === 'DANG_THUE';
+          {filteredRequests.map(({ request: req, vehicle, processState: pState }) => {
+            const isUnderRentalEvent = [
+              'DANG_THUE',
+              'DANG_GIA_HAN',
+              'DANG_XU_LY_SU_CO',
+            ].includes(req.status);
             const isExtending = req.status === 'DANG_GIA_HAN';
             const isIncident = req.status === 'DANG_XU_LY_SU_CO';
-            const isUnderRentalEvent = isRenting || isExtending || isIncident;
+            const statusInfo = getStatusDisplay(req);
 
             return (
               <Card
                 key={req.id}
-                className={`p-6 rounded-3xl border transition-all duration-300 hover:shadow-lg glass-surface ${
-                  isRejectedNoVehicle
-                    ? 'border-red-200/90 bg-red-50/20'
-                    : isRenting
-                    ? 'border-brand-500/50 bg-gradient-to-br from-brand-50/40 via-white to-brand-50/20 shadow-md ring-1 ring-brand-400/20'
-                    : isExtending
-                    ? 'border-blue-300/80 bg-blue-50/25 shadow-sm'
-                    : isIncident
-                    ? 'border-amber-300/80 bg-amber-50/25 shadow-sm'
-                    : 'border-slate-200/80 hover:border-slate-300'
-                }`}
+                className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4"
               >
-                {/* Header đơn */}
+                {/* Header thẻ: Tên xe, biển số, chip trạng thái */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                      #{req.id.slice(0, 8)}
-                    </span>
-                    <Badge variant={getStatusBadgeVariant(req.status)} size="md">
-                      {getStatusLabel(req.status)}
-                    </Badge>
+                  <div className="flex items-center gap-3">
+                    {vehicle ? (
+                      <div className="w-14 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                        <img
+                          src={getVehicleImageUrl(vehicle.model)}
+                          alt={vehicle.model}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-400">
+                        <Bike className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-base font-semibold text-slate-900">
+                        {vehicle?.model || 'Đang chọn phương tiện'}
+                      </h2>
+                      {vehicle?.plate && (
+                        <span className="text-[13px] font-mono font-medium text-slate-500">
+                          {vehicle.plate}
+                        </span>
+                      )}
+                    </div>
                   </div>
-
-                  <span className="text-xs text-slate-500">
-                    Thời gian tạo: {formatDateTime(req.start_at)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <StatusChip status={statusInfo.status} label={statusInfo.label} />
+                  </div>
                 </div>
 
-                {/* Thông báo nếu bị từ chối do hết xe */}
-                {isRejectedNoVehicle && (
-                  <div className="my-3 p-3 bg-red-50 rounded-xl border border-red-200 flex items-start gap-2 text-xs text-red-800">
-                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                    <div>
-                      <strong>Tạm thời hết xe:</strong> Phân khúc xe bạn chọn tạm thời không còn xe sẵn sàng trong khung giờ yêu cầu. Quý khách vui lòng chọn khung giờ khác hoặc đổi phân khúc xe.
-                    </div>
+                {/* Chi tiết lịch trình và giá */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <span className="text-[13px] text-slate-500 block">Thời gian thuê:</span>
+                    <p className="text-slate-800 font-medium">
+                      {formatDateTime(req.start_at)} — {formatDateTime(req.end_at)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[13px] text-slate-500 block">Tổng tiền / Đã cọc:</span>
+                    <p className="text-slate-900 font-semibold">
+                      {req.total_price ? formatCurrency(req.total_price) : '0 ₫'} ·{' '}
+                      <span className="text-teal-700">
+                        Cọc: {req.deposit_amount ? formatCurrency(req.deposit_amount) : '0 ₫'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Thông báo nếu xe hết hoặc bị từ chối */}
+                {req.status === 'TU_CHOI' && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-800 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>
+                      {req.closed_reason === 'HET_XE'
+                        ? 'Rất tiếc dòng xe này vừa hết. Quý khách vui lòng chọn dòng xe khác nhé.'
+                        : 'Yêu cầu thuê chưa thể hoàn tất. Quý khách có thể tạo đơn thuê mới bất cứ lúc nào.'}
+                    </span>
                   </div>
                 )}
 
-                {/* Chi tiết xe & thời gian */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 text-xs items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-14 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 p-1">
-                      <img
-                        src={getVehicleImageUrl(veh?.model)}
-                        alt={veh?.model || 'Xe'}
-                        className="h-full w-full object-contain filter drop-shadow-2xs"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Phương tiện thuê:</span>
-                      <strong className="text-slate-900 text-sm flex items-center gap-1.5 mt-0.5">
-                        {veh ? `${veh.model}` : 'Chưa phân bổ xe'}
-                      </strong>
-                      {veh && (
-                        <span className="text-[11px] font-mono text-slate-500 font-bold">
-                          {veh.plate}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block">Thời gian thuê:</span>
-                    <div className="text-slate-800 mt-0.5">
-                      {formatDateTime(req.start_at)} &rarr; {formatDateTime(req.end_at)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500 block">Tổng tiền / Tiền cọc:</span>
-                    <div className="text-slate-900 font-bold mt-0.5">
-                      {req.total_price ? formatCurrency(req.total_price) : 'Chưa dự toán'} /{' '}
-                      <span className="text-amber-700">
-                        {req.deposit_amount ? formatCurrency(req.deposit_amount) : '0 ₫'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* KHU VỰC HÀNH ĐỘNG DỰA TRÊN TRẠNG THÁI HIỆN TẠI */}
+                {/* KHU VỰC HÀNH ĐỘNG */}
                 <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                  {/* Trường hợp ĐANG THUÊ / GIA HẠN / SỰ CỐ */}
                   {isUnderRentalEvent ? (
                     <div className="w-full space-y-3">
-                      <div className="text-xs font-semibold text-slate-800 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-brand-600" />
-                          <span>Hợp đồng đang có hiệu lực:</span>
-                        </span>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {/* 1. Nút Gia hạn hợp đồng */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            data-testid="node-M_CatchExtend"
+                            disabled={isIncident}
+                            onClick={() => navigate(`/kh/07?requestId=${req.id}`)}
+                          >
+                            <Calendar className="w-4 h-4 mr-1.5 text-teal-600" />
+                            <span>{isExtending ? 'Tiến trình gia hạn' : 'Gia hạn xe'}</span>
+                          </Button>
 
-                        {isExtending && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                            <Clock className="w-3 h-3 animate-spin" />
-                            Đang xử lý gia hạn
-                          </span>
-                        )}
+                          {/* 2. Nút Báo sự cố khẩn cấp */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            data-testid="node-M_CatchIncident"
+                            disabled={isExtending}
+                            onClick={() => navigate(`/kh/08?requestId=${req.id}`)}
+                          >
+                            <Wrench className="w-4 h-4 mr-1.5 text-amber-600" />
+                            <span>{isIncident ? 'Theo dõi cứu hộ' : 'Báo sự cố'}</span>
+                          </Button>
+                        </div>
 
-                        {isIncident && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                            <ShieldAlert className="w-3 h-3" />
-                            Đang xử lý cứu hộ khẩn cấp
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Cảnh báo khóa tương hỗ */}
-                      {(isExtending || isIncident) && (
-                        <p className="text-[11px] text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
-                          * Hệ thống đang ưu tiên xử lý {isExtending ? 'yêu cầu gia hạn' : 'sự cố cứu hộ'}. Quý khách vui lòng hoàn tất bước này trước khi thực hiện thao tác khác.
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* 1. Nút Gia hạn hợp đồng (M_CatchExtend -> SP1) */}
+                        {/* 3. Nút Trả xe */}
                         <Button
-                          variant={isExtending ? 'primary' : 'outline'}
-                          size="sm"
-                          data-testid="node-M_CatchExtend"
-                          disabled={isIncident}
-                          onClick={() => navigate(`/kh/07?requestId=${req.id}`)}
-                          className={`flex items-center gap-1 text-xs ${
-                            isExtending
-                              ? 'bg-blue-600 hover:bg-blue-700 text-white font-bold'
-                              : 'text-brand-800 border-brand-300 hover:bg-brand-50'
-                          }`}
-                        >
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>{isExtending ? 'Xem tiến trình Gia hạn' : 'Gia hạn hợp đồng'}</span>
-                        </Button>
-
-                        {/* 2. Nút Báo sự cố khẩn cấp (M_CatchIncident -> SP2) */}
-                        <Button
-                          variant={isIncident ? 'primary' : 'outline'}
-                          size="sm"
-                          data-testid="node-M_CatchIncident"
-                          disabled={isExtending}
-                          onClick={() => navigate(`/kh/08?requestId=${req.id}`)}
-                          className={`flex items-center gap-1 text-xs ${
-                            isIncident
-                              ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
-                              : 'text-amber-800 border-amber-300 hover:bg-amber-50'
-                          }`}
-                        >
-                          <Wrench className="w-3.5 h-3.5" />
-                          <span>{isIncident ? 'Theo dõi Cứu hộ sự cố' : 'Báo sự cố cứu hộ'}</span>
-                        </Button>
-
-                        {/* 3. Nút Trả xe (M_CatchReturn -> NV-06) */}
-                        <Button
+                          variant="primary"
                           size="sm"
                           data-testid="node-M_CatchReturn"
                           disabled={isExtending || isIncident || processingReturnId === req.id}
                           loading={processingReturnId === req.id}
                           onClick={() => handleReturnVehicle(req.id)}
-                          className="flex items-center gap-1 text-xs ml-auto bg-slate-800 hover:bg-slate-900 text-white font-semibold"
                         >
-                          <KeyRound className="w-3.5 h-3.5" />
-                          <span>Yêu cầu trả xe</span>
+                          <KeyRound className="w-4 h-4 mr-1.5" />
+                          <span>Trả xe</span>
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    /* Các trạng thái đang chờ xử lý trước khi bàn giao hoặc sau trả xe */
-                    <>
-                      <div className="text-xs text-slate-500">
-                        {req.status === 'CHO_HO_SO' && 'Cần tải giấy tờ định danh & xác nhận báo giá.'}
-                        {req.status === 'CHO_COC' && 'Chờ thanh toán cọc 30% qua QR VietQR.'}
-                        {req.status === 'CHO_KY' && 'Chờ ký hợp đồng điện tử trực tuyến.'}
-                        {req.status === 'CHO_KHACH_NHAN' && 'Xe đã sẵn sàng, vui lòng xác nhận tình trạng.'}
-                        {req.status === 'CHO_NHAN_XE_TRA' && 'Đang chờ nhân viên nhận bàn giao xe trả lại.'}
-                        {req.status === 'CHO_KHACH_XAC_NHAN_BANG_KE' && 'Đã có bảng kê thanh lý, vui lòng kiểm tra đối soát.'}
-                        {req.status === 'CHO_THU_THEM' && 'Có khoản phí phát sinh cần thanh toán bổ sung.'}
-                        {req.status === 'CONG_NO' && 'Hồ sơ ghi nhận công nợ chưa quyết toán.'}
-                        {req.status === 'HOAN_TAT' && 'Hợp đồng thuê đã thanh lý và hoàn tất trọn vẹn.'}
-                        {req.status === 'TU_CHOI' && 'Đơn thuê đã bị từ chối tiếp nhận.'}
-                        {req.status === 'DA_HUY' && 'Đơn thuê đã bị hủy.'}
-                      </div>
+                    <div className="w-full flex items-center justify-end gap-2">
+                      {req.status === 'CHO_HO_SO' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate(`/kh/02?requestId=${req.id}`)}
+                        >
+                          <span>Nộp hồ sơ</span>
+                          <ArrowRight className="w-4 h-4 ml-1.5" />
+                        </Button>
+                      )}
 
-                      <div className="flex items-center gap-2">
-                        {req.status === 'CHO_HO_SO' && (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/kh/02?requestId=${req.id}`)}
-                            className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
-                          >
-                            <span>Nộp hồ sơ</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                      {req.status === 'CHO_COC' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate(`/kh/03?requestId=${req.id}`)}
+                        >
+                          <span>Đặt cọc</span>
+                          <ArrowRight className="w-4 h-4 ml-1.5" />
+                        </Button>
+                      )}
 
-                        {req.status === 'CHO_COC' && (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/kh/03?requestId=${req.id}`)}
-                            className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
-                          >
-                            <span>Thanh toán cọc QR</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                      {req.status === 'CHO_KY' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate(`/kh/04?requestId=${req.id}`)}
+                        >
+                          <span>Ký hợp đồng</span>
+                          <ArrowRight className="w-4 h-4 ml-1.5" />
+                        </Button>
+                      )}
 
-                        {req.status === 'CHO_KY' && (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/kh/04?requestId=${req.id}`)}
-                            className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
-                          >
-                            <span>Ký hợp đồng</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                      {req.status === 'CHO_KHACH_NHAN' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate(`/kh/05?requestId=${req.id}`)}
+                        >
+                          <span>Nhận xe</span>
+                          <ArrowRight className="w-4 h-4 ml-1.5" />
+                        </Button>
+                      )}
 
-                        {req.status === 'CHO_KHACH_NHAN' && (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/kh/05?requestId=${req.id}`)}
-                            className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
-                          >
-                            <span>Xác nhận nhận xe</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                      {pState?.waiting_node_ids?.includes('M_ConfirmRefund') && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate(`/kh/10?requestId=${req.id}`)}
+                        >
+                          <span>Nhận hoàn cọc</span>
+                          <ArrowRight className="w-4 h-4 ml-1.5" />
+                        </Button>
+                      )}
 
-                        {pState?.waiting_node_ids?.includes('M_ConfirmRefund') && (
+                      {req.status === 'CHO_KHACH_XAC_NHAN_BANG_KE' &&
+                        !pState?.waiting_node_ids?.includes('M_ConfirmRefund') && (
                           <Button
-                            size="sm"
-                            onClick={() => navigate(`/kh/10?requestId=${req.id}`)}
-                            className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
-                          >
-                            <span>Nhận tiền hoàn cọc</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
-
-                        {req.status === 'CHO_KHACH_XAC_NHAN_BANG_KE' && !pState?.waiting_node_ids?.includes('M_ConfirmRefund') && (
-                          <Button
+                            variant="primary"
                             size="sm"
                             onClick={() => navigate(`/kh/09?requestId=${req.id}`)}
-                            className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
                           >
-                            <span>Xem bảng kê thanh lý</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
+                            <span>Xem bảng kê</span>
+                            <ArrowRight className="w-4 h-4 ml-1.5" />
                           </Button>
                         )}
 
-                        {req.status === 'CHO_THU_THEM' && (
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/kh/10?requestId=${req.id}`)}
-                            className="flex items-center gap-1 text-xs bg-brand-600 hover:bg-brand-700 text-white"
-                          >
-                            <span>Thanh toán bổ sung</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </>
+                      {req.status === 'CHO_THU_THEM' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate(`/kh/10?requestId=${req.id}`)}
+                        >
+                          <span>Thanh toán thêm</span>
+                          <ArrowRight className="w-4 h-4 ml-1.5" />
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </Card>

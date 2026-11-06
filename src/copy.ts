@@ -35,6 +35,32 @@ export const COPY = {
     REGISTER: 'Tạo tài khoản',
   },
 
+  ACTIONS: {
+    SELECT_VEHICLE: 'Chọn xe',
+    BOOK_NOW: 'Đặt xe',
+    CONTINUE: 'Tiếp tục',
+    BACK: 'Quay lại',
+    DEPOSIT: 'Đặt cọc',
+    CONFIRM: 'Xác nhận',
+    REJECT: 'Từ chối',
+    SIGN_CONTRACT: 'Ký hợp đồng',
+    ACCEPT_VEHICLE: 'Nhận xe',
+    RETURN_VEHICLE: 'Trả xe',
+    EXTEND: 'Gia hạn',
+    REPORT_ISSUE: 'Báo sự cố',
+    CALL_SUPPORT: 'Gọi cứu hộ',
+    PROCESS: 'Xử lý',
+    SAVE: 'Lưu thay đổi',
+    CANCEL: 'Hủy bỏ',
+    AGREE: 'Đồng ý',
+    RESOLVE: 'Giải quyết',
+    UPDATE: 'Cập nhật',
+    VIEW_DETAILS: 'Xem chi tiết',
+    LOGOUT: 'Đăng xuất',
+    LOGIN: 'Đăng nhập',
+    REGISTER: 'Tạo tài khoản',
+  },
+
   // Nhãn trạng thái (Ngắn, thân thiện, đời thường)
   STATUS: {
     // 4 Nhóm trạng thái chính
@@ -42,6 +68,8 @@ export const COPY = {
     PENDING: 'Đang chờ',
     ERROR: 'Đã hủy',
     INACTIVE: 'Tạm dừng',
+    ACTIVE: 'Đang thuê',
+    DONE: 'Đã xong',
 
     // Trạng thái cụ thể trong luồng
     WAIT_DOCS: 'Chờ giấy tờ',
@@ -88,10 +116,14 @@ export const COPY = {
     CONTRACT: 'Hợp đồng',
     HANDOVER: 'Nhận xe',
     MY_TRIP: 'Hành trình của bạn',
+    TRIPS: 'Chuyến đi của bạn',
     EXTEND_TRIP: 'Gia hạn thuê',
+    EXTEND: 'Gia hạn thuê xe',
     INCIDENT: 'Hỗ trợ sự cố',
     RETURN_SETTLEMENT: 'Biên bản trả xe',
+    RETURN: 'Bảng kê trả xe',
     FINAL_SETTLEMENT: 'Hoàn tất chuyến đi',
+    SETTLEMENT: 'Quyết toán cọc',
 
     // Phân hệ Nhân viên
     STAFF_TASKS: 'Việc cần làm',
@@ -119,6 +151,7 @@ export const COPY = {
     NO_TASKS: 'Hiện không có việc nào cần xử lý.',
     NO_VEHICLES: 'Không tìm thấy xe phù hợp.',
     NO_RENTALS: 'Bạn chưa có chuyến đi nào.',
+    NO_TRIPS: 'Bạn chưa có chuyến đi nào.',
     NO_NOTIFICATIONS: 'Không có thông báo mới.',
     NO_INCIDENTS: 'Không có sự cố nào đang chờ giải quyết.',
   },

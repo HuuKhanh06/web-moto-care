@@ -1,6 +1,5 @@
 // src/features/customer/KH05Page.tsx
-// Màn hình KH-05: Xác nhận tình trạng xe khi nhận (Activity_0w8x12e, Activity_0d0qzp6, Gateway_0ixde68)
-// Khách xem checklist, hình ảnh xe thực tế và đồng ý nhận xe hoặc yêu cầu khắc phục.
+// Màn hình 5: Nhận xe & Xác nhận tình trạng xe thực tế
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -11,18 +10,13 @@ import type { RentalRequest, Vehicle, Inspection, Handover } from '@/db/types';
 import {
   Card,
   Button,
-  Badge,
   Textarea,
-  Stepper,
   toast,
+  BookingProgress,
+  StatusChip,
 } from '@/components/ui';
-import {
-  getStatusBadgeVariant,
-  getStatusLabel,
-} from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
-import { CUSTOMER_RENTAL_STEPS } from './constants';
-import { BpmnBadge } from '@/components/common/BpmnBadge';
+import { COPY } from '@/copy';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -33,6 +27,7 @@ import {
   Fuel,
   Check,
   Eye,
+  X,
 } from 'lucide-react';
 
 export function KH05Page() {
@@ -74,7 +69,6 @@ export function KH05Page() {
         setVehicle(v || null);
       }
 
-      // Lấy bản ghi PRE_HANDOVER đạt có attempt_no lớn nhất
       const insp = await db.inspections
         .where('request_id')
         .equals(requestId)
@@ -82,14 +76,13 @@ export function KH05Page() {
         .last();
       setInspection(insp || null);
 
-      // Lấy danh sách handovers đã ghi nhận
       const hList = await db.handovers
         .where('request_id')
         .equals(requestId)
         .toArray();
       setHandovers(hList);
     } catch (err) {
-      console.error('Lỗi nạp KH-05:', err);
+      console.error('Lỗi nạp thông tin nhận xe:', err);
     } finally {
       setLoading(false);
     }
@@ -101,22 +94,22 @@ export function KH05Page() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-          <p className="mt-3 text-sm text-slate-500">Đang tải biên bản bàn giao xe...</p>
-        </div>
+      <div className="max-w-2xl mx-auto py-16 text-center text-slate-500">
+        <ShieldCheck className="w-8 h-8 mx-auto animate-pulse text-teal-600 mb-2" />
+        <span className="text-sm font-normal">Đang kiểm tra thông tin xe...</span>
       </div>
     );
   }
 
   if (!request) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <Card className="text-center py-10">
-          <AlertTriangle className="mx-auto h-12 w-12 text-amber-500" />
-          <h2 className="mt-3 text-lg font-bold text-slate-800">Không tìm thấy yêu cầu thuê</h2>
-          <Button className="mt-4" onClick={() => navigate('/kh/06')}>Về danh sách hồ sơ</Button>
+      <div className="max-w-xl mx-auto py-12 px-4 text-center">
+        <Card className="p-8 border border-slate-200 bg-white rounded-xl space-y-4">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
+          <h2 className="text-lg font-semibold text-slate-900">Không tìm thấy yêu cầu thuê</h2>
+          <Button variant="primary" onClick={() => navigate('/kh/06')}>
+            Về chuyến đi của tôi
+          </Button>
         </Card>
       </div>
     );
@@ -124,7 +117,7 @@ export function KH05Page() {
 
   const latestHandover = handovers[handovers.length - 1];
   const attemptNo = inspection?.attempt_no || 1;
-  const isAccepted = latestHandover?.customer_accepted === true;
+  const isAccepted = latestHandover?.customer_accepted === true || request.status === 'DANG_THUE';
   const isWaitingResponse = currentNodeId === 'Activity_0d0qzp6' || request.status === 'CHO_KHACH_NHAN';
 
   const handleCustomerResponse = async (accepted: boolean) => {
@@ -134,7 +127,7 @@ export function KH05Page() {
     }
 
     if (!accepted && !customerNote.trim()) {
-      toast.error('Vui lòng nhập lý do hoặc ghi chú nếu không đồng ý nhận xe');
+      toast.warning('Vui lòng nhập lý do nếu bạn chưa đồng ý nhận xe');
       return;
     }
 
@@ -152,13 +145,14 @@ export function KH05Page() {
       );
 
       if (accepted) {
-        toast.success('Bạn đã xác nhận đồng ý nhận xe! Nhân viên sẽ tiến hành bàn giao xe và phụ kiện.');
+        toast.success('Đã xác nhận nhận xe thành công! Chúc bạn chuyến đi vui vẻ.');
+        navigate('/kh/06');
       } else {
-        toast.warning('Đã gửi phản hồi từ chối! Nhân viên kỹ thuật sẽ kiểm tra và khắc phục lại xe.');
+        toast.warning('Đã gửi phản hồi. Kỹ thuật viên sẽ kiểm tra và điều chỉnh ngay.');
       }
       await loadData();
     } catch (err: unknown) {
-      console.error('Lỗi gửi phản hồi khách:', err);
+      console.error('Lỗi phản hồi nhận xe:', err);
       toast.error(err instanceof Error ? err.message : 'Không thể gửi phản hồi');
     } finally {
       setSubmitting(false);
@@ -168,218 +162,191 @@ export function KH05Page() {
   const checklistObj = (inspection?.checklist || {}) as Record<string, unknown>;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 pb-24 sm:pb-6">
-      {/* Stepper tiến trình */}
-      <Card className="p-4 sm:p-5 border-slate-200/80 glass-surface shadow-sm">
-        <Stepper steps={CUSTOMER_RENTAL_STEPS} currentStepIndex={4} />
-      </Card>
+    <div className="space-y-6 max-w-2xl mx-auto pb-24 md:pb-8">
+      {/* 4 Bước tiến trình */}
+      <BookingProgress currentStep={4} />
 
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-700 border border-brand-200/80 shadow-xs">
-              Bước 5 • Xác nhận xe
-            </span>
-            <BpmnBadge nodeId="Activity_0d0qzp6" name="Khách xác nhận" />
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-              Kiểm tra & Nhận bàn giao xe
-            </h1>
-          </div>
-          <p className="text-sm text-slate-500">
-            Mã chuyến #{request.id.slice(0, 8)} • Quý khách vui lòng kiểm tra hình ảnh 4 góc và tình trạng thực tế
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusBadgeVariant(request.status)}>
-            {getStatusLabel(request.status)}
-          </Badge>
-          <Badge variant="neutral" className="text-slate-600">
-            Lần kiểm tra #{attemptNo}
-          </Badge>
-        </div>
+      {/* Tiêu đề trang */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+          {COPY.TITLES.HANDOVER}
+        </h1>
+        <StatusChip
+          status={isAccepted ? 'success' : isWaitingResponse ? 'pending' : 'inactive'}
+          label={isAccepted ? 'Đã nhận xe' : isWaitingResponse ? 'Chờ kiểm tra' : 'Đang xử lý'}
+        />
       </div>
 
-      {/* Thông tin xe bàn giao */}
+      {/* Thông tin phương tiện */}
       {vehicle && (
-        <Card className="p-5 border-slate-200/80 glass-surface shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 flex items-center justify-center p-1 shadow-xs">
-              <img
-                src={getVehicleImageUrl(vehicle.model)}
-                alt={vehicle.model}
-                className="h-full w-full object-contain"
-              />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-                {vehicle.model}
-              </h3>
-              <p className="text-sm text-slate-500">
-                Biển số: <strong className="text-brand-700 font-mono">{vehicle.plate}</strong> • Phân khúc: {vehicle.vehicle_type}
-              </p>
-            </div>
+        <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl flex items-center gap-4">
+          <div className="w-20 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+            <img
+              src={getVehicleImageUrl(vehicle.model)}
+              alt={vehicle.model}
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-slate-900 truncate">
+              {vehicle.model}
+            </h2>
+            <p className="text-sm text-slate-500 font-mono font-medium">
+              {vehicle.plate}
+            </p>
           </div>
         </Card>
       )}
 
-      {/* Kết quả kiểm tra kỹ thuật của nhân viên */}
-      <Card className="p-6 border-slate-200/80 space-y-4 glass-surface shadow-sm">
+      {/* Bảng kiểm tra an toàn kỹ thuật */}
+      <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-brand-600" />
-            <h3 className="font-bold text-slate-900 text-base">
-              Biên bản kiểm tra an toàn kỹ thuật
-            </h3>
+            <ShieldCheck className="w-5 h-5 text-teal-600" />
+            <h2 className="text-base font-semibold text-slate-900">
+              Biên bản an toàn kỹ thuật
+            </h2>
           </div>
-          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-            {inspection?.result === 'DAT' ? 'Đã đạt tiêu chuẩn an toàn' : 'Đang xử lý'}
+          <span className="text-[13px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            {inspection?.result === 'DAT' ? 'Đạt an toàn 100%' : 'Đang rà soát'}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 border border-slate-100 p-3 shadow-xs">
-            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Phanh: <strong>Đạt an toàn</strong></span>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700">Hệ thống phanh: <strong className="text-slate-900">Đạt</strong></span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 border border-slate-100 p-3 shadow-xs">
-            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Đèn & Xi-nhan: <strong>Hoạt động tốt</strong></span>
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700">Đèn & xi-nhan: <strong className="text-slate-900">Tốt</strong></span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 border border-slate-100 p-3 shadow-xs">
-            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Lốp & Áp suất: <strong>Đạt chuẩn</strong></span>
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700">Lốp & áp suất: <strong className="text-slate-900">Chuẩn</strong></span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 border border-slate-100 p-3 shadow-xs">
-            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Gương chiếu hậu: <strong>Đủ 2 gương</strong></span>
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700">Gương chiếu hậu: <strong className="text-slate-900">Đủ 2 gương</strong></span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 border border-slate-100 p-3 shadow-xs">
-            <Gauge className="h-4 w-4 text-brand-600 shrink-0" />
-            <span>ODO: <strong>{String(checklistObj.odometer || '12450')} Km</strong></span>
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <Gauge className="w-4 h-4 text-teal-600 shrink-0" />
+            <span className="text-slate-700">Số km (ODO): <strong className="text-slate-900">{String(checklistObj.odometer || '12.450')} km</strong></span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 border border-slate-100 p-3 shadow-xs">
-            <Fuel className="h-4 w-4 text-brand-600 shrink-0" />
-            <span>Nhiên liệu: <strong>{String(checklistObj.fuel_level || '100%')}</strong></span>
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <Fuel className="w-4 h-4 text-teal-600 shrink-0" />
+            <span className="text-slate-700">Mức xăng: <strong className="text-slate-900">{String(checklistObj.fuel_level || 'Đầy bình')}</strong></span>
           </div>
         </div>
       </Card>
 
-      {/* Thư viện ảnh thực tế xe */}
-      <Card className="p-6 border-slate-200/80 space-y-4 glass-surface shadow-sm">
+      {/* Ảnh chụp thực tế bàn giao */}
+      <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Camera className="h-5 w-5 text-brand-600" />
-            <h3 className="font-bold text-slate-900 text-base">
-              Hình ảnh thực tế khi bàn giao (Checklist 4 góc)
-            </h3>
+            <Camera className="w-5 h-5 text-teal-600" />
+            <h2 className="text-base font-semibold text-slate-900">
+              Ảnh thực tế của xe
+            </h2>
           </div>
-          <span className="text-xs text-slate-500 font-medium">
-            {inspection?.photo_urls?.length || 0} ảnh chụp
+          <span className="text-[13px] text-slate-500">
+            {inspection?.photo_urls?.length || 0} ảnh
           </span>
         </div>
 
         {inspection?.photo_urls && inspection.photo_urls.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {inspection.photo_urls.map((url, idx) => (
               <div
                 key={idx}
                 onClick={() => setSelectedPhotoPreview(url)}
-                className="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 aspect-video sm:aspect-square flex items-center justify-center hover:shadow-md transition-all duration-300"
+                className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-100 aspect-video sm:aspect-square flex items-center justify-center"
               >
                 <img
                   src={url}
                   alt={`Ảnh bàn giao ${idx + 1}`}
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white backdrop-blur-xs">
-                  <Eye className="h-6 w-6" />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                  <Eye className="w-6 h-6" />
                 </div>
-                <span className="absolute bottom-1.5 left-1.5 rounded-lg bg-black/60 backdrop-blur-md px-2 py-0.5 text-[10px] text-white font-medium">
-                  {idx === 0 ? 'Đầu xe' : idx === 1 ? 'Đuôi xe' : idx === 2 ? 'Sườn trái' : idx === 3 ? 'Sườn phải' : 'Đồng hồ ODO'}
+                <span className="absolute bottom-1.5 left-1.5 rounded-lg bg-black/60 px-2 py-0.5 text-[11px] text-white font-medium">
+                  {idx === 0 ? 'Đầu xe' : idx === 1 ? 'Đuôi xe' : idx === 2 ? 'Sườn trái' : idx === 3 ? 'Sườn phải' : 'Đồng hồ'}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500">
-            Chưa có hình ảnh bàn giao từ nhân viên
+          <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">
+            Chưa có ảnh bàn giao từ kỹ thuật viên
           </div>
         )}
       </Card>
 
-      {/* Xem trước ảnh phóng to (Modal thu nhỏ) */}
+      {/* Modal phóng to ảnh */}
       {selectedPhotoPreview && (
         <div
           onClick={() => setSelectedPhotoPreview(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
         >
-          <div className="relative max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl bg-white p-3 shadow-2xl">
+          <div className="relative max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-white p-3 shadow-2xl space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-semibold text-slate-800">Ảnh chi tiết phương tiện</span>
+              <button
+                type="button"
+                onClick={() => setSelectedPhotoPreview(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <img
               src={selectedPhotoPreview}
               alt="Phóng to ảnh"
-              className="max-h-[80vh] w-auto rounded-2xl object-contain"
+              className="max-h-[75vh] w-auto rounded-xl object-contain mx-auto"
             />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setSelectedPhotoPreview(null)}
-              className="mt-3 w-full"
-            >
-              Đóng xem ảnh
-            </Button>
           </div>
         </div>
       )}
 
-      {/* KHU VỰC KHÁCH XÁC NHẬN (Activity_0d0qzp6, Gateway_0ixde68) */}
+      {/* KHU VỰC KHÁCH XÁC NHẬN NHẬN XE */}
       <Card
         data-testid="node-Activity_0d0qzp6"
-        className="p-6 space-y-4 border-2 border-brand-300 bg-brand-50/25 rounded-3xl shadow-sm"
+        className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4"
       >
-        <div className="flex items-center gap-2">
-          <h3 className="font-bold text-slate-900 text-base">
-            Biên bản xác nhận tình trạng phương tiện
-          </h3>
-        </div>
+        <h2 className="text-base font-semibold text-slate-900">
+          Xác nhận nhận xe
+        </h2>
 
         {isAccepted ? (
-          <div className="rounded-2xl bg-emerald-50/90 p-5 border border-emerald-200 text-emerald-800 space-y-2">
-            <div className="flex items-center gap-2 font-bold">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              Bạn đã xác nhận đồng ý nhận xe này!
+          <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-900 space-y-3">
+            <div className="flex items-center gap-2 font-semibold text-sm">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span>Bạn đã xác nhận đồng ý nhận xe!</span>
             </div>
-            <p className="text-xs">
-              Nhân viên đang tiến hành hoàn tất bàn giao phụ kiện và kích hoạt hợp đồng thuê xe.
+            <p className="text-sm text-emerald-800">
+              Chúc bạn có chuyến hành trình khám phá Đà Nẵng thật an toàn và trọn vẹn.
             </p>
-            {latestHandover?.customer_note && (
-              <p className="text-xs italic text-slate-600">
-                Ghi chú của bạn: &quot;{latestHandover.customer_note}&quot;
-              </p>
-            )}
-            <div className="pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/kh/06')}
-                className="text-xs"
-              >
-                Về trang hồ sơ của tôi
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/kh/06')}
+            >
+              Chuyến đi của tôi
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Ghi chú phản hồi của khách hàng (bắt buộc nếu không đồng ý nhận xe)
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Ghi chú (nếu bạn cần kỹ thuật viên hỗ trợ thêm):
               </label>
               <Textarea
-                placeholder="Nhập yêu cầu cần nhân viên hỗ trợ (ví dụ: xe trầy xước bên trái chưa chụp, cần bổ sung gương, v.v.)..."
+                placeholder="Ví dụ: Cần kiểm tra lại gương bên phải, bổ sung mũ bảo hiểm..."
                 rows={3}
                 value={customerNote}
                 onChange={(e) => setCustomerNote(e.target.value)}
-                className="bg-white rounded-2xl"
+                className="bg-slate-50 border-slate-200 rounded-xl"
                 disabled={!isWaitingResponse || submitting}
               />
             </div>
@@ -389,54 +356,52 @@ export function KH05Page() {
               <Button
                 data-testid="node-Gateway_0ixde68"
                 variant="outline"
-                className="border-rose-300 text-rose-700 hover:bg-rose-50"
                 onClick={() => handleCustomerResponse(false)}
                 disabled={!isWaitingResponse || submitting}
                 loading={submitting}
               >
-                <XCircle className="mr-1.5 h-4 w-4" />
-                Không đồng ý (Kiểm tra lại xe)
+                <XCircle className="w-4 h-4 mr-1.5 text-rose-500" />
+                <span>Yêu cầu kiểm tra lại</span>
               </Button>
 
               <Button
                 data-testid="node-Gateway_0ixde68"
-                className="bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md"
+                variant="primary"
                 onClick={() => handleCustomerResponse(true)}
                 disabled={!isWaitingResponse || submitting}
                 loading={submitting}
               >
-                <CheckCircle2 className="mr-1.5 h-4 w-4" />
-                Đồng ý nhận xe
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                <span>Xác nhận nhận xe</span>
               </Button>
             </div>
           </div>
         )}
       </Card>
 
-      {/* Sticky Bottom Action Bar cho Mobile */}
+      {/* Sticky Bottom Bar cho Mobile */}
       {!isAccepted && isWaitingResponse && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 shadow-lg flex items-center gap-2">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 flex items-center gap-2">
           <Button
             data-testid="node-Gateway_0ixde68"
             variant="outline"
-            className="flex-1 border-rose-300 text-rose-700 text-xs py-2.5"
+            className="flex-1"
             onClick={() => handleCustomerResponse(false)}
             disabled={submitting}
             loading={submitting}
           >
-            <XCircle className="mr-1 h-3.5 w-3.5" />
-            Không đồng ý
+            Kiểm tra lại
           </Button>
 
           <Button
             data-testid="node-Gateway_0ixde68"
-            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs py-2.5 shadow-md"
+            variant="primary"
+            className="flex-1"
             onClick={() => handleCustomerResponse(true)}
             disabled={submitting}
             loading={submitting}
           >
-            <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-            Đồng ý nhận xe
+            Nhận xe
           </Button>
         </div>
       )}

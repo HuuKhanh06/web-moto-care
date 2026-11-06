@@ -1,15 +1,15 @@
 // src/features/auth/AuthPage.tsx
-// Màn hình AUTH-01: Đăng nhập / Đăng ký tài khoản (xác thực Web Crypto FE)
+// Màn hình Đăng nhập & Tạo tài khoản
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './authStore';
 import { SEED_USERS, seedDatabase } from '@/db/seed';
 import { db } from '@/db';
-import { Button, Input, Card, Tabs } from '@/components/ui';
+import { Button, Input, Card } from '@/components/ui';
 import { toast } from '@/components/ui/toastStore';
 import { Logo } from '@/components/common/Logo';
-import { ShieldCheck, LogIn, UserPlus, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -39,6 +39,8 @@ export function AuthPage() {
 
     if (role === 'khach_hang') {
       navigate('/kh/06', { replace: true });
+    } else if (role === 'quan_ly') {
+      navigate('/ql/dashboard', { replace: true });
     } else {
       navigate('/nv/01', { replace: true });
     }
@@ -52,7 +54,7 @@ export function AuthPage() {
           await seedDatabase();
         }
       } catch (err) {
-        console.error('Seed check error:', err);
+        console.error('Lỗi kiểm tra tài khoản khởi tạo:', err);
       }
     }
     ensureSeed();
@@ -89,7 +91,7 @@ export function AuthPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regFullName || !regPhone || !regEmail || !regPassword) {
-      toast.warning('Vui lòng điền đầy đủ tất cả các trường');
+      toast.warning('Vui lòng điền đầy đủ thông tin');
       return;
     }
     if (regPassword !== regConfirmPassword) {
@@ -107,7 +109,7 @@ export function AuthPage() {
     setLoading(false);
 
     if (res.success) {
-      toast.success('Tạo tài khoản thành công! Vui lòng đăng nhập lại để tiếp tục.');
+      toast.success('Tạo tài khoản thành công! Bạn có thể đăng nhập ngay.');
       setActiveTab('login');
       setLoginEmail(regEmail);
       setLoginPassword('');
@@ -117,15 +119,8 @@ export function AuthPage() {
       setRegPassword('');
       setRegConfirmPassword('');
     } else {
-      toast.error(res.error || 'Đăng ký thất bại');
+      toast.error(res.error || 'Đăng ký tài khoản chưa thành công');
     }
-  };
-
-  const handleFillDemo = (email: string) => {
-    setActiveTab('login');
-    setLoginEmail(email);
-    setLoginPassword('password123');
-    toast.info(`Đã điền tài khoản: ${email}`);
   };
 
   const handleQuickLogin = async (email: string) => {
@@ -138,10 +133,10 @@ export function AuthPage() {
       const res = await login(email, 'password123');
       if (res.success) {
         const currentActor = useAuthStore.getState().currentActor;
-        toast.success(`Đăng nhập thành công với vai trò ${currentActor?.role}`);
+        toast.success(`Đăng nhập thành công!`);
         if (currentActor) redirectAfterLogin(currentActor.role);
       } else {
-        toast.error(res.error || 'Đăng nhập mẫu thất bại');
+        toast.error(res.error || 'Đăng nhập không thành công');
       }
     } finally {
       setLoading(false);
@@ -149,35 +144,50 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50/50 via-slate-50/30 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      {/* Brand Header */}
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+      {/* Logo & Tiêu đề */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center flex flex-col items-center">
-        <Logo size="lg" className="mb-2" />
-        <p className="text-xs text-slate-500 font-medium">
-          Dịch vụ cho thuê xe máy linh hoạt & Hỗ trợ cứu hộ 24/7
+        <Logo size="lg" className="mb-3" />
+        <p className="text-sm text-slate-500 font-normal">
+          Thuê xe máy tự lái tại Đà Nẵng · Nhận xe nhanh chóng
         </p>
       </div>
 
-      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl px-4 sm:px-0">
-        <Card className="p-6 sm:p-8 shadow-xl border-slate-200/80 bg-white/90 backdrop-blur-xl rounded-3xl">
-          {/* Tabs chuyển đổi Đăng nhập / Đăng ký */}
-          <Tabs
-            tabs={[
-              { id: 'login', label: 'Đăng nhập', icon: LogIn },
-              { id: 'register', label: 'Đăng ký tài khoản mới', icon: UserPlus },
-            ]}
-            activeTab={activeTab}
-            onChange={(id) => setActiveTab(id as 'login' | 'register')}
-            className="mb-6"
-          />
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-lg">
+        <Card className="p-6 md:p-8 border border-slate-200 bg-white rounded-xl space-y-6">
+          {/* Tabs Đăng nhập / Đăng ký */}
+          <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setActiveTab('login')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                activeTab === 'login'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Đăng nhập
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('register')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                activeTab === 'register'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Tạo tài khoản
+            </button>
+          </div>
 
           {/* Form Đăng nhập */}
           {activeTab === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <Input
-                label="Địa chỉ Email"
+                label="Địa chỉ email"
                 type="email"
-                placeholder="vd: khachhang1@gmail.com"
+                placeholder="vd: khachhang@gmail.com"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 required
@@ -186,14 +196,19 @@ export function AuthPage() {
               <Input
                 label="Mật khẩu"
                 type="password"
-                placeholder="Nhập mật khẩu của bạn"
+                placeholder="Nhập mật khẩu"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 required
               />
 
-              <Button type="submit" variant="primary" fullWidth size="lg" loading={loading} className="mt-2 shadow-md">
-                Đăng nhập vào hệ thống
+              <Button
+                type="submit"
+                variant="primary"
+                fullWidth
+                loading={loading}
+              >
+                Đăng nhập
               </Button>
             </form>
           )}
@@ -201,14 +216,6 @@ export function AuthPage() {
           {/* Form Đăng ký */}
           {activeTab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
-              <div className="p-3 bg-brand-50 border border-brand-200/80 rounded-2xl flex items-start gap-2.5 text-xs text-brand-900">
-                <CheckCircle2 className="w-4 h-4 text-brand-600 flex-shrink-0 mt-0.5" />
-                <span>
-                  Đăng ký trực tuyến áp dụng cho tài khoản <strong>Khách hàng</strong>. Tài khoản Nhân viên và Quản trị
-                  được hệ thống phân quyền nội bộ.
-                </span>
-              </div>
-
               <Input
                 label="Họ và tên"
                 placeholder="vd: Nguyễn Văn An"
@@ -220,14 +227,14 @@ export function AuthPage() {
               <Input
                 label="Số điện thoại"
                 type="tel"
-                placeholder="vd: 0901234567"
+                placeholder="vd: 0901 234 567"
                 value={regPhone}
                 onChange={(e) => setRegPhone(e.target.value)}
                 required
               />
 
               <Input
-                label="Email đăng nhập"
+                label="Địa chỉ email"
                 type="email"
                 placeholder="vd: an.nguyen@gmail.com"
                 value={regEmail}
@@ -253,22 +260,24 @@ export function AuthPage() {
                 required
               />
 
-              <Button type="submit" variant="primary" fullWidth size="lg" loading={loading} className="mt-2 shadow-md">
+              <Button
+                type="submit"
+                variant="primary"
+                fullWidth
+                loading={loading}
+              >
                 Tạo tài khoản
               </Button>
             </form>
           )}
 
-          {/* Bảng tài khoản mẫu phục vụ Demo */}
-          <div className="mt-7 pt-5 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-brand-600" />
-                Tài khoản trải nghiệm mẫu (Mật khẩu: password123)
-              </h4>
-            </div>
+          {/* Danh sách tài khoản thử nghiệm nhanh */}
+          <div className="pt-4 border-t border-slate-100 space-y-3">
+            <span className="text-[13px] font-semibold text-slate-500 uppercase tracking-wider block">
+              Tài khoản nghiệm thu hệ thống
+            </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div className="space-y-2">
               {SEED_USERS.map((user) => {
                 const roleBadge =
                   user.role === 'quan_ly'
@@ -277,45 +286,40 @@ export function AuthPage() {
                     ? 'Nhân viên'
                     : 'Khách hàng';
 
-                const roleColor =
+                const badgeClass =
                   user.role === 'quan_ly'
-                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    ? 'bg-purple-50 text-purple-800 border-purple-200'
                     : user.role === 'nhan_vien'
-                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                    : 'bg-brand-50 text-brand-700 border-brand-200';
+                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-200';
 
                 return (
                   <div
                     key={user.id}
-                    className="p-2.5 rounded-2xl border border-slate-200/80 hover:border-brand-500 bg-slate-50/60 hover:bg-white transition-all flex items-center justify-between gap-2 shadow-2xs hover:shadow-xs"
+                    className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3"
                   >
-                    <div className="min-w-0 cursor-pointer" onClick={() => handleFillDemo(user.email)}>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-800 truncate">{user.full_name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${roleColor}`}>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-900 text-sm truncate">
+                          {user.full_name}
+                        </span>
+                        <span className={`text-[13px] px-2 py-0.5 rounded-full border font-semibold ${badgeClass}`}>
                           {roleBadge}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-500 truncate">{user.email}</div>
+                      <span className="text-[13px] text-slate-500 block truncate">
+                        {user.email}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        disabled={loading}
-                        onClick={() => handleFillDemo(user.email)}
-                        className="px-2 py-1 text-[11px] font-medium rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95"
-                      >
-                        Điền
-                      </button>
-                      <button
-                        type="button"
-                        disabled={loading}
-                        onClick={() => handleQuickLogin(user.email)}
-                        className="px-2.5 py-1 text-[11px] font-bold rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition-all shadow-xs active:scale-95"
-                      >
-                        Vào ngay
-                      </button>
-                    </div>
+
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleQuickLogin(user.email)}
+                      className="px-3 py-1.5 text-[13px] font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white shrink-0 transition-colors cursor-pointer"
+                    >
+                      Đăng nhập
+                    </button>
                   </div>
                 );
               })}
@@ -323,14 +327,14 @@ export function AuthPage() {
           </div>
         </Card>
 
-        {/* Thông báo bảo mật */}
-        <div className="mt-4 px-4 text-center">
-          <p className="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />
-            Bảo mật đầu cuối với mã hóa PBKDF2 • Không lưu trữ mật khẩu thuần
-          </p>
-        </div>
+        {/* Thông tin bảo mật */}
+        <p className="mt-4 text-[13px] text-slate-400 text-center flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-teal-600" />
+          <span>Bảo mật thông tin tài khoản đạt tiêu chuẩn</span>
+        </p>
       </div>
     </div>
   );
 }
+
+export default AuthPage;

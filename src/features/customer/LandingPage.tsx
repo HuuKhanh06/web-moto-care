@@ -171,7 +171,7 @@ const TESTIMONIALS = [
 const FAQS = [
   {
     q: 'Thủ tục thuê xe cần chuẩn bị những giấy tờ gì?',
-    a: 'Bạn chỉ cần ảnh chụp CCCD (hoặc Hộ chiếu) và Giấy phép lái xe (GPLX) hợp lệ. Hệ thống AI Agent OCR sẽ tự động bóc tách và xác thực trong 60 giây. Moto Care KHÔNG GIỮ giấy tờ gốc của khách hàng.',
+    a: 'Bạn chỉ cần ảnh chụp CCCD (hoặc Hộ chiếu) và Giấy phép lái xe (GPLX) hợp lệ. Hệ thống sẽ tự động xác thực và nhận diện trong 60 giây. Moto Care KHÔNG GIỮ giấy tờ gốc của khách hàng.',
   },
   {
     q: 'Tiền cọc được tính như thế nào và khi nào được hoàn lại?',
@@ -1333,7 +1333,7 @@ export function LandingPage() {
             <div className="flex items-center gap-4 text-[11px]">
               <span>Dịch vụ chuẩn quốc tế</span>
               <span>&bull;</span>
-              <span>AI OCR Xác thực</span>
+              <span>Xác thực tự động</span>
               <span>&bull;</span>
               <span>Thanh toán VietQR Napas</span>
             </div>

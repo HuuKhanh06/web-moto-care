@@ -1,6 +1,5 @@
 // src/features/customer/KH08Page.tsx
-// Màn hình KH-08: Báo sự cố & Theo dõi cứu hộ (SP2: SC_Create, SC_Track, SC_SendContinue, SC_NotifyEarly)
-// Khách hàng gửi vị trí GPS/mô tả sự cố, tải ảnh, theo dõi phản hồi thời gian thực qua useLiveQuery.
+// Màn hình báo cáo sự cố & Cứu hộ khẩn cấp 24/7
 
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -11,19 +10,16 @@ import { db } from '@/db';
 import {
   Card,
   Button,
-  Badge,
   Input,
   Textarea,
   FileUpload,
   toast,
+  StatusChip,
 } from '@/components/ui';
 import type { FileUploadResult } from '@/components/ui/FileUpload';
-import {
-  formatDateTime,
-  getStatusBadgeVariant,
-  getStatusLabel,
-} from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
+import { COPY } from '@/copy';
 import {
   Wrench,
   AlertTriangle,
@@ -33,22 +29,17 @@ import {
   CheckCircle2,
   PhoneCall,
   UserCheck,
-  ShieldCheck,
-  ArrowRight,
   Navigation,
-  PlusCircle,
 } from 'lucide-react';
-import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { cn } from '@/lib/utils';
 
 const COMMON_INCIDENTS = [
   'Chết máy / Không nổ được',
-  'Thủng săm / Xịt lốp',
-  'Đứt phanh / Phanh không ăn',
+  'Thủng lốp / Xịt lốp',
   'Hết bình ắc quy / Mất điện',
+  'Đứt phanh / Phanh không ăn',
   'Va chạm giao thông',
-  'Mất chìa khóa / Lỗi Smartkey',
-  'Đứt xích / Tuột xích',
+  'Sự cố khác',
 ];
 
 export function KH08Page() {
@@ -56,9 +47,7 @@ export function KH08Page() {
   const rawRequestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
-  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
-  // Form báo cáo sự cố (SC_Create)
   const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [locationText, setLocationText] = useState('');
@@ -74,13 +63,10 @@ export function KH08Page() {
     );
   };
 
-  // Truy vấn dữ liệu thời gian thực (Live Query) từ Dexie
   const liveData = useLiveQuery(async () => {
     let targetId = rawRequestId;
 
-    // Nếu không có requestId trên URL, tự động liên kết hợp đồng của khách hàng
     if (!targetId && currentActor) {
-      // 1. Tìm đơn đang xử lý sự cố hoặc đang thuê
       const activeReq = await db.rental_requests
         .where('customer_id')
         .equals(currentActor.id)
@@ -90,7 +76,6 @@ export function KH08Page() {
       if (activeReq) {
         targetId = activeReq.id;
       } else {
-        // 2. Tìm đơn gần nhất của khách
         const list = await db.rental_requests
           .where('customer_id')
           .equals(currentActor.id)
@@ -99,17 +84,6 @@ export function KH08Page() {
         if (list.length > 0) {
           targetId = list[0].id;
         }
-      }
-    }
-
-    // 3. Fallback cho dữ liệu mô phỏng demo
-    if (!targetId) {
-      const demoActive = await db.rental_requests
-        .where('status')
-        .equals('DANG_THUE')
-        .first();
-      if (demoActive) {
-        targetId = demoActive.id;
       }
     }
 
@@ -151,10 +125,9 @@ export function KH08Page() {
     };
   }, [rawRequestId, currentActor]);
 
-  // Lấy tọa độ GPS tự động từ trình duyệt
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      toast.warning('Trình duyệt không hỗ trợ định vị tự động. Vui lòng nhập địa chỉ.');
+      toast.warning('Trình duyệt không hỗ trợ định vị. Vui lòng nhập địa chỉ.');
       return;
     }
 
@@ -163,9 +136,9 @@ export function KH08Page() {
       (pos) => {
         setLatitude(pos.coords.latitude);
         setLongitude(pos.coords.longitude);
-        setLocationText(`Tọa độ GPS: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
+        setLocationText(`Tọa độ: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
         setLocating(false);
-        toast.success('Đã lấy tọa độ định vị hiện tại!');
+        toast.success('Đã nhận diện tọa độ định vị.');
       },
       (err) => {
         console.warn('Lỗi định vị:', err);
@@ -176,32 +149,21 @@ export function KH08Page() {
     );
   };
 
-  // Nạp ảnh mẫu nhanh phục vụ demo đồ án
-  const handleFillDemoIncident = () => {
-    setSelectedIncidents(['Thủng săm / Xịt lốp', 'Đứt xích / Tuột xích']);
-    setDescription('Xe bị rung lắc mạnh và dính đinh khi đang di chuyển trên đường');
-    setLocationText('123 Đường Nguyễn Văn Cừ, Quận 5, TP.HCM');
-    setLatitude(10.758);
-    setLongitude(106.682);
-    setIncidentPhoto('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="%23DC2626" width="400" height="300"/><text fill="%23ffffff" font-family="sans-serif" font-size="20" dy="10.5" font-weight="bold" x="50%" y="50%" text-anchor="middle">Ảnh chụp hiện trường sự cố xe</text></svg>');
-    toast.success('Đã nạp dữ liệu sự cố mẫu');
-  };
-
-  // Gửi sự cố tại cổng M_EG (SC_Create)
   const handleSubmitIncident = async () => {
     const targetId = liveData?.targetId || rawRequestId;
     if (!currentActor || !targetId) {
-      toast.error('Vui lòng đăng nhập và chọn chuyến đi cần cứu hộ');
+      toast.error('Vui lòng chọn chuyến đi cần cứu hộ');
       return;
     }
 
     const combinedDescription = [
-      selectedIncidents.length > 0 ? `Loại sự cố: ${selectedIncidents.join(', ')}` : '',
+      selectedIncidents.length > 0 ? `Sự cố: ${selectedIncidents.join(', ')}` : '',
       description.trim() ? `Chi tiết: ${description.trim()}` : '',
+      locationText.trim() ? `Vị trí: ${locationText.trim()}` : '',
     ].filter(Boolean).join('. ');
 
     if (!combinedDescription) {
-      toast.error('Vui lòng chọn loại sự cố hoặc nhập mô tả sự cố gặp phải');
+      toast.warning('Vui lòng chọn loại sự cố hoặc nhập mô tả');
       return;
     }
 
@@ -231,234 +193,106 @@ export function KH08Page() {
     }
   };
 
-  // Đang truy vấn dữ liệu từ IndexedDB / Dexie
   if (liveData === undefined) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-          <p className="mt-3 text-sm text-slate-500">Đang kiểm tra thông tin cứu hộ...</p>
-        </div>
+      <div className="max-w-2xl mx-auto py-16 text-center text-slate-500">
+        <Wrench className="w-8 h-8 mx-auto animate-pulse text-teal-600 mb-2" />
+        <span className="text-sm font-normal">Đang kiểm tra thông tin cứu hộ...</span>
       </div>
     );
   }
 
-  // Khách hàng chưa có hợp đồng nào đang thuê cần cứu hộ trực tiếp
+  // Khách chưa có đơn thuê nào cần cứu hộ trực tiếp
   if (liveData === null) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-rose-100 text-rose-600 mb-2 shadow-inner">
-            <PhoneCall className="w-8 h-8 animate-bounce" />
+      <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-2 border border-rose-200">
+            <PhoneCall className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-            Tổng Đài Cứu Hộ Khẩn Cấp 24/7
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+            {COPY.TITLES.INCIDENT}
           </h1>
-          <p className="text-slate-600 max-w-lg mx-auto text-sm sm:text-base">
-            Đội ngũ hỗ trợ kỹ thuật và cứu hộ đường bộ của MOTO CARE luôn túc trực 24/7 để đồng hành cùng bạn trên mọi nẻo đường.
+          <p className="text-sm text-slate-600">
+            Tổng đài hỗ trợ kỹ thuật và cứu hộ đường bộ MotoCare hoạt động 24/7.
           </p>
         </div>
 
-        {/* Thẻ Hotline Khẩn Cấp */}
-        <Card className="p-6 sm:p-8 border-2 border-rose-300 bg-linear-to-br from-rose-50/70 to-amber-50/50 shadow-md text-center space-y-4">
-          <div className="text-xs font-bold uppercase tracking-wider text-rose-700">
-            Hotline Hỗ Trợ Kỹ Thuật Toàn Quốc
-          </div>
+        <Card className="p-6 md:p-8 border border-rose-200 bg-rose-50 text-center space-y-3 rounded-xl">
+          <span className="text-[13px] font-semibold text-rose-700 block uppercase tracking-wider">
+            Hotline khẩn cấp 24/7
+          </span>
           <a
             href="tel:19006868"
-            className="inline-flex items-center justify-center gap-3 text-3xl sm:text-4xl font-extrabold text-rose-600 hover:text-rose-700 hover:scale-105 transition-transform"
+            className="inline-flex items-center justify-center gap-3 text-3xl font-semibold text-rose-700 hover:text-rose-800"
           >
             <PhoneCall className="w-8 h-8" />
             <span>1900 6868</span>
           </a>
-          <p className="text-xs text-slate-500">
-            (Miễn phí cước cuộc gọi &bull; Tiếp nhận trong vòng 15 giây &bull; Hoạt động 24/7)
+          <p className="text-[13px] text-rose-600">
+            Miễn phí cước gọi · Có mặt hỗ trợ trong vòng 15-30 phút tại Đà Nẵng
           </p>
         </Card>
-
-        {/* Hướng dẫn khi gặp sự cố */}
-        <Card className="p-6 space-y-4 border-slate-200">
-          <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-emerald-600" />
-            3 bước xử lý nhanh khi gặp sự cố trên đường
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-              <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold inline-flex items-center justify-center text-xs">
-                1
-              </span>
-              <p className="font-bold text-slate-900">Bảo đảm an toàn</p>
-              <p className="text-slate-500 text-xs">
-                Dắt xe vào lề đường an toàn, bật đèn cảnh báo nếu trời tối hoặc sương mù.
-              </p>
-            </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-              <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold inline-flex items-center justify-center text-xs">
-                2
-              </span>
-              <p className="font-bold text-slate-900">Gọi Hotline 1900 6868</p>
-              <p className="text-slate-500 text-xs">
-                Cung cấp vị trí và tình trạng xe để điều phối đối tác cứu hộ gần nhất.
-              </p>
-            </div>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-              <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold inline-flex items-center justify-center text-xs">
-                3
-              </span>
-              <p className="font-bold text-slate-900">Theo dõi trực tiếp</p>
-              <p className="text-slate-500 text-xs">
-                Hệ thống tự động liên kết hợp đồng của bạn để cập nhật vị trí xe cứu hộ theo thời gian thực.
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Nút hành động */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/kh/06')}
-            className="w-full sm:w-auto font-bold text-xs"
-          >
-            Xem chuyến đi của tôi
-          </Button>
-          <Button
-            onClick={() => navigate('/kh/01')}
-            className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm"
-          >
-            <PlusCircle className="w-4 h-4 mr-1.5" />
-            Đặt xe máy mới
-          </Button>
-        </div>
       </div>
     );
   }
 
-  const { request, vehicle, incident, partner, lastDispatch } = liveData;
-  const isIncidentInProgress =
-    request.status === 'DANG_XU_LY_SU_CO' ||
-    (incident && incident.status !== 'DONG_TIEP_TUC' && incident.status !== 'DONG_TRA_SOM');
+  const { vehicle, incident, partner } = liveData;
+  const isIncidentInProgress = incident && ['MOI', 'DANG_HO_TRO', 'VUOT_SLA'].includes(incident.status);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700 border border-rose-200/80 shadow-xs">
-              Cứu hộ 24/7
-            </span>
-            <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Hỗ trợ sự cố & Cứu hộ khẩn cấp
-            </h1>
-          </div>
-          <p className="text-sm text-slate-500">
-            Hợp đồng #{request.id.slice(0, 8)} • Điều phối đối tác cứu hộ theo thời gian thực
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={getStatusBadgeVariant(request.status)}>
-            {getStatusLabel(request.status)}
-          </Badge>
-        </div>
+    <div className="space-y-6 max-w-2xl mx-auto pb-24 md:pb-8">
+      {/* Tiêu đề trang */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+          {COPY.TITLES.INCIDENT}
+        </h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/kh/06')}
+        >
+          Chuyến đi của tôi
+        </Button>
       </div>
 
-      {/* Thông tin xe */}
+      {/* Thông tin phương tiện */}
       {vehicle && (
-        <Card className="p-4 bg-slate-50 border-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shadow-xs">
-              <img
-                src={getVehicleImageUrl(vehicle.model)}
-                alt={vehicle.model}
-                className="h-full w-full object-contain"
-              />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                {vehicle.model} ({vehicle.plate})
-              </h3>
-              <p className="text-xs text-slate-500">
-                Hotline hỗ trợ kỹ thuật khẩn cấp: <strong className="text-brand-700">1900 6868</strong>
-              </p>
-            </div>
+        <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl flex items-center gap-4">
+          <div className="w-20 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+            <img
+              src={getVehicleImageUrl(vehicle.model)}
+              alt={vehicle.model}
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-slate-900 truncate">
+              {vehicle.model}
+            </h2>
+            <p className="text-sm text-slate-500 font-mono font-medium">
+              {vehicle.plate}
+            </p>
           </div>
         </Card>
       )}
 
-      {/* THÔNG BÁO TIẾP TỤC THUÊ */}
-      {incident?.status === 'DONG_TIEP_TUC' && (
-        <Card className="p-5 border-emerald-300 bg-emerald-50/40 text-emerald-900 space-y-3 shadow-sm">
-          <div className="flex items-center gap-2 font-bold text-base">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            Sự cố đã được khắc phục hoàn tất!
-          </div>
-          <p className="text-xs sm:text-sm">
-            Kỹ thuật viên đã hỗ trợ khắc phục tại chỗ xong. Xe đạt tiêu chuẩn an toàn để bạn tiếp tục hành trình của mình.
-            Chi phí phát sinh đã được nhân viên ghi nhận.
-          </p>
-          <div className="pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/kh/06')}
-              className="text-xs border-emerald-300 hover:bg-emerald-100"
-            >
-              Về trang chủ của tôi
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* THÔNG BÁO HƯỚNG DẪN TRẢ XE SỚM */}
-      {(incident?.status === 'DONG_TRA_SOM' || request.status === 'CHO_NHAN_XE_TRA') && (
-        <Card className="p-5 border-amber-300 bg-amber-50/50 text-amber-900 space-y-3 shadow-sm">
-          <div className="flex items-center gap-2 font-bold text-base">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            Hướng dẫn trả xe sớm do sự cố kỹ thuật
-          </div>
-          <p className="text-xs sm:text-sm">
-            Xe không thể khắc phục tại chỗ và cần đưa về trạm bảo dưỡng. Hợp đồng của bạn đã được chuyển sang trạng thái <strong>Chờ nhận xe trả</strong>.
-            Nhân viên MotoCare sẽ liên hệ đón nhận xe và tiến hành quyết toán hoàn tiền cho thời gian chưa sử dụng.
-          </p>
-          <div className="pt-2">
-            <Button
-              size="sm"
-              onClick={() => navigate('/kh/06')}
-              className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold"
-            >
-              Xem danh sách yêu cầu thuê
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* FORM BÁO CÁO SỰ CỐ MỚI */}
+      {/* FORM BÁO SỰ CỐ MỚI */}
       {!isIncidentInProgress && incident?.status !== 'DONG_TIEP_TUC' && incident?.status !== 'DONG_TRA_SOM' && (
-        <Card data-testid="node-SC_Create" className="p-5 sm:p-6 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
-            <div className="flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-rose-600" />
-              <h3 className="font-bold text-slate-900 text-base">
-                Báo cáo sự cố khẩn cấp
-              </h3>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleFillDemoIncident}
-              className="text-xs text-brand-700 border-brand-300 hover:bg-brand-50"
-            >
-              Nạp thông tin mẫu nhanh
-            </Button>
+        <Card data-testid="node-SC_Create" className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <Wrench className="w-5 h-5 text-rose-600" />
+            <h2 className="text-base font-semibold text-slate-900">
+              Gửi thông tin sự cố
+            </h2>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                1. Chọn nhanh các vấn đề xe gặp phải (chọn một hoặc nhiều):
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Loại sự cố gặp phải:
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {COMMON_INCIDENTS.map((item) => {
                   const isSelected = selectedIncidents.includes(item);
                   return (
@@ -467,13 +301,12 @@ export function KH08Page() {
                       type="button"
                       onClick={() => toggleIncident(item)}
                       className={cn(
-                        'px-3 py-1.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
+                        'p-3 rounded-xl text-sm font-semibold border text-left transition-colors cursor-pointer',
                         isSelected
-                          ? 'bg-rose-50 border-rose-400 text-rose-800 font-bold shadow-2xs ring-1 ring-rose-400/30'
-                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                          ? 'bg-rose-50 border-rose-300 text-rose-800'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                       )}
                     >
-                      <span className={cn('w-2 h-2 rounded-full', isSelected ? 'bg-rose-500' : 'bg-slate-300')} />
                       {item}
                     </button>
                   );
@@ -482,183 +315,146 @@ export function KH08Page() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                2. Mô tả thêm chi tiết (tùy chọn):
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
+                Chi tiết sự cố:
               </label>
               <Textarea
-                placeholder="Ví dụ: Xe chết máy khi đang đi, phanh kêu to hoặc các lưu ý khác..."
+                placeholder="Ví dụ: Xe chết máy khi vừa qua cầu Rồng, không nổ lại được..."
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                className="bg-slate-50 border-slate-200 rounded-xl"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-brand-600" />
-                  Vị trí xe hiện tại
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-1">
+                  <MapPin className="w-4 h-4 text-teal-600" />
+                  <span>Vị trí hiện tại</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleGetLocation}
                   disabled={locating}
-                  className="text-xs text-brand-700 hover:text-brand-800 font-medium flex items-center gap-1"
+                  className="text-[13px] text-teal-700 hover:underline font-semibold flex items-center gap-1"
                 >
-                  <Navigation className="h-3 w-3" />
-                  {locating ? 'Đang lấy tọa độ...' : 'Lấy vị trí GPS tự động'}
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>{locating ? 'Đang định vị...' : 'Lấy vị trí GPS'}</span>
                 </button>
               </div>
               <Input
-                placeholder="Nhập địa chỉ hoặc cột mốc nơi xe gặp sự cố..."
+                placeholder="Nhập số nhà, tên đường hoặc địa danh gần nhất..."
                 value={locationText}
                 onChange={(e) => setLocationText(e.target.value)}
               />
-              {latitude && longitude && (
-                <p className="text-[11px] text-emerald-700 mt-1">
-                  Tọa độ xác thực: {latitude.toFixed(5)}, {longitude.toFixed(5)}
-                </p>
-              )}
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                <Camera className="h-3.5 w-3.5 text-brand-600" />
-                Ảnh chụp hiện trường sự cố (Tùy chọn)
+              <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                <Camera className="w-4 h-4 text-teal-600" />
+                <span>Ảnh chụp hiện trường (nếu có)</span>
               </label>
               <FileUpload
-                label="Tải ảnh chụp sự cố"
+                label="Tải ảnh sự cố"
                 onFileSelect={(res: FileUploadResult | null) => setIncidentPhoto(res?.previewUrl || '')}
               />
-              {incidentPhoto && (
-                <img
-                  src={incidentPhoto}
-                  alt="Hiện trường sự cố"
-                  className="mt-2 h-32 w-full max-w-xs rounded-xl object-cover border"
-                />
-              )}
             </div>
 
-            <div className="pt-2">
-              <Button
-                data-testid="node-SC_Create"
-                onClick={handleSubmitIncident}
-                loading={submitting}
-                className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-bold"
-              >
-                <AlertTriangle className="mr-2 h-4 w-4" />
-                Gửi yêu cầu cứu hộ khẩn cấp
-              </Button>
-            </div>
+            <Button
+              data-testid="node-SC_Create"
+              variant="primary"
+              onClick={handleSubmitIncident}
+              loading={submitting}
+              className="bg-rose-600 hover:bg-rose-700 w-full"
+            >
+              <AlertTriangle className="w-4 h-4 mr-1.5" />
+              <span>Gửi yêu cầu cứu hộ khẩn cấp</span>
+            </Button>
           </div>
         </Card>
       )}
 
-      {/* THEO DÕI TIẾN TRÌNH CỨU HỘ THỜI GIAN THỰC */}
+      {/* THEO DÕI TIẾN ĐỘ CỨU HỘ */}
       {isIncidentInProgress && incident && (
-        <Card data-testid="node-SC_Track" className="p-5 sm:p-6 space-y-5 border-2 border-amber-300 bg-amber-50/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+        <Card data-testid="node-SC_Track" className="p-4 md:p-6 border border-amber-200 bg-white rounded-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-600 animate-pulse" />
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">
-                  Tiến độ cứu hộ thời gian thực
-                </h3>
-                <span className="text-xs text-slate-500 font-mono">
-                  Mã phiếu sự cố: #{incident.incident_code}
-                </span>
-              </div>
+              <Clock className="w-5 h-5 text-amber-600 animate-pulse" />
+              <h2 className="text-base font-semibold text-slate-900">
+                Tiến độ cứu hộ
+              </h2>
             </div>
-
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-                {incident.status === 'MOI' && 'Đang điều phối đối tác'}
-                {incident.status === 'DANG_HO_TRO' && 'Đối tác đang di chuyển / xử lý'}
-                {incident.status === 'VUOT_SLA' && 'Đã chuyển Quản lý xử lý khẩn cấp'}
-              </span>
-            </div>
+            <StatusChip
+              status="pending"
+              label={incident.status === 'VUOT_SLA' ? 'Đang ưu tiên cao' : 'Đang xử lý'}
+            />
           </div>
 
-          {/* Chi tiết sự cố đã báo */}
-          <div className="rounded-xl bg-white p-4 border border-slate-200 text-xs sm:text-sm space-y-2">
-            <div className="flex justify-between items-start">
-              <span className="text-slate-500 font-medium">Nội dung báo:</span>
-              <span className="text-slate-400 text-xs">{formatDateTime(incident.created_at)}</span>
+          <div className="space-y-3 text-sm">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <span className="text-[13px] text-slate-500 block">Nội dung sự cố:</span>
+              <p className="font-semibold text-slate-900">{incident.description}</p>
+              <span className="text-[13px] text-slate-500 block pt-1">
+                Thời điểm ghi nhận: {formatDateTime(incident.created_at)}
+              </span>
             </div>
-            <p className="font-semibold text-slate-800">{incident.description}</p>
-            {incident.photo_urls && incident.photo_urls.length > 0 && (
-              <div className="pt-2">
-                <img
-                  src={incident.photo_urls[0]}
-                  alt="Hiện trường"
-                  className="h-28 w-auto rounded-lg object-cover border"
-                />
+
+            {partner && (
+              <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 space-y-2">
+                <div className="flex items-center gap-2 font-semibold">
+                  <UserCheck className="w-5 h-5 text-teal-700" />
+                  <span>Kỹ thuật viên đang di chuyển đến</span>
+                </div>
+                <p className="text-sm">
+                  Đơn vị cứu hộ: <strong>{partner.name}</strong> ({partner.region})
+                </p>
+                <p className="text-sm">
+                  Hotline liên hệ: <a href={`tel:${partner.contact}`} className="font-semibold underline">{partner.contact}</a>
+                </p>
               </div>
             )}
           </div>
+        </Card>
+      )}
 
-          {/* Thông tin đối tác tiếp nhận */}
-          {partner && lastDispatch ? (
-            <div className="rounded-xl bg-white p-4 border border-slate-200 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-brand-700 font-bold text-sm">
-                  <UserCheck className="h-4 w-4" />
-                  Đối tác cứu hộ tiếp nhận
-                </div>
-                <span className="text-xs text-slate-500">
-                  Lần điều phối thứ <strong>#{lastDispatch.attempt_no}</strong>
-                </span>
-              </div>
+      {/* KẾT QUẢ: ĐÃ XỬ LÝ XONG, TIẾP TỤC THUÊ */}
+      {incident?.status === 'DONG_TIEP_TUC' && (
+        <Card className="p-4 md:p-6 border border-emerald-200 bg-emerald-50 text-emerald-900 space-y-3 rounded-xl">
+          <div className="flex items-center gap-2 font-semibold text-base">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <span>Sự cố đã được khắc phục thành công!</span>
+          </div>
+          <p className="text-sm text-emerald-800">
+            Xe đã hoạt động ổn định trở lại. Bạn có thể tiếp tục hành trình của mình.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/kh/06')}
+          >
+            Chuyến đi của tôi
+          </Button>
+        </Card>
+      )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
-                <div>
-                  <span className="text-slate-500 block">Đơn vị hỗ trợ:</span>
-                  <strong className="text-slate-900">{partner.name}</strong>
-                  <p className="text-slate-500 text-xs">Khu vực: {partner.region}</p>
-                </div>
-
-                <div>
-                  <span className="text-slate-500 block">Số điện thoại liên hệ:</span>
-                  <a
-                    href={`tel:${partner.contact}`}
-                    className="inline-flex items-center gap-1.5 font-bold text-brand-700 text-sm hover:underline mt-0.5"
-                  >
-                    <PhoneCall className="h-3.5 w-3.5" />
-                    {partner.contact}
-                  </a>
-                </div>
-              </div>
-
-              <div className="rounded-lg bg-brand-50 p-3 text-xs text-brand-800 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-brand-600 shrink-0" />
-                Đối tác đã xác nhận tiếp nhận và đang trên đường đến vị trí của bạn.
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-amber-300 p-6 text-center text-xs text-slate-600 space-y-2 bg-white">
-              <Clock className="h-6 w-6 text-amber-500 mx-auto animate-spin" />
-              <p className="font-semibold">Đang liên hệ mạng lưới đối tác cứu hộ gần nhất...</p>
-              <p className="text-slate-400">
-                Nếu đối tác không phản hồi trong 15 phút hoặc từ chối, hệ thống sẽ tự động điều phối đối tác khác gần nhất.
-              </p>
-            </div>
-          )}
-
-          {/* Công cụ dành cho ban giám khảo / chấm thi (chỉ hiện khi bật chế độ BPMN) */}
-          {isBpmnMode && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t text-xs text-slate-500">
-              <span>Chế độ chấm thi: Quản lý hoặc Đối tác có thể thao tác tiếp nhận trên Cổng đối tác DT-01.</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/dt/01')}
-                className="text-xs text-slate-700 hover:bg-slate-50 shrink-0"
-              >
-                Mở Cổng đối tác DT-01 (Mô phỏng)
-                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
+      {/* KẾT QUẢ: TRẢ XE SỚM */}
+      {incident?.status === 'DONG_TRA_SOM' && (
+        <Card className="p-4 md:p-6 border border-amber-200 bg-amber-50 text-amber-900 space-y-3 rounded-xl">
+          <div className="flex items-center gap-2 font-semibold text-base">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <span>Xe đã được chuyển về trạm bảo dưỡng</span>
+          </div>
+          <p className="text-sm text-amber-800">
+            Hệ thống đã chuyển hợp đồng sang quyết toán. MotoCare sẽ hoàn trả tiền thuê các ngày chưa sử dụng cho bạn.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/kh/06')}
+          >
+            Chuyến đi của tôi
+          </Button>
         </Card>
       )}
     </div>
