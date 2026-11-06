@@ -101,6 +101,7 @@ const TASK_ROLE_MAP: Record<string, Array<Actor['role']>> = {
   SC_Escalate: ['quan_ly'],
 
   // Khách hàng
+  M_CheckDocs: ['khach_hang', 'nhan_vien', 'quan_ly', 'system'],
   M_WaitDeposit: ['khach_hang', 'nhan_vien', 'quan_ly', 'system'],
   M_WaitSign: ['khach_hang'],
   Activity_0d0qzp6: ['khach_hang'],
@@ -156,6 +157,7 @@ export class ProcessEngine {
       loop_counters: {},
       variables: {
         preferred_vehicle_type: initialData.vehicle_type,
+        auto_test_mode: initialData.documents !== undefined,
       },
       updated_at: clock.nowISO(),
     };
@@ -187,6 +189,11 @@ export class ProcessEngine {
   ): Promise<void> {
     let currentNodeId = fromNodeId;
     let currentOutcome = outcome;
+
+    // Nếu tiếp tục từ M_CheckDocs, chạy kiểm tra hồ sơ thực tế để cập nhật docs_all_valid trước khi đánh giá M_G02
+    if (fromNodeId === 'M_CheckDocs' && outcome === undefined) {
+      await this.executeAutomaticNode(requestId, 'M_CheckDocs', actor);
+    }
 
     // Vòng lặp chuyển bước cho đến khi gặp điểm chờ hoặc kết thúc
     while (true) {
@@ -247,6 +254,16 @@ export class ProcessEngine {
         await logEvent(requestId, 'SC_START', 'START_SP2', actor);
         currentNodeId = 'SC_START';
         continue;
+      }
+
+      // Tạm dừng tại M_CheckDocs nếu là luồng tương tác thực tế của người dùng (chưa nộp giấy tờ ở KH-01)
+      if (currentNodeId === 'M_CheckDocs') {
+        const pState = await db.process_state.get(requestId);
+        const docs = await db.customer_documents.where('request_id').equals(requestId).toArray();
+        if (pState?.variables?.auto_test_mode !== true && docs.length === 0) {
+          await this.enterWaitPoint(requestId, 'M_CheckDocs', actor);
+          break;
+        }
       }
 
       // 3. Kiểm tra nếu là ĐIỂM CHỜ (User Task, Receive Task, Event Gateway...)

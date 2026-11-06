@@ -369,4 +369,43 @@ describe('GIAI ĐOẠN 2A: Bộ Máy Quy Trình Lõi & Quy Trình Chính (Proces
     expect(stateLoop?.waiting_node_ids).toContain('M_ReceiveReview');
     expect(stateLoop?.loop_counters.dispute_count).toBe(1);
   });
+
+  // 9. Luồng thực tế KH-01 & KH-02: Không truyền giấy tờ từ đầu -> Chờ nộp hồ sơ an toàn tại M_CheckDocs
+  it('Luồng thực tế UI: start() không có documents -> Dừng tại M_CheckDocs (CHO_HO_SO) không bị hủy non -> Nộp đủ giấy tờ thì sang M_WaitDeposit (CHO_COC)', async () => {
+    await seedDatabase();
+
+    // Khách gửi yêu cầu từ KH-01 (chưa có giấy tờ)
+    const reqId = await engine.start(customerActor, {
+      customer_id: customerActor.id,
+      vehicle_type: 'tay_ga',
+      start_at: '2026-11-20T08:00:00.000Z',
+      end_at: '2026-11-22T08:00:00.000Z',
+    });
+
+    const req = await db.rental_requests.get(reqId);
+    // Hồ sơ không được bị hủy mà phải ở trạng thái CHO_HO_SO
+    expect(req?.status).toBe('CHO_HO_SO');
+    expect(req?.closed_reason).toBeUndefined();
+
+    const state = await db.process_state.get(reqId);
+    expect(state?.waiting_node_ids).toContain('M_CheckDocs');
+
+    // Khách lên KH-02 tải giấy tờ hợp lệ
+    await db.customer_documents.bulkAdd([
+      { id: crypto.randomUUID(), request_id: reqId, doc_type: 'CCCD_TRUOC', file_url: 'blob:c1', is_valid: true },
+      { id: crypto.randomUUID(), request_id: reqId, doc_type: 'CCCD_SAU', file_url: 'blob:c2', is_valid: true },
+      { id: crypto.randomUUID(), request_id: reqId, doc_type: 'BANG_LAI_TRUOC', file_url: 'blob:b1', is_valid: true },
+    ]);
+
+    // Bấm "Nộp hồ sơ & Tiếp tục đặt cọc"
+    await engine.advance(reqId, 'M_CheckDocs', undefined, customerActor);
+
+    // Hồ sơ đã chuyển sang CHO_COC và dừng tại M_WaitDeposit
+    const updatedReq = await db.rental_requests.get(reqId);
+    expect(updatedReq?.status).toBe('CHO_COC');
+    expect(updatedReq?.deposit_amount).toBeGreaterThan(0);
+
+    const updatedState = await db.process_state.get(reqId);
+    expect(updatedState?.waiting_node_ids).toContain('M_WaitDeposit');
+  });
 });

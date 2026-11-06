@@ -295,7 +295,7 @@ export function KH02Page() {
         </Badge>
       </div>
 
-      {/* Cảnh báo khi bị hủy do quá 3 lần */}
+      {/* Cảnh báo khi bị hủy hoặc từ chối */}
       {isCancelled && (
         <Card className="p-5 border-red-300 bg-red-50 text-red-900 space-y-3">
           <div className="flex items-center gap-2 font-bold text-base text-red-800">
@@ -303,7 +303,15 @@ export function KH02Page() {
             Hồ sơ thuê xe đã dừng xử lý
           </div>
           <p className="text-xs text-red-700 leading-relaxed">
-            Hồ sơ đã vượt quá số lần tải lại giấy tờ cho phép. Vui lòng tạo yêu cầu thuê mới khi bạn đã có sẵn ảnh chụp rõ nét.
+            {request.closed_reason === 'HO_SO_KHONG_DAT'
+              ? 'Hồ sơ đã vượt quá số lần tải lại giấy tờ cho phép. Vui lòng tạo yêu cầu thuê mới khi bạn đã có sẵn ảnh chụp rõ nét.'
+              : request.closed_reason === 'QUA_HAN_COC'
+              ? 'Yêu cầu thuê xe đã bị hủy do quá thời hạn thanh toán tiền cọc.'
+              : request.closed_reason === 'QUA_HAN_KY'
+              ? 'Yêu cầu thuê xe đã bị hủy do quá thời hạn ký hợp đồng điện tử.'
+              : request.closed_reason === 'HET_XE'
+              ? 'Rất tiếc! Đã hết xe sẵn sàng trong khung giờ bạn chọn.'
+              : 'Hồ sơ thuê xe đã kết thúc hoặc bị hủy bỏ.'}
           </p>
           <Button
             variant="outline"
