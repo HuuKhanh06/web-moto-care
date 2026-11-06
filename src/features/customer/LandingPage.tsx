@@ -8,6 +8,7 @@ import { useAuthStore } from '@/features/auth/authStore';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/ui';
 import { formatCurrency } from '@/lib/format';
+import { getAssetUrl } from '@/lib/vehicleImages';
 import {
   Bike,
   ShieldCheck,
@@ -59,7 +60,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp 16L tiện lợi',
     badge: 'Phổ biến nhất',
     badgeColor: 'brand',
-    imageUrl: '/images/vehicles/honda-vision.jpg',
+    imageUrl: getAssetUrl('images/vehicles/honda-vision.jpg'),
     features: ['Khóa thông minh Smartkey', 'Tiết kiệm xăng', 'Dễ lái cho nữ & gia đình'],
   },
   {
@@ -73,7 +74,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp lớn 23.2L',
     badge: 'Êm ái & Mạnh mẽ',
     badgeColor: 'brand',
-    imageUrl: '/images/vehicles/honda-airblade.png',
+    imageUrl: getAssetUrl('images/vehicles/honda-airblade.png'),
     features: ['Cổng sạc USB tiện lợi', 'Phanh đĩa an toàn', 'Vận hành đầm chắc'],
   },
   {
@@ -87,7 +88,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp nhỏ vừa áo mưa',
     badge: 'Tiết kiệm chi phí',
     badgeColor: 'blue',
-    imageUrl: '/images/vehicles/honda-wave-alpha.png',
+    imageUrl: getAssetUrl('images/vehicles/honda-wave-alpha.png'),
     features: ['Siêu tiết kiệm xăng', 'Dễ dàng leo dốc / đèo', 'Chi phí thuê tối ưu nhất'],
   },
   {
@@ -101,7 +102,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp U-Box chứa nón',
     badge: 'Động cơ bốc & êm',
     badgeColor: 'blue',
-    imageUrl: '/images/vehicles/honda-future.png',
+    imageUrl: getAssetUrl('images/vehicles/honda-future.png'),
     features: ['Đèn pha LED siêu sáng', 'Bình xăng 4.6L lớn', 'Chạy đường trường tuyệt vời'],
   },
   {
@@ -115,7 +116,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Balo kèm phụ kiện',
     badge: 'Phanh ABS Thể thao',
     badgeColor: 'amber',
-    imageUrl: '/images/vehicles/honda-winner-x.png',
+    imageUrl: getAssetUrl('images/vehicles/honda-winner-x.png'),
     features: ['Phanh chống bó cứng ABS', 'Côn tay nhẹ bốc', 'Chuyên phượt đường dài'],
   },
   {
@@ -129,7 +130,7 @@ const FEATURED_VEHICLES: FeaturedVehicle[] = [
     storage: 'Cốp siêu rộng 27L',
     badge: 'Smartkey & Hybrid',
     badgeColor: 'brand',
-    imageUrl: '/images/vehicles/yamaha-grande.png',
+    imageUrl: getAssetUrl('images/vehicles/yamaha-grande.png'),
     features: ['Trợ lực điện Hybrid êm ru', 'Cốp chứa 2 nón bảo hiểm', 'Nắp bình xăng phía trước'],
   },
 ];
@@ -211,7 +212,7 @@ const HERO_BANNER_SLIDES: HeroBannerSlide[] = [
       'Giao nhận xe tận nơi tại Sân bay, Ga tàu & Khách sạn. Thủ tục 100% số hóa, không giữ CCCD/Hộ chiếu gốc.',
     primaryCtaText: 'ĐẶT XE NGAY',
     secondaryCtaText: 'Xem đội xe',
-    imageUrl: '/images/banners/banner-1.jpg',
+    imageUrl: getAssetUrl('images/banners/banner-1.jpg'),
     footnote: '(*) Miễn phí giao nhận xe trong bán kính 10km cho chuyến đi từ 2 ngày.',
     targetAnchor: '#booking-box',
   },
@@ -225,7 +226,7 @@ const HERO_BANNER_SLIDES: HeroBannerSlide[] = [
       'Đa dạng các mẫu xe: Honda Vision 2023 Smartkey, Air Blade 125, Wave Alpha, Future 125, Winner X, Yamaha Exciter 155.',
     primaryCtaText: 'CHỌN DÒNG XE',
     secondaryCtaText: 'Bảng giá niêm yết',
-    imageUrl: '/images/banners/banner-2.jpg',
+    imageUrl: getAssetUrl('images/banners/banner-2.jpg'),
     footnote: '(*) Trang bị sẵn 2 nón bảo hiểm đạt chuẩn an toàn & 2 áo mưa tiện lợi.',
     targetAnchor: '#fleet',
   },
@@ -239,7 +240,7 @@ const HERO_BANNER_SLIDES: HeroBannerSlide[] = [
       'Quy trình số hóa toàn diện từ chọn xe, xác minh thông tin, thanh toán đặt cọc qua VietQR đến ký hợp đồng bảo mật.',
     primaryCtaText: 'TRẢI NGHIỆM NGAY',
     secondaryCtaText: 'Xem quy trình',
-    imageUrl: '/images/banners/banner-3.jpg',
+    imageUrl: getAssetUrl('images/banners/banner-3.jpg'),
     footnote: '(*) Tự động đối soát chuyển khoản ngân hàng 24/7 không cần chờ đợi.',
     targetAnchor: '#process',
   },
@@ -253,7 +254,7 @@ const HERO_BANNER_SLIDES: HeroBannerSlide[] = [
       'Hotline cứu hộ khẩn cấp 1900 6868 luôn sẵn sàng 24/7. Hỗ trợ kỹ thuật tận nơi và đổi xe thay thế nhanh chóng nếu gặp sự cố.',
     primaryCtaText: 'GỌI CỨU HỘ 1900 6868',
     secondaryCtaText: 'Mạng lưới trạm xe',
-    imageUrl: '/images/banners/banner-4.jpg',
+    imageUrl: getAssetUrl('images/banners/banner-4.jpg'),
     footnote: '(*) Đội ngũ kỹ thuật viên lưu động chuyên nghiệp túc trực tại các địa bàn du lịch.',
     targetAnchor: '#stations',
   },
