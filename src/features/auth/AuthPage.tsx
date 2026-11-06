@@ -107,8 +107,15 @@ export function AuthPage() {
     setLoading(false);
 
     if (res.success) {
-      toast.success('Đăng ký tài khoản khách hàng thành công!');
-      redirectAfterLogin('khach_hang');
+      toast.success('Tạo tài khoản thành công! Vui lòng đăng nhập lại để tiếp tục.');
+      setActiveTab('login');
+      setLoginEmail(regEmail);
+      setLoginPassword('');
+      setRegFullName('');
+      setRegPhone('');
+      setRegEmail('');
+      setRegPassword('');
+      setRegConfirmPassword('');
     } else {
       toast.error(res.error || 'Đăng ký thất bại');
     }
@@ -247,7 +254,7 @@ export function AuthPage() {
               />
 
               <Button type="submit" variant="primary" fullWidth size="lg" loading={loading} className="mt-2 shadow-md">
-                Tạo tài khoản Khách hàng
+                Tạo tài khoản
               </Button>
             </form>
           )}

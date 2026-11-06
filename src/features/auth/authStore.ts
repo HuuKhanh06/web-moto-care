@@ -32,7 +32,7 @@ interface AuthState {
   restoreSession: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   currentActor: null,
   currentUser: null,
   isAuthenticated: false,
@@ -178,8 +178,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await db.profiles.add(newProfile);
       await db.auth_accounts.add(newAccount);
 
-      // Tự động đăng nhập
-      return await get().login(normalizedEmail, password);
+      // Không tự động đăng nhập - người dùng cần đăng nhập lại ở bước tiếp theo
+      return { success: true };
     } catch (err) {
       console.error('Lỗi đăng ký:', err);
       return { success: false, error: 'Đã xảy ra lỗi khi tạo tài khoản.' };
