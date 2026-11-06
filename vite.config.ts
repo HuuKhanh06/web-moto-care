@@ -2,11 +2,18 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-const isDeploy = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
+const isVercel = process.env.VERCEL === '1';
+
+// Tự động phân giải đường dẫn gốc:
+// - GitHub Pages: yêu cầu subpath '/web-moto-care/'
+// - Vercel / Tên miền riêng: chạy trên root '/'
+// - Môi trường nội bộ / file preview: './'
+const basePath = isGitHubActions ? '/web-moto-care/' : isVercel ? '/' : './';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: isDeploy ? '/web-moto-care/' : './',
+  base: basePath,
   plugins: [react()],
   resolve: {
     alias: {
