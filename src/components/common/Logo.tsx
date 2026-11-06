@@ -43,14 +43,16 @@ export function Logo({ className = '', size = 'md', showSubtitle = false }: Logo
         </svg>
       </div>
 
-      <div className="flex flex-col leading-none">
-        <div className={`font-extrabold tracking-tight ${textSizes[size]} text-slate-900`}>
+      <div className="flex flex-col leading-none whitespace-nowrap shrink-0">
+        <div className={`font-extrabold tracking-tight ${textSizes[size]} text-slate-900 inline-flex items-center`}>
           <span>MOTO</span>
-          <span className="text-brand-600 ml-1">CARE</span>
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5"></span>
+          <span className="text-brand-600 ml-1 inline-flex items-center">
+            CARE
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5"></span>
+          </span>
         </div>
         {showSubtitle && (
-          <span className="text-[10px] font-medium text-slate-500 tracking-wider uppercase mt-0.5">
+          <span className="text-[10px] font-medium text-slate-500 tracking-wider uppercase mt-0.5 whitespace-nowrap">
             Smart Mobility
           </span>
         )}

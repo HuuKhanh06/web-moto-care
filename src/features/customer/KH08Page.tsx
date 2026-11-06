@@ -38,14 +38,28 @@ import {
   Navigation,
   PlusCircle,
 } from 'lucide-react';
+import { useBpmnStore } from '@/features/bpmn/bpmnStore';
+import { cn } from '@/lib/utils';
+
+const COMMON_INCIDENTS = [
+  'Chết máy / Không nổ được',
+  'Thủng săm / Xịt lốp',
+  'Đứt phanh / Phanh không ăn',
+  'Hết bình ắc quy / Mất điện',
+  'Va chạm giao thông',
+  'Mất chìa khóa / Lỗi Smartkey',
+  'Đứt xích / Tuột xích',
+];
 
 export function KH08Page() {
   const [searchParams] = useSearchParams();
   const rawRequestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
+  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   // Form báo cáo sự cố (SC_Create)
+  const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [locationText, setLocationText] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
@@ -53,6 +67,12 @@ export function KH08Page() {
   const [incidentPhoto, setIncidentPhoto] = useState<string>('');
   const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const toggleIncident = (type: string) => {
+    setSelectedIncidents((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
 
   // Truy vấn dữ liệu thời gian thực (Live Query) từ Dexie
   const liveData = useLiveQuery(async () => {
@@ -158,7 +178,8 @@ export function KH08Page() {
 
   // Nạp ảnh mẫu nhanh phục vụ demo đồ án
   const handleFillDemoIncident = () => {
-    setDescription('Xe bị thủng lốp sau và đứt xích khi đang di chuyển trên đường');
+    setSelectedIncidents(['Thủng săm / Xịt lốp', 'Đứt xích / Tuột xích']);
+    setDescription('Xe bị rung lắc mạnh và dính đinh khi đang di chuyển trên đường');
     setLocationText('123 Đường Nguyễn Văn Cừ, Quận 5, TP.HCM');
     setLatitude(10.758);
     setLongitude(106.682);
@@ -174,8 +195,13 @@ export function KH08Page() {
       return;
     }
 
-    if (!description.trim()) {
-      toast.error('Vui lòng nhập mô tả sự cố gặp phải');
+    const combinedDescription = [
+      selectedIncidents.length > 0 ? `Loại sự cố: ${selectedIncidents.join(', ')}` : '',
+      description.trim() ? `Chi tiết: ${description.trim()}` : '',
+    ].filter(Boolean).join('. ');
+
+    if (!combinedDescription) {
+      toast.error('Vui lòng chọn loại sự cố hoặc nhập mô tả sự cố gặp phải');
       return;
     }
 
@@ -186,7 +212,7 @@ export function KH08Page() {
         'M_EG',
         {
           event_type: 'INCIDENT',
-          description: description.trim(),
+          description: combinedDescription,
           lat: latitude,
           lng: longitude,
           photo_urls: incidentPhoto ? [incidentPhoto] : [],
@@ -196,6 +222,7 @@ export function KH08Page() {
 
       toast.success('Đã gửi yêu cầu cứu hộ khẩn cấp! Đội ngũ kỹ thuật đang tiếp nhận.');
       setDescription('');
+      setSelectedIncidents([]);
     } catch (err: unknown) {
       console.error('Lỗi gửi sự cố:', err);
       toast.error(err instanceof Error ? err.message : 'Không thể gửi yêu cầu cứu hộ');
@@ -428,12 +455,39 @@ export function KH08Page() {
 
           <div className="space-y-4">
             <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                1. Chọn nhanh các vấn đề xe gặp phải (chọn một hoặc nhiều):
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {COMMON_INCIDENTS.map((item) => {
+                  const isSelected = selectedIncidents.includes(item);
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => toggleIncident(item)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 cursor-pointer',
+                        isSelected
+                          ? 'bg-rose-50 border-rose-400 text-rose-800 font-bold shadow-2xs ring-1 ring-rose-400/30'
+                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                      )}
+                    >
+                      <span className={cn('w-2 h-2 rounded-full', isSelected ? 'bg-rose-500' : 'bg-slate-300')} />
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Mô tả chi tiết tình trạng sự cố *
+                2. Mô tả thêm chi tiết (tùy chọn):
               </label>
               <Textarea
-                placeholder="Ví dụ: Xe bị chết máy giữa đường, phanh trước kêu to, lốp sau bị dính đinh..."
-                rows={3}
+                placeholder="Ví dụ: Xe chết máy khi đang đi, phanh kêu to hoặc các lưu ý khác..."
+                rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -585,24 +639,26 @@ export function KH08Page() {
               <Clock className="h-6 w-6 text-amber-500 mx-auto animate-spin" />
               <p className="font-semibold">Đang liên hệ mạng lưới đối tác cứu hộ gần nhất...</p>
               <p className="text-slate-400">
-                Nếu đối tác không phản hồi trong 15 phút (SC_AckTimer) hoặc từ chối, hệ thống sẽ tự động thử đối tác tiếp theo (SC_TryNext).
+                Nếu đối tác không phản hồi trong 15 phút hoặc từ chối, hệ thống sẽ tự động điều phối đối tác khác gần nhất.
               </p>
             </div>
           )}
 
-          {/* Nút giả lập chuyển sang cổng đối tác DT-01 khi demo */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t text-xs text-slate-500">
-            <span>Dành cho demo: Quản lý hoặc Đối tác có thể thao tác tiếp nhận trên Cổng đối tác DT-01.</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/dt/01')}
-              className="text-xs text-slate-700 hover:bg-slate-50 shrink-0"
-            >
-              Mở Cổng đối tác DT-01 (Mô phỏng)
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </Button>
-          </div>
+          {/* Công cụ dành cho ban giám khảo / chấm thi (chỉ hiện khi bật chế độ BPMN) */}
+          {isBpmnMode && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t text-xs text-slate-500">
+              <span>Chế độ chấm thi: Quản lý hoặc Đối tác có thể thao tác tiếp nhận trên Cổng đối tác DT-01.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/dt/01')}
+                className="text-xs text-slate-700 hover:bg-slate-50 shrink-0"
+              >
+                Mở Cổng đối tác DT-01 (Mô phỏng)
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </Card>
       )}
     </div>

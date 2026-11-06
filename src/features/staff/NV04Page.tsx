@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
+import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import type { RentalRequest, Vehicle, Inspection } from '@/db/types';
@@ -41,6 +42,7 @@ export function NV04Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
+  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -209,7 +211,7 @@ export function NV04Page() {
         currentActor
       );
 
-      toast.success('Đã gửi checklist và ảnh cho khách hàng xác nhận (Activity_0w8x12e)!');
+      toast.success('Đã gửi checklist và ảnh cho khách hàng xác nhận thành công!');
       navigate('/nv/01');
     } catch (err: unknown) {
       console.error('Lỗi nộp ảnh bàn giao:', err);
@@ -237,7 +239,7 @@ export function NV04Page() {
               NV-04
             </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Checklist & Ảnh bàn giao xe (M_Photo)
+              Checklist &amp; Ảnh bàn giao xe
             </h1>
           </div>
           <p className="text-sm text-slate-500">
@@ -248,9 +250,11 @@ export function NV04Page() {
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          <Badge variant="neutral" className="text-slate-600">
-            BPMN: M_Photo
-          </Badge>
+          {isBpmnMode && (
+            <Badge variant="neutral" className="text-slate-600 font-mono">
+              BPMN: M_Photo
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -433,7 +437,7 @@ export function NV04Page() {
           className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-bold"
         >
           <Send className="mr-2 h-4 w-4" />
-          Gửi khách duyệt tình trạng xe (M_Photo)
+          Gửi khách duyệt tình trạng xe
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

@@ -15,7 +15,6 @@ import {
   PlusCircle,
   ChevronDown,
   ShieldCheck,
-  PhoneCall,
   Sparkles,
   Zap,
 } from 'lucide-react';
@@ -154,7 +153,7 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
               Chuyến đi của tôi
             </NavLink>
 
-            {/* 4. Chính sách & Tiện ích (Dropdown VinFast Style) */}
+            {/* 4. Chính sách & Cam kết */}
             <div className="relative shrink-0" ref={policyMenuRef}>
               <button
                 type="button"
@@ -173,32 +172,40 @@ export function CustomerLayout({ children }: { children?: React.ReactNode }) {
 
               {policyMenuOpen && (
                 <div className="absolute top-full left-0 mt-2 w-64 rounded-2xl bg-white shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="p-2.5 rounded-xl hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                  <Link
+                    to="/#benefits"
+                    onClick={() => setPolicyMenuOpen(false)}
+                    className="block p-2.5 rounded-xl hover:bg-brand-50/60 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900 group-hover:text-brand-600">
                       <ShieldCheck className="w-3.5 h-3.5 text-brand-600 shrink-0" />
                       <span>Không giữ giấy tờ tùy thân gốc</span>
                     </div>
                     <div className="text-[10px] text-slate-500 mt-0.5">Xác thực số hóa &mdash; Bảo mật danh tính</div>
-                  </div>
+                  </Link>
 
-                  <div className="p-2.5 rounded-xl hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                  <Link
+                    to="/#stations"
+                    onClick={() => setPolicyMenuOpen(false)}
+                    className="block p-2.5 rounded-xl hover:bg-brand-50/60 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900 group-hover:text-brand-600">
                       <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>Giao nhận xe tận nơi</span>
                     </div>
                     <div className="text-[10px] text-slate-500 mt-0.5">Sân bay, ga tàu &amp; khách sạn 24/7</div>
-                  </div>
+                  </Link>
 
                   <Link
-                    to="/kh/08"
+                    to="/#faq"
                     onClick={() => setPolicyMenuOpen(false)}
-                    className="flex items-center gap-2 p-2.5 rounded-xl hover:bg-amber-50/70 transition-colors text-amber-900"
+                    className="block p-2.5 rounded-xl hover:bg-brand-50/60 transition-colors group"
                   >
-                    <PhoneCall className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <div>
-                      <div className="text-xs font-bold">Cứu hộ khẩn cấp 1900 6868</div>
-                      <div className="text-[10px] text-slate-500">Báo sự cố trên đường đi</div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900 group-hover:text-brand-600">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <span>Quy chế cọc &amp; Hoàn tiền minh bạch</span>
                     </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">Rõ ràng, đối soát tự động qua VietQR</div>
                   </Link>
                 </div>
               )}

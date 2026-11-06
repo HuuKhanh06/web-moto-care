@@ -237,7 +237,7 @@ export function AD01Page() {
             <h1 className="text-2xl font-bold text-slate-900">Quản lý Xe & Người dùng</h1>
           </div>
           <p className="text-sm text-slate-500">
-            Cấu hình danh mục xe, đối tác cứu hộ ngoại vi và quản trị cơ sở dữ liệu IndexedDB.
+            Cấu hình danh mục xe, đối tác cứu hộ ngoại vi và quản trị cơ sở dữ liệu hệ thống.
           </p>
         </div>
 
@@ -248,7 +248,7 @@ export function AD01Page() {
             size="sm"
             onClick={handleExport}
             className="flex items-center gap-1.5"
-            title="Tải toàn bộ IndexedDB thành file JSON"
+            title="Tải toàn bộ dữ liệu hệ thống thành file JSON"
           >
             <Download className="w-4 h-4 text-brand-700" />
             <span>Sao lưu (JSON)</span>

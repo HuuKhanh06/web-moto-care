@@ -425,7 +425,7 @@ export function KH03Page() {
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-500">
-            Công cụ giả lập phản hồi của hệ thống ngân hàng đối soát. Chọn kịch bản nhanh hoặc nhập tùy ý để kiểm thử cả 3 nhánh BPMN (<code className="font-mono font-bold">M_G03: ĐỦ, THIẾU, SAI</code>).
+            Cổng thanh toán thử nghiệm Napas 24/7. Chọn kịch bản để thử nghiệm chuyển khoản khớp đúng, thiếu hoặc sai số tiền cọc.
           </p>
 
           {/* 3 Preset kịch bản nhanh */}

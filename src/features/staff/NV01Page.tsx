@@ -238,7 +238,7 @@ export function NV01Page() {
                 { value: 'settle', label: 'Chưa thanh toán & Đánh giá xe (NV-08, 09)' },
                 { value: 'incident', label: 'Xử lý sự cố (NV-10)' },
                 ...(isManager ? [{ value: 'manager', label: 'Việc của Quản lý (QL-01, QL-02)' }] : []),
-                { value: 'debt', label: `Hồ sơ công nợ CONG_NO (${debtRequests.length})` },
+                { value: 'debt', label: `Hồ sơ công nợ (${debtRequests.length})` },
               ]}
             />
           </div>

@@ -217,7 +217,7 @@ export function NV02Page() {
               NV-02
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Kiểm tra cọc ngoại lệ (M_ManualDeposit)</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Kiểm tra cọc ngoại lệ</h1>
           <p className="text-xs text-slate-500">
             Mã hồ sơ: <code className="font-mono font-bold text-slate-700">{requestId}</code>
           </p>
@@ -369,7 +369,7 @@ export function NV02Page() {
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="text-xs text-slate-500 flex items-center gap-1.5">
               <HelpCircle className="w-4 h-4 text-slate-400" />
-              <span>Quyết định rẽ nhánh BPMN To-Be: <code className="font-mono text-brand-700">M_G03b</code></span>
+              <span>Phương án phê duyệt cọc giữ xe:</span>
             </div>
 
             <div className="flex items-center gap-3">

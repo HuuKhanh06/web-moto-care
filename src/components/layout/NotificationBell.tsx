@@ -2,14 +2,16 @@
 // Chuông thông báo hiển thị thời gian thực từ bảng notifications của Dexie
 
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { useAuthStore } from '@/features/auth/authStore';
 import { formatDateTime } from '@/lib/format';
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function NotificationBell() {
+  const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,8 +50,34 @@ export function NotificationBell() {
     }
   };
 
-  const markAsRead = async (id: string) => {
-    await db.notifications.update(id, { is_read: true });
+  const handleNotificationClick = async (n: { id: string; request_id?: string }) => {
+    await db.notifications.update(n.id, { is_read: true });
+    setOpen(false);
+
+    if (n.request_id) {
+      const req = await db.rental_requests.get(n.request_id);
+      if (req) {
+        if (req.status === 'CHO_HO_SO') {
+          navigate(`/kh/02?requestId=${req.id}`);
+          return;
+        }
+        if (req.status === 'CHO_COC') {
+          navigate(`/kh/03?requestId=${req.id}`);
+          return;
+        }
+        if (req.status === 'CHO_KY') {
+          navigate(`/kh/04?requestId=${req.id}`);
+          return;
+        }
+        if (req.status === 'CHO_BAN_GIAO' || req.status === 'CHO_KHACH_NHAN') {
+          navigate(`/kh/05?requestId=${req.id}`);
+          return;
+        }
+      }
+      navigate('/kh/06');
+    } else {
+      navigate('/kh/06');
+    }
   };
 
   return (
@@ -101,9 +129,9 @@ export function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => markAsRead(n.id)}
+                  onClick={() => handleNotificationClick(n)}
                   className={cn(
-                    'p-3.5 transition-colors cursor-pointer text-left',
+                    'p-3.5 transition-colors cursor-pointer text-left group',
                     n.is_read ? 'bg-white hover:bg-slate-50' : 'bg-brand-50/40 hover:bg-brand-50/70'
                   )}
                 >
@@ -111,9 +139,12 @@ export function NotificationBell() {
                     <p className={cn('text-xs leading-relaxed', n.is_read ? 'text-slate-600' : 'text-slate-900 font-medium')}>
                       {n.message}
                     </p>
-                    {!n.is_read && (
-                      <span className="w-2 h-2 rounded-full bg-brand-600 flex-shrink-0 mt-1" />
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                      {!n.is_read && (
+                        <span className="w-2 h-2 rounded-full bg-brand-600" />
+                      )}
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </div>
                   <span className="text-[10px] text-slate-400 mt-1.5 block">
                     {formatDateTime(n.created_at)}

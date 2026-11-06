@@ -143,7 +143,7 @@ export function KH09Page() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded">
-              Màn hình KH-09
+              Quyết toán hợp đồng
             </span>
             <span className="text-xs font-mono text-slate-500">Mã đơn #{requestId.slice(0, 8)}</span>
             {statement && (

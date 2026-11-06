@@ -7,6 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { engine } from '@/engine';
 import { useAuthStore } from '@/features/auth/authStore';
+import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { Button, Card, Badge, QRBox, Modal, Input, toast } from '@/components/ui';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import {
@@ -25,6 +26,7 @@ export function KH10Page() {
   const navigate = useNavigate();
   const requestId = searchParams.get('requestId') || '';
   const currentActor = useAuthStore((s) => s.currentActor);
+  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -299,7 +301,7 @@ export function KH10Page() {
                 className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-semibold flex items-center justify-center gap-1.5"
               >
                 <CheckCircle className="w-4 h-4" />
-                <span>Xác nhận đã nhận hoàn cọc (M_ConfirmRefund)</span>
+                <span>Xác nhận đã nhận tiền hoàn cọc</span>
               </Button>
             </div>
           ) : (
@@ -384,16 +386,18 @@ export function KH10Page() {
                     <span>Đã chuyển khoản (Mở khung giả lập ngân hàng)</span>
                   </Button>
 
-                  <div className="flex justify-between items-center text-[11px] text-slate-500 pt-1">
-                    <span>Thử nghiệm quá hạn 30 phút:</span>
-                    <button
-                      type="button"
-                      onClick={handleSimulateExtraTimeout}
-                      className="text-amber-700 hover:underline font-semibold"
-                    >
-                      Giả lập hết hạn (M_BoundExtra)
-                    </button>
-                  </div>
+                  {isBpmnMode && (
+                    <div className="flex justify-between items-center text-[11px] text-slate-500 pt-1">
+                      <span>Thử nghiệm quá hạn 30 phút:</span>
+                      <button
+                        type="button"
+                        onClick={handleSimulateExtraTimeout}
+                        className="text-amber-700 hover:underline font-semibold"
+                      >
+                        Giả lập hết hạn (M_BoundExtra)
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="p-3 bg-slate-50 rounded text-center text-xs text-slate-600">

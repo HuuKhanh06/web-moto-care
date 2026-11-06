@@ -368,7 +368,7 @@ export function KH06Page() {
                           }`}
                         >
                           <Calendar className="w-3.5 h-3.5" />
-                          <span>{isExtending ? 'Xem tiến trình Gia hạn (SP1)' : 'Gia hạn hợp đồng (SP1)'}</span>
+                          <span>{isExtending ? 'Xem tiến trình Gia hạn' : 'Gia hạn hợp đồng'}</span>
                         </Button>
 
                         {/* 2. Nút Báo sự cố khẩn cấp (M_CatchIncident -> SP2) */}
@@ -385,7 +385,7 @@ export function KH06Page() {
                           }`}
                         >
                           <Wrench className="w-3.5 h-3.5" />
-                          <span>{isIncident ? 'Theo dõi Cứu hộ sự cố (SP2)' : 'Báo sự cố cứu hộ (SP2)'}</span>
+                          <span>{isIncident ? 'Theo dõi Cứu hộ sự cố' : 'Báo sự cố cứu hộ'}</span>
                         </Button>
 
                         {/* 3. Nút Trả xe (M_CatchReturn -> NV-06) */}
@@ -398,7 +398,7 @@ export function KH06Page() {
                           className="flex items-center gap-1 text-xs ml-auto bg-slate-800 hover:bg-slate-900 text-white font-semibold"
                         >
                           <KeyRound className="w-3.5 h-3.5" />
-                          <span>Yêu cầu trả xe (M_CatchReturn)</span>
+                          <span>Yêu cầu trả xe</span>
                         </Button>
                       </div>
                     </div>

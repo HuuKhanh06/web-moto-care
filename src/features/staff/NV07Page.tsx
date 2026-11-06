@@ -9,7 +9,7 @@ import { engine } from '@/engine';
 import { useAuthStore } from '@/features/auth/authStore';
 import { Button, Card, Badge, toast, FileUpload } from '@/components/ui';
 import type { FileUploadResult } from '@/components/ui/FileUpload';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, getStatusLabel } from '@/lib/format';
 import {
   AlertTriangle,
   Camera,
@@ -243,9 +243,7 @@ export function NV07Page() {
             Xác Minh Hư Hỏng &amp; Ước Tính Bồi Thường
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Quy trình BPMN: <code className="font-mono text-brand-700 font-semibold">M_VerifyDamage</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_CalcFees</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_SendStatement</code>
+            Đối soát danh mục phụ kiện và tình trạng hư hỏng phương tiện sau khi trả xe
           </p>
         </div>
 
@@ -418,17 +416,17 @@ export function NV07Page() {
         <Card className="p-8 text-center space-y-4">
           <CheckCircle className="w-12 h-12 text-brand-600 mx-auto" />
           <h3 className="text-lg font-bold text-slate-900">
-            Hồ sơ không ở bước xác minh hư hại (M_VerifyDamage)!
+            Hồ sơ hiện không ở bước xác minh hư hại!
           </h3>
           <p className="text-sm text-slate-600 max-w-md mx-auto">
-            Hồ sơ hiện ở trạng thái <strong>{rentalReq?.status}</strong>. Có thể hồ sơ không phát hiện hư hỏng hoặc đã được chuyển tiếp sang bước thanh toán bảng kê.
+            Hồ sơ hiện ở trạng thái <strong>{rentalReq ? getStatusLabel(rentalReq.status) : ''}</strong>. Có thể hồ sơ không phát hiện hư hỏng hoặc đã được chuyển tiếp sang bước thanh toán bảng kê.
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => navigate('/nv/01')}>
-              Về Hộp việc cần làm (NV-01)
+              Về Danh sách việc cần làm
             </Button>
             <Button onClick={() => navigate(`/kh/09?requestId=${requestId}`)}>
-              Xem bảng kê trả xe (KH-09)
+              Xem bảng kê trả xe
             </Button>
           </div>
         </Card>

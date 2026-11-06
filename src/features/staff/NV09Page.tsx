@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { engine } from '@/engine';
 import { useAuthStore } from '@/features/auth/authStore';
 import { Button, Card, Badge, Textarea, toast } from '@/components/ui';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, getStatusLabel } from '@/lib/format';
 import {
   Sparkles,
   Wrench,
@@ -75,11 +75,11 @@ export function NV09Page() {
 
       if (result === 'DAT') {
         toast.success(
-          'Xe đã chuyển về trạng thái SẴN SÀNG (SAN_SANG). Hồ sơ đã lưu trữ tập trung (M_Archive) và hoàn tất!'
+          'Xe đã chuyển về trạng thái SẴN SÀNG. Hồ sơ thuê đã được lưu trữ và hoàn tất thành công!'
         );
       } else {
         toast.warning(
-          'Đã lập phiếu bảo trì và khóa lịch xe 48 giờ (M_Maintenance). Hồ sơ đã đóng băng lưu trữ (M_Archive)!'
+          'Đã lập phiếu bảo dưỡng kỹ thuật xe 48 giờ. Hồ sơ đã được lưu trữ hoàn tất!'
         );
       }
 
@@ -119,10 +119,7 @@ export function NV09Page() {
             Đánh Giá Xe Sau Trả &amp; Lưu Trữ Hồ Sơ
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Quy trình BPMN: <code className="font-mono text-brand-700 font-semibold">M_CheckReady</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_GReady</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_MarkReady / M_Maintenance</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_Archive (Hoàn tất)</code>
+            Đánh giá tình trạng kỹ thuật phương tiện sau khi khách trả và lưu trữ hồ sơ hợp đồng
           </p>
         </div>
 
@@ -144,7 +141,14 @@ export function NV09Page() {
               {vehicle?.model} ({vehicle?.plate})
             </div>
             <div className="text-slate-500">
-              Trạng thái xe hiện tại: <span className="font-mono font-semibold">{vehicle?.status}</span>
+              Trạng thái xe hiện tại:{' '}
+              <span className="font-semibold text-slate-800">
+                {vehicle?.status === 'SAN_SANG'
+                  ? 'Sẵn sàng phục vụ'
+                  : vehicle?.status === 'BAO_TRI'
+                  ? 'Bảo dưỡng kỹ thuật'
+                  : 'Đang cho thuê'}
+              </span>
             </div>
           </div>
         </Card>
@@ -246,7 +250,7 @@ export function NV09Page() {
           <div className="p-3 bg-slate-50 rounded text-xs text-slate-600 flex items-center gap-2">
             <Archive className="w-4 h-4 text-slate-500 shrink-0" />
             <span>
-              Sau khi bấm xác nhận, hệ thống sẽ thực thi tác vụ tự động <code>M_Archive</code>, gắn dấu thời gian <code>archived_at</code> và đóng hồ sơ thuê xe ở trạng thái <strong>HOÀN TẤT (HOAN_TAT)</strong>.
+              Sau khi bấm xác nhận, hệ thống sẽ lưu trữ hồ sơ và chính thức đóng hợp đồng ở trạng thái <strong>Hoàn tất</strong>.
             </span>
           </div>
 
@@ -261,7 +265,7 @@ export function NV09Page() {
               loading={isSubmitting}
               className="bg-brand-600 hover:bg-brand-700 text-white font-semibold flex items-center gap-1.5"
             >
-              <span>Xác nhận đánh giá &amp; Lưu hồ sơ (M_CheckReady)</span>
+              <span>Xác nhận đánh giá &amp; Lưu hồ sơ</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -270,17 +274,17 @@ export function NV09Page() {
         <Card className="p-8 text-center space-y-4">
           <CheckCircle className="w-12 h-12 text-brand-600 mx-auto" />
           <h3 className="text-lg font-bold text-slate-900">
-            Hồ sơ thuê xe đã hoàn tất trọn vẹn chu trình (HOÀN TẤT)!
+            Hồ sơ thuê xe đã hoàn tất trọn vẹn chu trình!
           </h3>
           <p className="text-sm text-slate-600 max-w-md mx-auto">
-            Hồ sơ này đã được quyết toán và lưu trữ an toàn trong kho dữ liệu. Trạng thái hiện tại: <strong>{rentalReq?.status}</strong>.
+            Hồ sơ này đã được quyết toán và lưu trữ an toàn trong kho dữ liệu. Trạng thái hiện tại: <strong>{rentalReq ? getStatusLabel(rentalReq.status) : ''}</strong>.
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => navigate('/nv/01')}>
-              Về Hộp việc cần làm (NV-01)
+              Về Hộp việc cần làm
             </Button>
             <Button onClick={() => navigate('/trace')}>
-              Xem toàn bộ Trace BPMN
+              Xem lịch sử tiến trình hợp đồng
             </Button>
           </div>
         </Card>

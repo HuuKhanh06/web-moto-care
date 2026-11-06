@@ -290,7 +290,7 @@ export function KH04Page() {
         <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-center justify-between text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2 font-medium">
             <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-            <span>Thời hạn hoàn tất ký hợp đồng (Timer 24h - M_BoundSign):</span>
+            <span>Thời hạn hoàn tất ký hợp đồng điện tử:</span>
           </div>
           <span className="font-mono font-bold text-sm text-amber-950 bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 shadow-xs">
             {timerStr}
@@ -389,7 +389,7 @@ export function KH04Page() {
           <strong className="block font-bold text-slate-900 text-[12px]">ĐIỀU 3: QUYỀN VÀ TRÁCH NHIỆM</strong>
           <div className="pl-3 space-y-1">
             <div>1. Bên B có trách nhiệm kiểm tra hiện trạng xe khi nhận, tuân thủ Luật Giao thông đường bộ và giữ gìn xe trong suốt thời gian thuê.</div>
-            <div>2. Trong trường hợp xảy ra sự cố ngoài ý muốn hoặc hư hỏng kỹ thuật, Bên B kích hoạt tính năng cứu hộ (SP2) trên ứng dụng để được hỗ trợ kịp thời.</div>
+            <div>2. Trong trường hợp xảy ra sự cố ngoài ý muốn hoặc hư hỏng kỹ thuật, Bên B kích hoạt tính năng cứu hộ khẩn cấp trên ứng dụng để được hỗ trợ kịp thời.</div>
             <div>3. Tiền cọc sẽ được hoàn trả 100% khi thanh lý hợp đồng nếu xe được trả đúng hiện trạng ban đầu.</div>
           </div>
         </div>
@@ -539,7 +539,7 @@ export function KH04Page() {
               className="hidden sm:flex items-center justify-center gap-2 shadow-md"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Xác nhận ký hợp đồng (M_WaitSign)</span>
+              <span>Xác nhận ký hợp đồng điện tử</span>
             </Button>
           </div>
         </Card>

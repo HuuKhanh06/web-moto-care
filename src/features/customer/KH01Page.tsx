@@ -16,6 +16,7 @@ import {
 import { formatCurrency } from '@/lib/format';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
+import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import {
   Bike,
   ArrowRight,
@@ -29,6 +30,7 @@ export function KH01Page() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentActor = useAuthStore((s) => s.currentActor);
+  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -322,20 +324,22 @@ export function KH01Page() {
             </label>
           </div>
 
-          {/* Tùy chọn test giả lập hết xe */}
-          <div className="pt-2 border-t border-slate-100">
-            <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={simulateNoVehicle}
-                onChange={(e) => setSimulateNoVehicle(e.target.checked)}
-                className="rounded text-red-600 focus:ring-red-500"
-              />
-              <span className="text-slate-500 text-[11px]">
-                Mô phỏng kịch bản hết xe sẵn sàng trong khung giờ chọn
-              </span>
-            </label>
-          </div>
+          {/* Tùy chọn test giả lập hết xe (chỉ hiển thị khi bật chế độ BPMN) */}
+          {isBpmnMode && (
+            <div className="pt-2 border-t border-slate-100">
+              <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={simulateNoVehicle}
+                  onChange={(e) => setSimulateNoVehicle(e.target.checked)}
+                  className="rounded text-red-600 focus:ring-red-500"
+                />
+                <span className="text-slate-500 text-[11px]">
+                  Mô phỏng kịch bản hết xe sẵn sàng trong khung giờ chọn (Test BPMN M_CheckFleet: No)
+                </span>
+              </label>
+            </div>
+          )}
         </Card>
 
         {/* Nút gửi form Desktop */}

@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { engine } from '@/engine';
 import { useAuthStore } from '@/features/auth/authStore';
 import { Button, Card, Badge, Textarea, toast } from '@/components/ui';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDateTime, getStatusLabel } from '@/lib/format';
 import {
   Gavel,
   AlertTriangle,
@@ -159,7 +159,7 @@ export function QL01Page() {
             Hiện tại khách hàng đã xác nhận đồng thuận toàn bộ bảng kê thanh lý hoặc không có tranh chấp phát sinh.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành (NV-01)</Button>
+            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
           </div>
         </Card>
       </div>
@@ -194,9 +194,7 @@ export function QL01Page() {
             Xử Lý Bất Đồng Bảng Kê Thanh Lý
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Quy trình BPMN: <code className="font-mono text-brand-700 font-semibold">M_Resolve</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_ApproveAdjustment</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_SendStatement</code>
+            Xem xét phản hồi của khách hàng và ban hành bảng kê quyết toán điều chỉnh
           </p>
         </div>
 
@@ -256,7 +254,7 @@ export function QL01Page() {
       {damages && damages.length > 0 && (
         <Card className="p-4 border-slate-200 space-y-3">
           <div className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Các khoản hư hại đã được nhân viên ghi nhận ở NV-07:
+            Các khoản hư hại đã được nhân viên ghi nhận tại biên bản kiểm tra:
           </div>
           <div className="space-y-2">
             {damages.map((d) => (
@@ -351,7 +349,7 @@ export function QL01Page() {
               loading={isSubmitting}
               className="bg-brand-600 hover:bg-brand-700 text-white font-semibold flex items-center gap-1.5"
             >
-              <span>Duyệt phương án &amp; Gửi lại bảng kê (M_Resolve)</span>
+              <span>Duyệt phương án &amp; Gửi lại bảng kê</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -360,17 +358,17 @@ export function QL01Page() {
         <Card className="p-8 text-center space-y-4">
           <CheckCircle className="w-12 h-12 text-brand-600 mx-auto" />
           <h3 className="text-lg font-bold text-slate-900">
-            Hồ sơ không ở trạng thái chờ giải quyết khiếu nại (M_Resolve)!
+            Hồ sơ không ở trạng thái chờ giải quyết khiếu nại!
           </h3>
           <p className="text-sm text-slate-600 max-w-md mx-auto">
-            Hiện hồ sơ đang ở trạng thái <strong>{rentalReq?.status}</strong>. Có thể khách hàng đã chấp thuận bảng kê hoặc quản lý đã giải quyết xong.
+            Hiện hồ sơ đang ở trạng thái <strong>{rentalReq ? getStatusLabel(rentalReq.status) : ''}</strong>. Có thể khách hàng đã chấp thuận bảng kê hoặc quản lý đã giải quyết xong.
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => navigate('/nv/01')}>
-              Về danh sách việc cần làm (NV-01)
+              Về Hộp việc cần làm
             </Button>
             <Button onClick={() => navigate(`/kh/09?requestId=${requestId}`)}>
-              Xem bảng kê (KH-09)
+              Xem bảng kê chi tiết
             </Button>
           </div>
         </Card>

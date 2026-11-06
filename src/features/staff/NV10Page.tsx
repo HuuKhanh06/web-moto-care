@@ -125,9 +125,9 @@ export function NV10Page() {
       );
 
       if (continueRental) {
-        toast.success('Đã xác nhận sự cố! Khách hàng tiếp tục thuê xe (SC_SendContinue).');
+        toast.success('Đã xác nhận sự cố! Khách hàng tiếp tục thuê xe.');
       } else {
-        toast.warning('Đã quyết định kết thúc sớm! Chuyển hồ sơ sang bước nhận xe trả (SC_NotifyEarly).');
+        toast.warning('Đã quyết định kết thúc sớm! Chuyển hồ sơ sang bước nhận xe trả.');
       }
       await loadData();
     } catch (err: unknown) {
@@ -148,11 +148,11 @@ export function NV10Page() {
               NV-10
             </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Xác nhận sự cố & Ghi nhận chi phí (SC_Log)
+              Xác nhận sự cố & Ghi nhận chi phí
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Nghiệm thu kết quả xử lý kỹ thuật, đối soát chi phí cứu hộ và quyết định phương án hợp đồng (SC_SettleDecision).
+            Nghiệm thu kết quả xử lý kỹ thuật, đối soát chi phí cứu hộ và quyết định phương án hợp đồng.
           </p>
         </div>
 
@@ -241,7 +241,7 @@ export function NV10Page() {
                 <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
                   <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                     <CreditCard className="h-4 w-4 text-brand-600" />
-                    Ghi nhận chi phí cứu hộ / sửa chữa thực tế (SC_Log)
+                    Ghi nhận chi phí cứu hộ / sửa chữa thực tế
                   </div>
 
                   <div className="max-w-xs">
@@ -266,7 +266,7 @@ export function NV10Page() {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <h4 className="font-bold text-sm text-slate-900">
-                      Quyết định tiếp tục thuê hay trả xe sớm? (Cổng BPMN SC_SettleDecision)
+                      Quyết định tiếp tục thuê hay trả xe sớm?
                     </h4>
                     <p className="text-xs text-slate-500">
                       Nếu xe còn an toàn để lưu thông &rarr; Tiếp tục thuê. Nếu xe hỏng nặng &rarr; Trả xe sớm.
@@ -283,7 +283,7 @@ export function NV10Page() {
                       className="border-amber-300 text-amber-800 hover:bg-amber-50 text-xs"
                     >
                       <XCircle className="mr-1.5 h-4 w-4" />
-                      Trả xe sớm (SC_NotifyEarly)
+                      Trả xe sớm
                     </Button>
 
                     <Button
@@ -294,7 +294,7 @@ export function NV10Page() {
                       className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs"
                     >
                       <CheckCircle2 className="mr-1.5 h-4 w-4" />
-                      Tiếp tục cho thuê (SC_SendContinue)
+                      Tiếp tục cho thuê
                     </Button>
                   </div>
                 </div>

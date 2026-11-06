@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
+import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import type { RentalRequest, Vehicle, Profile, Handover } from '@/db/types';
@@ -49,6 +50,7 @@ export function NV05Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
+  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -187,7 +189,7 @@ export function NV05Page() {
         currentActor
       );
 
-      toast.success('Bàn giao thành công! Hợp đồng chính thức chuyển sang trạng thái ĐANG THUÊ (M_SetRented).');
+      toast.success('Bàn giao thành công! Hợp đồng chính thức chuyển sang trạng thái ĐANG THUÊ.');
       navigate('/nv/01');
     } catch (err: unknown) {
       console.error('Lỗi hoàn tất bàn giao:', err);
@@ -215,7 +217,7 @@ export function NV05Page() {
               NV-05
             </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Bàn giao xe & Phụ kiện (M_Handover)
+              Bàn giao xe &amp; Phụ kiện
             </h1>
           </div>
           <p className="text-sm text-slate-500">
@@ -226,9 +228,11 @@ export function NV05Page() {
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          <Badge variant="neutral" className="text-slate-600">
-            BPMN: M_Handover
-          </Badge>
+          {isBpmnMode && (
+            <Badge variant="neutral" className="text-slate-600 font-mono">
+              BPMN: M_Handover
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -480,7 +484,7 @@ export function NV05Page() {
             className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-bold"
           >
             <KeyRound className="mr-2 h-4 w-4" />
-            Xác nhận bàn giao xe & Phụ kiện (M_Handover)
+            Xác nhận bàn giao xe &amp; Phụ kiện
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         )}

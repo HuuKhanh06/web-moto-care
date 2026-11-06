@@ -773,8 +773,8 @@ export function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Bảng Giá &amp; Dòng Xe Du Lịch Nổi Bật
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Tất cả xe đều được rửa sạch, thay dầu nhớt và kiểm tra áp suất lốp trước khi trao tận tay khách hàng.
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+              Tất cả xe đều được bảo dưỡng định kỳ, rửa sạch và kiểm tra an toàn kỹ thuật trước khi trao tận tay khách hàng.
             </p>
           </div>
 
@@ -927,8 +927,8 @@ export function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Thuê Xe Nhanh Chóng Trong 4 Bước
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Quy trình tự động hóa trên nền tảng BPMN 2.0 tiêu chuẩn quốc tế, minh bạch và bảo vệ quyền lợi tuyệt đối cho khách hàng.
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+              Quy trình số hóa chuẩn quốc tế — tiện lợi, minh bạch và bảo vệ quyền lợi tối đa cho khách hàng.
             </p>
           </div>
 
@@ -941,9 +941,6 @@ export function LandingPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Chọn mẫu xe mong muốn, ngày nhận và điểm nhận xe. Hệ thống tự kiểm tra xe trống và tính giá trọn gói ngay.
               </p>
-              <span className="text-[10px] font-bold text-slate-400 block pt-1 font-mono">
-                BPMN: M_START &bull; M_CheckFleet
-              </span>
             </div>
 
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs relative space-y-3 hover:shadow-lg hover:-translate-y-1 transition-all">
@@ -954,9 +951,6 @@ export function LandingPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Chụp ảnh CCCD và GPLX. Trí tuệ nhân tạo Gemini AI tự động bóc tách thông tin, <strong>không giữ giấy tờ gốc</strong>.
               </p>
-              <span className="text-[10px] font-bold text-purple-700 block pt-1 font-mono">
-                BPMN: M_CheckDocs &bull; AI Agent
-              </span>
             </div>
 
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs relative space-y-3 hover:shadow-lg hover:-translate-y-1 transition-all">
@@ -967,9 +961,6 @@ export function LandingPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Quét mã VietQR cọc 30% và ký hợp đồng điện tử trực tuyến. Hợp đồng pháp lý rõ ràng gửi thẳng về email của bạn.
               </p>
-              <span className="text-[10px] font-bold text-blue-700 block pt-1 font-mono">
-                BPMN: M_CreateDeposit &bull; M_Contract
-              </span>
             </div>
 
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs relative space-y-3 hover:shadow-lg hover:-translate-y-1 transition-all">
@@ -980,9 +971,6 @@ export function LandingPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Nhân viên bàn giao xe kiểm định 6 bước, chụp ảnh đối soát tình trạng xe. Bảo hiểm và cứu hộ 24/7 trọn chuyến đi.
               </p>
-              <span className="text-[10px] font-bold text-emerald-700 block pt-1 font-mono">
-                BPMN: M_InspectPre &bull; M_Handover
-              </span>
             </div>
           </div>
         </div>
@@ -998,8 +986,8 @@ export function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               6 Cam Kết Dịch Vụ Vàng Từ MOTO CARE
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Chúng tôi lo toàn bộ rủi ro kỹ thuật để bạn tận hưởng trọn vẹn từng cung đường du lịch và công tác.
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+              Chúng tôi bảo đảm toàn bộ rủi ro kỹ thuật để bạn an tâm tận hưởng trọn vẹn từng cung đường du lịch và công tác.
             </p>
           </div>
 
@@ -1067,58 +1055,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 7. ĐÁNH GIÁ KHÁCH HÀNG (TESTIMONIALS) */}
-      <section id="reviews" className="py-16 bg-slate-50 border-t border-slate-200/80 scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
-              Khách hàng nói về chúng tôi
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Trải Nghiệm Thực Tế Từ Người Thuê
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Hơn 3.200 chuyến đi an toàn và hài lòng được ghi nhận trên toàn hệ thống.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-lg transition-all"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                    ))}
-                  </div>
-
-                  <p className="text-xs text-slate-600 italic leading-relaxed">
-                    &ldquo;{t.comment}&rdquo;
-                  </p>
-                </div>
-
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-800 font-bold text-xs flex items-center justify-center">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">{t.name}</h4>
-                    <span className="text-[10px] text-slate-400 block">{t.city}</span>
-                    <span className="text-[10px] font-semibold text-brand-700 block mt-0.5">
-                      {t.vehicle}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 8. MẠNG LƯỚI TRẠM XE & GIỜ PHỤC VỤ (STATIONS & LOCATIONS) */}
+      {/* 7. MẠNG LƯỚI TRẠM XE & GIỜ PHỤC VỤ (STATIONS & LOCATIONS) */}
       <section id="stations" className="py-16 bg-white border-t border-slate-200/80 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -1128,8 +1065,8 @@ export function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Hệ Thống Trạm Xe &amp; Giao Tận Nơi
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              Nhận xe ngay khi bước xuống máy bay hoặc tàu hỏa, không phải di chuyển xa.
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+              Nhận xe tiện lợi ngay khi vừa bước xuống máy bay hoặc ga tàu hỏa — không phải di chuyển xa.
             </p>
           </div>
 
@@ -1184,6 +1121,57 @@ export function LandingPage() {
                 Phục vụ trực tiếp khách nghỉ dưỡng tại dãy khách sạn &amp; resort ven biển.
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. ĐÁNH GIÁ KHÁCH HÀNG (TESTIMONIALS) */}
+      <section id="reviews" className="py-16 bg-slate-50 border-t border-slate-200/80 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
+              Khách hàng nói về chúng tôi
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Trải Nghiệm Thực Tế Từ Người Thuê
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+              Hơn 3.200 chuyến đi an toàn và hài lòng được ghi nhận trên toàn hệ thống.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map((t, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-lg transition-all"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1">
+                    {[...Array(t.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-slate-600 italic leading-relaxed">
+                    &ldquo;{t.comment}&rdquo;
+                  </p>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-800 font-bold text-xs flex items-center justify-center">
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">{t.name}</h4>
+                    <span className="text-[10px] text-slate-400 block">{t.city}</span>
+                    <span className="text-[10px] font-semibold text-brand-700 block mt-0.5">
+                      {t.vehicle}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1251,7 +1239,7 @@ export function LandingPage() {
                 <span className="font-extrabold text-base text-white tracking-tight">MOTO CARE</span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Nền tảng cho thuê xe máy thế hệ mới. Ứng dụng công nghệ quy trình BPMN 2.0 và trí tuệ nhân tạo AI OCR để tối ưu trải nghiệm khách hàng.
+                Nền tảng cho thuê xe máy thế hệ mới. Ứng dụng quy trình số hóa tự động và trí tuệ nhân tạo AI để mang đến trải nghiệm thuận tiện và an tâm nhất cho khách hàng.
               </p>
               <div className="text-[11px] text-slate-500">
                 GPKD: 0402189689 do Sở Kế hoạch &amp; Đầu tư TP. Đà Nẵng cấp.
@@ -1342,11 +1330,11 @@ export function LandingPage() {
           <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
             <div>&copy; 2026 MOTO CARE VIỆT NAM. Bảo lưu mọi quyền.</div>
             <div className="flex items-center gap-4 text-[11px]">
-              <span>Tiêu chuẩn BPMN 2.0 To-Be</span>
+              <span>Dịch vụ chuẩn quốc tế</span>
               <span>&bull;</span>
-              <span>Gemini AI OCR Agent</span>
+              <span>AI OCR Xác thực</span>
               <span>&bull;</span>
-              <span>VietQR Auto Reconcile</span>
+              <span>Thanh toán VietQR Napas</span>
             </div>
           </div>
         </div>

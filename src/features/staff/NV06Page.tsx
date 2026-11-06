@@ -254,7 +254,7 @@ export function NV06Page() {
       // Kiểm tra nút tiếp theo từ state
       const nextState = await db.process_state.get(activeId);
       if (nextState?.waiting_node_ids.includes('M_VerifyDamage')) {
-        toast.success('Phát hiện sai lệch! Chuyển sang bước NV-07 Xác minh hư hỏng.');
+        toast.success('Phát hiện sai lệch! Chuyển sang khâu xác minh chi phí hư hỏng.');
         setTimeout(() => {
           navigate(`/nv/07?requestId=${activeId}`);
         }, 800);
@@ -530,7 +530,7 @@ export function NV06Page() {
                 {diffCount > 0 ? (
                   <span className="text-amber-700 font-semibold flex items-center gap-1">
                     <ShieldAlert className="w-4 h-4" />
-                    Có {diffCount} sai lệch: hệ thống sẽ chuyển sang bước NV-07 để ước tính chi phí.
+                    Có {diffCount} sai lệch: hệ thống sẽ chuyển sang khâu xác minh chi phí phát sinh.
                   </span>
                 ) : (
                   <span className="text-brand-700 font-semibold flex items-center gap-1">
@@ -546,7 +546,7 @@ export function NV06Page() {
                 loading={isSubmitting}
                 className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-semibold"
               >
-                Hoàn tất kiểm tra đối chiếu (M_CheckReturn)
+                Hoàn tất kiểm tra đối chiếu
               </Button>
             </div>
           </Card>
@@ -561,16 +561,16 @@ export function NV06Page() {
             Hồ sơ này đã hoàn tất khâu nhận và kiểm tra xe trả!
           </h3>
           <p className="text-sm text-slate-600 max-w-md mx-auto">
-            Hồ sơ hiện đang ở trạng thái <strong>{rentalReq?.status}</strong>. Bạn có thể quay lại Hộp việc cần làm
+            Hồ sơ hiện đang ở trạng thái <strong>{rentalReq ? getStatusLabel(rentalReq.status) : ''}</strong>. Bạn có thể quay lại Hộp việc cần làm
             hoặc chuyển sang màn hình tiếp theo để xử lý.
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => navigate('/nv/01')}>
-              Về Hộp việc cần làm (NV-01)
+              Về Danh sách việc cần làm
             </Button>
             {rentalReq?.status === 'CHO_KHACH_XAC_NHAN_BANG_KE' && (
               <Button onClick={() => navigate(`/kh/09?requestId=${requestId}`)}>
-                Xem bảng kê thanh lý (KH-09)
+                Xem bảng kê thanh lý
               </Button>
             )}
           </div>

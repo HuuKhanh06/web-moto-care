@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { engine } from '@/engine';
 import { useAuthStore } from '@/features/auth/authStore';
 import { Button, Card, Badge, Textarea, toast } from '@/components/ui';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDateTime, getStatusLabel } from '@/lib/format';
 import {
   PhoneCall,
   AlertTriangle,
@@ -130,7 +130,7 @@ export function NV08Page() {
         );
       } else {
         toast.warning(
-          'Đã ghi nhận công nợ (M_RecordDebt). Hồ sơ kết thúc tại trạng thái Công nợ chưa tất toán (M_END_DEBT).'
+          'Đã ghi nhận công nợ. Hồ sơ kết thúc tại trạng thái Công nợ chưa tất toán.'
         );
       }
 
@@ -186,9 +186,7 @@ export function NV08Page() {
             Xử Lý Khoản Chưa Thanh Toán / Quá Hạn Thu Thêm
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
-            Quy trình BPMN: <code className="font-mono text-brand-700 font-semibold">M_ManualExtra</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_GExtraDecision</code> &rarr;{' '}
-            <code className="font-mono text-brand-700 font-semibold">M_ReceiveExtra / M_RecordDebt</code>
+            Xử lý thu hồi chi phí phát sinh hoặc chuyển sang theo dõi công nợ khách hàng
           </p>
         </div>
 
@@ -310,7 +308,7 @@ export function NV08Page() {
                 <span className="font-bold text-slate-900 text-sm">Ghi nhận công nợ (Không thu được)</span>
               </div>
               <p className="text-xs text-slate-600 mt-1.5">
-                Khách từ chối thanh toán hoặc không liên lạc được. Hệ thống kích hoạt <code>M_RecordDebt</code> ghi nhận hồ sơ nợ chưa tất toán (<code>M_END_DEBT</code>).
+                Khách từ chối thanh toán hoặc không liên lạc được. Hệ thống sẽ ghi nhận hồ sơ nợ chưa tất toán để tiếp tục theo dõi.
               </p>
             </button>
           </div>
@@ -341,7 +339,7 @@ export function NV08Page() {
                   : 'bg-amber-600 hover:bg-amber-700'
               }`}
             >
-              <span>Xác nhận phương án (M_ManualExtra)</span>
+              <span>Xác nhận phương án xử lý</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -350,10 +348,10 @@ export function NV08Page() {
         <Card className="p-8 text-center space-y-4">
           <CheckCircle className="w-12 h-12 text-brand-600 mx-auto" />
           <h3 className="text-lg font-bold text-slate-900">
-            Hồ sơ không ở bước xử lý khoản chưa thanh toán (M_ManualExtra)!
+            Hồ sơ hiện không ở bước xử lý khoản chưa thanh toán!
           </h3>
           <p className="text-sm text-slate-600 max-w-md mx-auto">
-            Hồ sơ hiện ở trạng thái <strong>{rentalReq?.status}</strong>. Có thể khách hàng đang thực hiện thanh toán lại hoặc đã tất toán xong.
+            Hồ sơ hiện ở trạng thái <strong>{rentalReq ? getStatusLabel(rentalReq.status) : ''}</strong>. Có thể khách hàng đang thực hiện thanh toán lại hoặc đã tất toán xong.
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => navigate('/nv/01')}>

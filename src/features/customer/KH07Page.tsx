@@ -539,7 +539,7 @@ export function KH07Page() {
             </div>
 
             <p className="text-xs text-slate-600">
-              Mô phỏng khách hàng quét mã và ứng dụng ngân hàng gửi Webhook đối soát (GH_VerifyQR).
+              Mô phỏng khách hàng quét mã và hệ thống tự động xác nhận giao dịch chuyển khoản gia hạn.
             </p>
 
             <div className="space-y-3">

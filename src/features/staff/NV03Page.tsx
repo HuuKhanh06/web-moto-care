@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
+import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import type { RentalRequest, Vehicle, Inspection } from '@/db/types';
@@ -58,6 +59,7 @@ export function NV03Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
+  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -298,9 +300,11 @@ export function NV03Page() {
           <Badge variant={getStatusBadgeVariant(request.status)}>
             {getStatusLabel(request.status)}
           </Badge>
-          <Badge variant="neutral" className="text-slate-600">
-            BPMN: {currentNodeId}
-          </Badge>
+          {isBpmnMode && (
+            <Badge variant="neutral" className="text-slate-600 font-mono">
+              BPMN: {currentNodeId}
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -376,7 +380,7 @@ export function NV03Page() {
             <AlertTriangle className="h-6 w-6 text-rose-600 shrink-0 mt-0.5" />
             <div>
               <h3 className="text-base font-bold text-rose-900">
-                Khu vực khắc phục / Đổi xe (M_Rework)
+                Khu vực khắc phục &amp; Đổi xe kỹ thuật
               </h3>
               <p className="text-xs text-rose-700">
                 Xe chưa đạt tiêu chuẩn kỹ thuật. Nhân viên kỹ thuật cần thực hiện khắc phục tại chỗ hoặc đổi sang xe khác cùng loại.
@@ -430,7 +434,7 @@ export function NV03Page() {
                 className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Xác nhận khắc phục & Kiểm tra lại (M_InspectPre)
+                Xác nhận khắc phục &amp; Kiểm tra lại
               </Button>
             </div>
           </div>
@@ -619,12 +623,12 @@ export function NV03Page() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h4 className="font-bold text-sm text-slate-900">
-                  Kết luận kiểm tra kỹ thuật (Cổng BPMN M_G04)
+                  Kết luận kiểm tra kỹ thuật
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {isAllChecklistPassed
                     ? 'Tất cả hạng mục đều đạt chuẩn kỹ thuật sẵn sàng bàn giao.'
-                    : 'Một số hạng mục chưa đạt, hồ sơ sẽ chuyển sang khắc phục (M_Rework).'}
+                    : 'Một số hạng mục chưa đạt, hồ sơ sẽ chuyển sang quy trình khắc phục / đổi xe.'}
                 </p>
               </div>
 

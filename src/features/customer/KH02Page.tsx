@@ -28,6 +28,7 @@ import {
 } from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
+import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   FileText,
@@ -47,6 +48,7 @@ export function KH02Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
+  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -131,7 +133,7 @@ export function KH02Page() {
       });
       setIsAppliedToProfile(false);
 
-      toast.success(`AI OCR bóc tách thành công: ${res.routing.action} (Độ tin cậy m = ${((res.minimum_required_confidence || 0) * 100).toFixed(0)}%)`);
+      toast.success('AI OCR bóc tách và xác thực thông tin giấy tờ thành công!');
     } catch (err: unknown) {
       console.error('Lỗi AI OCR:', err);
       toast.error('Lỗi khi chạy AI OCR');
@@ -458,7 +460,7 @@ export function KH02Page() {
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-extrabold text-slate-900 text-sm">AI Agent OCR (T02b &bull; M_CheckDocs)</span>
+                <span className="font-extrabold text-slate-900 text-sm">AI Agent OCR Trích Xuất &amp; Thẩm Định</span>
                 <span className="block text-xs text-slate-500">Bóc tách thực thể CCCD/GPLX & thẩm định độ tin cậy kép</span>
               </div>
             </div>
@@ -623,38 +625,40 @@ export function KH02Page() {
             </div>
           )}
 
-          {/* Các nút giả lập kịch bản demo */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-purple-100/70 text-[11px] text-slate-500">
-            <span className="font-semibold text-slate-600">Thử kịch bản demo:</span>
-            <button
-              type="button"
-              onClick={() => handleRunAiOcr('HIGH_CONFIDENCE')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold border border-emerald-200 transition-colors"
-            >
-              m=96% (Tự động)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRunAiOcr('MEDIUM_CONFIDENCE')}
-              className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-bold border border-amber-200 transition-colors"
-            >
-              m=87% (Cần duyệt)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRunAiOcr('LOW_CONFIDENCE')}
-              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-800 hover:bg-red-100 text-[11px] font-bold border border-red-200 transition-colors"
-            >
-              m=65% (Chụp lại)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRunAiOcr('NAME_MISMATCH')}
-              className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-bold border border-amber-200 transition-colors"
-            >
-              Lệch tên
-            </button>
-          </div>
+          {/* Các nút giả lập kịch bản demo (chỉ hiển thị khi bật chế độ BPMN) */}
+          {isBpmnMode && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-purple-100/70 text-[11px] text-slate-500">
+              <span className="font-semibold text-slate-600">Thử kịch bản demo:</span>
+              <button
+                type="button"
+                onClick={() => handleRunAiOcr('HIGH_CONFIDENCE')}
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold border border-emerald-200 transition-colors"
+              >
+                m=96% (Tự động)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRunAiOcr('MEDIUM_CONFIDENCE')}
+                className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-bold border border-amber-200 transition-colors"
+              >
+                m=87% (Cần duyệt)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRunAiOcr('LOW_CONFIDENCE')}
+                className="px-2.5 py-1 rounded-lg bg-red-50 text-red-800 hover:bg-red-100 text-[11px] font-bold border border-red-200 transition-colors"
+              >
+                m=65% (Chụp lại)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRunAiOcr('NAME_MISMATCH')}
+                className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-bold border border-amber-200 transition-colors"
+              >
+                Lệch tên
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Checkbox chấp thuận điều khoản */}

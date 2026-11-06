@@ -126,9 +126,9 @@ export function QL02Page() {
       );
 
       if (decision === 'Có phương án') {
-        toast.success('Đã duyệt phương án xử lý! Chuyển nhân viên ghi nhận chi phí (NV-10).');
+        toast.success('Đã duyệt phương án xử lý! Chuyển nhân viên ghi nhận chi phí.');
       } else {
-        toast.warning('Đã quyết định thu hồi xe! Kích hoạt kết thúc sớm (M_EarlyBoundary) sang Trả xe.');
+        toast.warning('Đã quyết định thu hồi xe! Chuyển hồ sơ sang quy trình nhận xe trả sớm.');
       }
       await loadData();
     } catch (err: unknown) {
@@ -149,11 +149,11 @@ export function QL02Page() {
               QL-02
             </span>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              Xử lý sự cố vượt SLA / Hết đối tác cứu hộ (SC_Escalate)
+              Xử lý sự cố vượt SLA / Hết đối tác cứu hộ
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Khu vực can thiệp của Quản lý khi mạng lưới đối tác từ chối hết hoặc xử lý quá 2 giờ (Cổng SC_GResolve).
+            Khu vực can thiệp của Quản lý khi mạng lưới đối tác từ chối hết hoặc xử lý quá hạn định mức.
           </p>
         </div>
 
@@ -198,7 +198,7 @@ export function QL02Page() {
                         Sự cố leo thang #{inc.incident_code}
                       </h3>
                       <p className="text-xs text-rose-700">
-                        Lý do leo thang: Hết đối tác cứu hộ khả dụng hoặc Quá hạn SLA 2 giờ (SC_ResultTimer)
+                        Lý do leo thang: Hết đối tác cứu hộ khả dụng hoặc quá hạn thời gian xử lý sự cố
                       </p>
                     </div>
                   </div>
@@ -294,7 +294,7 @@ export function QL02Page() {
                 <div className="rounded-xl border border-rose-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <h4 className="font-bold text-sm text-slate-900">
-                      Quyết định của Quản lý (Cổng BPMN SC_GResolve)
+                      Quyết định của Quản lý
                     </h4>
                     <p className="text-xs text-slate-500">
                       Chọn &quot;Có phương án&quot; để tiếp tục khắc phục hoặc &quot;Không&quot; để thu hồi xe và hướng dẫn khách trả xe sớm.

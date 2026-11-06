@@ -96,9 +96,9 @@ export function DT01Page() {
       );
 
       if (status === 'ACCEPTED') {
-        toast.success(`Đối tác ${item.partner?.name || ''} đã tiếp nhận cứu hộ (SC_ReceiveAck)!`);
+        toast.success(`Đối tác ${item.partner?.name || ''} đã tiếp nhận cứu hộ!`);
       } else {
-        toast.warning(`Đối tác ${item.partner?.name || ''} từ chối. Hệ thống sẽ điều phối đối tác tiếp theo (SC_TryNext).`);
+        toast.warning(`Đối tác ${item.partner?.name || ''} từ chối. Hệ thống sẽ điều phối đối tác tiếp theo.`);
       }
       await loadData();
     } catch (err: unknown) {
@@ -123,7 +123,7 @@ export function DT01Page() {
         currentActor
       );
 
-      toast.success('Đã gửi báo cáo kết quả cứu hộ hoàn tất (SC_ReceiveResult)!');
+      toast.success('Đã gửi báo cáo kết quả cứu hộ hoàn tất!');
       await loadData();
     } catch (err: unknown) {
       console.error('Lỗi báo cáo kết quả:', err);
@@ -139,7 +139,7 @@ export function DT01Page() {
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 flex items-start gap-3">
         <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <strong className="font-bold">Màn hình mô phỏng Cổng đối tác (DT-01):</strong> Trong môi trường sản phẩm thực tế, đối tác cứu hộ tương tác tự động qua Webhook có chữ ký bảo mật HMAC-SHA256 hoặc ứng dụng đối tác riêng. Màn hình này phục vụ ban giám khảo và người dùng demo thao tác phản hồi thay đối tác cứu hộ theo đúng tiến trình BPMN.
+          <strong className="font-bold">Màn hình mô phỏng Cổng đối tác (DT-01):</strong> Trong môi trường sản phẩm thực tế, đối tác cứu hộ tương tác tự động qua Webhook có chữ ký bảo mật HMAC-SHA256 hoặc ứng dụng đối tác riêng. Màn hình này phục vụ ban giám khảo và người dùng demo thao tác phản hồi thay đối tác cứu hộ theo đúng tiến trình.
         </div>
       </div>
 
@@ -155,7 +155,7 @@ export function DT01Page() {
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Tiếp nhận điều phối sự cố (SC_ReceiveAck) và báo cáo kết quả hỗ trợ kỹ thuật (SC_ReceiveResult).
+            Tiếp nhận điều phối sự cố và báo cáo kết quả hỗ trợ kỹ thuật.
           </p>
         </div>
 
@@ -240,7 +240,7 @@ export function DT01Page() {
                 {isWaitingAck && (
                   <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t">
                     <p className="text-xs text-slate-500 italic">
-                      Đối tác có 15 phút để phản hồi (SC_AckTimer). Nếu từ chối, hệ thống chuyển sang đối tác kế tiếp.
+                      Đối tác có 15 phút để phản hồi tiếp nhận. Nếu từ chối, hệ thống tự động chuyển sang đối tác kế tiếp.
                     </p>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -266,7 +266,7 @@ export function DT01Page() {
                         className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs"
                       >
                         <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                        Tiếp nhận cứu hộ (SC_ReceiveAck)
+                        Tiếp nhận cứu hộ
                       </Button>
                     </div>
                   </div>
@@ -277,7 +277,7 @@ export function DT01Page() {
                   <div className="pt-2 space-y-3 border-t">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Ghi chú kết quả xử lý tại hiện trường (SC_ReceiveResult)
+                        Ghi chú kết quả xử lý tại hiện trường
                       </label>
                       <Textarea
                         placeholder="Nhập nội dung xử lý (ví dụ: Đã thay săm lốp mới, tăng xích, kiểm tra dầu nhớt...)"
@@ -297,7 +297,7 @@ export function DT01Page() {
                         className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs"
                       >
                         <Send className="mr-1.5 h-3.5 w-3.5" />
-                        Báo kết quả cứu hộ hoàn tất (SC_ReceiveResult)
+                        Báo kết quả cứu hộ hoàn tất
                       </Button>
                     </div>
                   </div>
