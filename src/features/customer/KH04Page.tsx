@@ -1,6 +1,5 @@
 // src/features/customer/KH04Page.tsx
-// Màn hình KH-04: Ký hợp đồng điện tử (M_Contract, M_WaitSign)
-// Xem trước hợp đồng chuẩn A4, in/tải PDF, đồng hồ đếm ngược 24h và ô ký chữ ký số (Canvas/Tên)
+// Màn hình 4: Ký hợp đồng điện tử
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -12,20 +11,13 @@ import type { RentalRequest, Contract, Vehicle, Profile, ProcessState } from '@/
 import {
   Card,
   Button,
-  Badge,
   Input,
-  Stepper,
   toast,
+  BookingProgress,
+  StatusChip,
+  StickyBottomBar,
 } from '@/components/ui';
-import {
-  formatCurrency,
-  formatDateTime,
-  getStatusBadgeVariant,
-  getStatusLabel,
-} from '@/lib/format';
-import { getVehicleImageUrl } from '@/lib/vehicleImages';
-import { CUSTOMER_RENTAL_STEPS } from './constants';
-import { BpmnBadge } from '@/components/common/BpmnBadge';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import {
   Clock,
   Printer,
@@ -34,7 +26,9 @@ import {
   ShieldAlert,
   Eraser,
   Type,
+  FileCheck,
 } from 'lucide-react';
+import { COPY } from '@/copy';
 
 export function KH04Page() {
   const [searchParams] = useSearchParams();
@@ -47,11 +41,10 @@ export function KH04Page() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [customer, setCustomer] = useState<Profile | null>(null);
   const [processState, setProcessState] = useState<ProcessState | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(86400); // 24 giờ
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(86400);
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
 
-  // Chế độ ký: 'draw' (vẽ) hoặc 'type' (gõ tên)
   const [signMode, setSignMode] = useState<'draw' | 'type'>('draw');
   const [typedName, setTypedName] = useState('');
   const [isCanvasEmpty, setIsCanvasEmpty] = useState(true);
@@ -97,24 +90,27 @@ export function KH04Page() {
     loadData();
   }, [loadData]);
 
-  // Cập nhật đồng hồ đếm ngược 24h
+  // Đồng hồ đếm ngược 24h
   useEffect(() => {
-    if (!contract?.expires_at) return;
+    if (!contract || !contract.expires_at) return;
 
-    const expiresTime = contract.expires_at;
-    const updateCountdown = () => {
+    const updateTimer = () => {
       const now = clock.now();
-      const due = new Date(expiresTime);
-      const diff = Math.max(0, Math.floor((due.getTime() - now.getTime()) / 1000));
-      setRemainingSeconds(diff);
+      const expire = new Date(contract.expires_at || '');
+      const diffSec = Math.max(0, Math.floor((expire.getTime() - now.getTime()) / 1000));
+      setRemainingSeconds(diffSec);
+
+      if (diffSec <= 0) {
+        loadData();
+      }
     };
 
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [contract?.expires_at]);
+  }, [contract, loadData]);
 
-  // Canvas drawing event handlers
+  // Khởi tạo Canvas vẽ chữ ký
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -145,7 +141,7 @@ export function KH04Page() {
 
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#006233'; // Brand-700
+    ctx.strokeStyle = '#0f766e';
     ctx.lineTo(clientX - rect.left, clientY - rect.top);
     ctx.stroke();
   };
@@ -163,23 +159,22 @@ export function KH04Page() {
     setIsCanvasEmpty(true);
   };
 
-  // Ký hợp đồng
   const handleSignContract = async () => {
-    if (!requestId || !currentActor) return;
+    if (!requestId || !contract || !currentActor) return;
 
-    let signatureUrl = '';
+    let signatureData = '';
     if (signMode === 'draw') {
       if (isCanvasEmpty) {
         toast.warning('Vui lòng vẽ chữ ký của bạn trước khi xác nhận');
         return;
       }
-      signatureUrl = canvasRef.current?.toDataURL('image/png') || 'blob:signature.png';
+      signatureData = canvasRef.current?.toDataURL('image/png') || 'signature_drawn';
     } else {
       if (!typedName.trim()) {
-        toast.warning('Vui lòng nhập họ tên để ký xác nhận');
+        toast.warning('Vui lòng nhập đầy đủ họ tên để ký số');
         return;
       }
-      signatureUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(typedName.trim())}`;
+      signatureData = `Chữ ký số: ${typedName.trim()}`;
     }
 
     setSigning(true);
@@ -187,12 +182,14 @@ export function KH04Page() {
       await engine.complete(
         requestId,
         'M_WaitSign',
-        { signature_url: signatureUrl },
+        {
+          signature_url: signatureData,
+        },
         currentActor
       );
 
-      toast.success('Ký hợp đồng thành công! Lịch thuê đã được khóa và chuyển giao kỹ thuật viên.');
-      await loadData();
+      toast.success('Ký hợp đồng thành công! Lịch thuê đã được xác nhận.');
+      navigate(`/kh/05?requestId=${requestId}`);
     } catch (err: unknown) {
       console.error('Lỗi khi ký hợp đồng:', err);
       const msg = err instanceof Error ? err.message : 'Có lỗi khi ký hợp đồng';
@@ -204,8 +201,9 @@ export function KH04Page() {
 
   if (loading) {
     return (
-      <div className="py-12 flex justify-center">
-        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
+      <div className="max-w-2xl mx-auto py-16 text-center text-slate-500">
+        <FileCheck className="w-8 h-8 mx-auto animate-pulse text-teal-600 mb-2" />
+        <span className="text-sm font-normal">Đang tạo văn bản hợp đồng...</span>
       </div>
     );
   }
@@ -213,241 +211,146 @@ export function KH04Page() {
   if (!request) return null;
 
   const isExpired = request.status === 'DA_HUY' && request.closed_reason === 'QUA_HAN_KY';
-  const isSigned = contract?.status === 'SIGNED' || request.status === 'CHO_BAN_GIAO' || request.status === 'CHO_KHACH_NHAN' || request.status === 'DANG_THUE';
+  const isSigned = contract?.status === 'SIGNED' || ['CHO_BAN_GIAO', 'CHO_KHACH_NHAN', 'DANG_THUE'].includes(request.status);
 
   const hours = Math.floor(remainingSeconds / 3600);
   const minutes = Math.floor((remainingSeconds % 3600) / 60);
   const seconds = remainingSeconds % 60;
   const timerStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
+  const cccdNumber = String(processState?.variables?.customer_id_number || '079095012345');
+  const licenseClass = String(processState?.variables?.customer_license_class || 'A1');
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-20 sm:pb-6">
-      {/* Stepper */}
-      <Card className="p-4 border-slate-200/80 shadow-sm glass-surface">
-        <Stepper steps={CUSTOMER_RENTAL_STEPS} currentStepIndex={3} />
-      </Card>
+    <div className="space-y-6 max-w-2xl mx-auto pb-24 md:pb-8">
+      {/* 4 Bước tiến trình */}
+      <BookingProgress currentStep={4} />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
-              Bước 4 &bull; Ký hợp đồng điện tử
-            </span>
-            <BpmnBadge nodeId="M_Contract" name="Ký số" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ký hợp đồng thuê xe</h1>
-          </div>
-          <p className="text-sm text-slate-500">
-            Xem điều khoản pháp lý và ký số trực tuyến để khóa lịch phương tiện
-          </p>
-        </div>
-
+      {/* Tiêu đề trang */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+          {COPY.TITLES.CONTRACT}
+        </h1>
         <div className="flex items-center gap-2">
-          <Badge variant={getStatusBadgeVariant(request.status)} size="md">
-            {getStatusLabel(request.status)}
-          </Badge>
+          <StatusChip
+            status={isSigned ? 'success' : isExpired ? 'error' : 'pending'}
+            label={isSigned ? 'Đã ký hợp lệ' : isExpired ? 'Quá hạn ký' : 'Chờ ký số'}
+          />
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 shadow-xs"
-            title="In hoặc lưu file PDF từ trình duyệt"
+            className="hidden sm:inline-flex"
+            title="In hoặc tải PDF"
           >
-            <Printer className="w-4 h-4 text-slate-600" />
-            <span>In / Tải PDF</span>
+            <Printer className="w-4 h-4 mr-1.5" />
+            <span>In PDF</span>
           </Button>
         </div>
       </div>
 
-      {/* Cảnh báo quá hạn 24 giờ */}
       {isExpired && (
-        <Card className="p-5 border-red-300 bg-red-50/80 text-red-900 space-y-2 shadow-sm rounded-2xl">
-          <div className="flex items-center gap-2 font-bold text-sm text-red-800">
-            <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
-            Hợp đồng đã hết hạn ký nhận (24 giờ)
+        <Card className="p-4 md:p-6 border border-rose-200 bg-rose-50 text-rose-900 space-y-2 rounded-xl">
+          <div className="flex items-center gap-2 font-semibold text-base text-rose-800">
+            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>Hợp đồng đã quá hạn 24 giờ</span>
           </div>
-          <p className="text-xs text-red-700 leading-relaxed">
-            Hệ thống đã tự động hoàn tiền đặt cọc vào tài khoản của quý khách do quá hạn ký hợp đồng.
+          <p className="text-sm text-rose-700">
+            Yêu cầu đã tự động kết thúc và tiền cọc được hoàn về tài khoản của bạn.
           </p>
         </Card>
       )}
 
-      {/* Thông báo nếu đã ký */}
       {isSigned && (
-        <Card className="p-4 border-emerald-300 bg-emerald-50/90 text-emerald-900 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2 text-xs sm:text-sm">
+        <Card className="p-4 md:p-6 border border-emerald-200 bg-emerald-50 text-emerald-900 flex items-center justify-between rounded-xl">
+          <div className="flex items-center gap-2 text-sm font-semibold">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>
-              Hợp đồng điện tử đã được ký kết thành công vào lúc <strong>{formatDateTime(contract?.signed_at || request.start_at)}</strong>.
-            </span>
+            <span>Hợp đồng đã được ký kết thành công!</span>
           </div>
-          <Badge variant="success">ĐÃ KÝ SỐ HỢP LỆ</Badge>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => navigate(`/kh/05?requestId=${requestId}`)}
+          >
+            Nhận xe
+          </Button>
         </Card>
       )}
 
-      {/* Đếm ngược 24h */}
       {!isSigned && !isExpired && (
-        <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-center justify-between text-xs text-amber-900 shadow-xs">
-          <div className="flex items-center gap-2 font-medium">
-            <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-            <span>Thời hạn hoàn tất ký hợp đồng điện tử:</span>
+        <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between text-sm text-amber-900">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-600" />
+            <span>Thời hạn hoàn tất ký hợp đồng:</span>
           </div>
-          <span className="font-mono font-bold text-sm text-amber-950 bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 shadow-xs">
+          <span className="font-mono font-semibold text-amber-950">
             {timerStr}
           </span>
         </div>
       )}
 
-      {/* KHUNG XEM TRƯỚC HỢP ĐỒNG KHỔ A4 (Preview Document) */}
-      <Card className="p-8 sm:p-12 border-slate-200/80 bg-white shadow-xl text-slate-900 font-serif leading-relaxed text-xs sm:text-sm space-y-6 rounded-3xl relative overflow-hidden">
-        {/* Dấu chìm bảo chứng an toàn */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.03] select-none text-center">
-          <div className="text-8xl font-black uppercase tracking-widest text-brand-900 font-sans">MOTO CARE</div>
-        </div>
-
-        {/* Quốc hiệu & Tiêu ngữ */}
-        <div className="text-center space-y-1 font-sans">
-          <div className="font-bold uppercase tracking-wider text-xs">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-          <div className="font-semibold text-xs text-slate-700">Độc lập - Tự do - Hạnh phúc</div>
-          <div className="w-24 h-0.5 bg-slate-400 mx-auto mt-1" />
-        </div>
-
-        {/* Tiêu đề hợp đồng */}
-        <div className="text-center pt-4 font-sans">
-          <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900">
-            HỢP ĐỒNG CHO THUÊ XE MÁY ĐIỆN TỬ
+      {/* BẢN TÓM TẮT HỢP ĐỒNG THƯƠNG MẠI */}
+      <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
+        <div className="border-b border-slate-100 pb-3 text-center">
+          <span className="text-[13px] font-semibold text-teal-700 uppercase tracking-wider block">
+            CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+          </span>
+          <h2 className="text-lg font-semibold text-slate-900 mt-1">
+            HỢP ĐỒNG THUÊ XE MÁY ĐIỆN TỬ
           </h2>
-          <div className="text-xs text-slate-500 font-mono mt-1">
-            Số: MC-HD/{request.id.slice(0, 8).toUpperCase()}/{new Date().getFullYear()}
+          <span className="text-[13px] text-slate-500">Mã hợp đồng: #{contract?.id.slice(-8).toUpperCase()}</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm divide-y sm:divide-y-0 divide-slate-100">
+          <div className="space-y-1.5">
+            <span className="font-semibold text-slate-900 block">BÊN CHO THUÊ (BÊN A)</span>
+            <p className="text-slate-700">Công ty Cổ phần MotoCare Đà Nẵng</p>
+            <p className="text-[13px] text-slate-500">Hotline hỗ trợ: 1900 6868</p>
+          </div>
+
+          <div className="space-y-1.5 pt-2 sm:pt-0">
+            <span className="font-semibold text-slate-900 block">BÊN THUÊ XE (BÊN B)</span>
+            <p className="text-slate-800 font-semibold">{customer?.full_name || 'Khách hàng'}</p>
+            <p className="text-[13px] text-slate-500">CCCD: {cccdNumber} · Hạng bằng: {licenseClass}</p>
           </div>
         </div>
 
-        {/* Căn cứ pháp lý */}
-        <div className="italic text-[11px] text-slate-600 text-justify">
-          - Căn cứ Bộ luật Dân sự số 91/2015/QH13 ngày 24/11/2015 và các văn bản quy định hiện hành;
-          <br />- Căn cứ nhu cầu và khả năng thực tế của hai bên tham gia giao dịch.
-        </div>
-
-        {/* Hai bên ký kết */}
-        <div className="space-y-3 font-sans text-xs">
-          <div>
-            <strong className="block text-slate-900 font-bold uppercase text-[12px]">BÊN CHO THUÊ (BÊN A):</strong>
-            <div className="mt-1 pl-3 space-y-0.5 text-slate-700">
-              <div>Đơn vị: <strong>CÔNG TY CỔ PHẦN DỊCH VỤ MOTO CARE</strong></div>
-              <div>Địa chỉ: 123 Đường Điện Biên Phủ, Phường 15, Quận Bình Thạnh, TP. Hồ Chí Minh</div>
-              <div>Hotline / Cứu hộ: 1900 8899 &bull; Đại diện pháp lý: Ban Quản lý Vận hành</div>
-            </div>
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-slate-500">Phương tiện:</span>
+            <span className="font-semibold text-slate-900">{vehicle?.model} ({vehicle?.plate})</span>
           </div>
-
-          <div>
-            <strong className="block text-slate-900 font-bold uppercase text-[12px]">BÊN THUÊ XE (BÊN B):</strong>
-            <div className="mt-1 pl-3 space-y-0.5 text-slate-700">
-              <div>Họ và tên: <strong>{customer?.full_name || 'Khách thuê xe'}</strong></div>
-              <div>Số Căn cước công dân (CCCD): <strong>{(processState?.variables?.extracted_id_number as string) || '079095012345 (Đã định danh AI OCR)'}</strong></div>
-              <div>Hạng Giấy phép lái xe: <strong>{(processState?.variables?.extracted_license_class as string) || 'A1'}</strong></div>
-              <div>Số điện thoại liên hệ: <strong>{customer?.phone || '0908 123 456'}</strong></div>
-              <div>Địa chỉ thường trú: <strong>{(processState?.variables?.extracted_address as string) || 'TP. Hồ Chí Minh'}</strong></div>
-            </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">Thời gian thuê:</span>
+            <span className="font-semibold text-slate-900">{formatDateTime(request.start_at)} đến {formatDateTime(request.end_at)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">Tổng tiền thuê:</span>
+            <span className="font-semibold text-slate-900">{formatCurrency(request.total_price || 0)}</span>
+          </div>
+          <div className="flex justify-between border-t border-slate-200 pt-2">
+            <span className="text-slate-700 font-semibold">Tiền cọc đã thanh toán:</span>
+            <span className="font-semibold text-teal-700">{formatCurrency(request.deposit_amount || 0)}</span>
           </div>
         </div>
 
-        {/* Điều khoản 1: Đối tượng & Thời gian */}
-        <div className="space-y-2 font-sans text-xs text-slate-800">
-          <strong className="block font-bold text-slate-900 text-[12px]">ĐIỀU 1: ĐỐI TƯỢNG VÀ THỜI HẠN THUÊ</strong>
-          <div className="pl-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div>- Phương tiện: <strong>{vehicle ? `${vehicle.model} (Biển số: ${vehicle.plate})` : 'Phân khúc xe máy Moto Care'}</strong></div>
-              <div>- Thời gian nhận xe: <strong>{formatDateTime(request.start_at)}</strong></div>
-              <div>- Thời gian trả xe dự kiến: <strong>{formatDateTime(request.end_at)}</strong></div>
-            </div>
-            {vehicle && (
-              <div className="w-24 h-16 rounded-xl bg-slate-50 border border-slate-200/80 p-1 shrink-0 overflow-hidden flex items-center justify-center">
-                <img
-                  src={getVehicleImageUrl(vehicle.model)}
-                  alt={vehicle.model}
-                  className="h-full w-full object-contain"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Điều khoản 2: Giá trị và thanh toán */}
-        <div className="space-y-2 font-sans text-xs text-slate-800">
-          <strong className="block font-bold text-slate-900 text-[12px]">ĐIỀU 2: GIÁ THUÊ VÀ TIỀN ĐẶT CỌC</strong>
-          <div className="pl-3 space-y-1">
-            <div>- Đơn giá thuê: <strong>{formatCurrency(vehicle?.daily_price || 120000)} / ngày</strong></div>
-            <div>- Tổng tiền thuê dự tính: <strong>{formatCurrency(request.total_price)}</strong></div>
-            <div>
-              - Tiền đặt cọc bảo chứng hợp đồng (30%): <strong className="text-amber-700">{formatCurrency(request.deposit_amount)}</strong> (Đã đối soát thanh toán).
-            </div>
-          </div>
-        </div>
-
-        {/* Điều khoản 3: Quyền và nghĩa vụ */}
-        <div className="space-y-2 font-sans text-xs text-slate-700 text-justify">
-          <strong className="block font-bold text-slate-900 text-[12px]">ĐIỀU 3: QUYỀN VÀ TRÁCH NHIỆM</strong>
-          <div className="pl-3 space-y-1">
-            <div>1. Bên B có trách nhiệm kiểm tra hiện trạng xe khi nhận, tuân thủ Luật Giao thông đường bộ và giữ gìn xe trong suốt thời gian thuê.</div>
-            <div>2. Trong trường hợp xảy ra sự cố ngoài ý muốn hoặc hư hỏng kỹ thuật, Bên B kích hoạt tính năng cứu hộ khẩn cấp trên ứng dụng để được hỗ trợ kịp thời.</div>
-            <div>3. Tiền cọc sẽ được hoàn trả 100% khi thanh lý hợp đồng nếu xe được trả đúng hiện trạng ban đầu.</div>
-          </div>
-        </div>
-
-        {/* Chữ ký hai bên */}
-        <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-8 text-center font-sans text-xs">
-          <div>
-            <div className="font-bold uppercase text-slate-800">ĐẠI DIỆN BÊN A</div>
-            <div className="text-[11px] text-slate-500 italic mt-0.5">Đã ký số điện tử</div>
-            <div className="h-16 flex items-center justify-center">
-              <span className="font-serif italic font-bold text-brand-700 text-sm border-2 border-brand-600 px-3 py-1 rounded-lg rotate-[-3deg] shadow-xs">
-                MOTO CARE CO., LTD
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <div className="font-bold uppercase text-slate-800">ĐẠI DIỆN BÊN B</div>
-            <div className="text-[11px] text-slate-500 italic mt-0.5">Khách thuê xe</div>
-            <div className="h-16 flex items-center justify-center">
-              {isSigned ? (
-                <div className="text-center">
-                  <span className="font-serif italic font-bold text-emerald-700 text-sm">
-                    {customer?.full_name}
-                  </span>
-                  <div className="text-[10px] text-emerald-600 font-mono">Đã xác nhận ký điện tử</div>
-                </div>
-              ) : (
-                <span className="text-slate-400 italic text-xs">(Chưa ký)</span>
-              )}
-            </div>
-          </div>
+        <div className="text-[13px] text-slate-500 leading-normal space-y-1">
+          <p>• Bên B cam kết điều khiển phương tiện đúng luật giao thông và hoàn trả xe đúng hẹn.</p>
+          <p>• Tiền cọc được hoàn trả ngay khi hoàn tất bàn giao xe và kiểm tra không có hư hại phát sinh.</p>
         </div>
       </Card>
 
-      {/* KHU VỰC KÝ CHỮ KÝ SỐ (Dành cho khách hàng) */}
+      {/* KHUNG KÝ CHỮ KÝ SỐ */}
       {!isSigned && !isExpired && (
-        <Card className="p-6 border-slate-200/80 space-y-4 glass-surface shadow-md">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                <PenTool className="w-5 h-5 text-brand-600" />
-                Ký xác nhận hợp đồng điện tử
-              </h3>
-              <p className="text-xs text-slate-500">
-                Lựa chọn vẽ chữ ký trực tiếp hoặc nhập họ tên để hoàn tất cam kết.
-              </p>
-            </div>
-
-            {/* Toggle chế độ ký */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl self-start sm:self-auto text-xs">
+        <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-base font-semibold text-slate-900">Ký xác nhận hợp đồng</h2>
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-sm">
               <button
                 type="button"
                 onClick={() => setSignMode('draw')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                  signMode === 'draw'
-                    ? 'bg-white text-brand-800 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                className={`px-3 py-1 rounded-md text-sm font-semibold transition-all cursor-pointer ${
+                  signMode === 'draw' ? 'bg-white text-teal-700 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 <span className="flex items-center gap-1">
@@ -459,28 +362,25 @@ export function KH04Page() {
               <button
                 type="button"
                 onClick={() => setSignMode('type')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
-                  signMode === 'type'
-                    ? 'bg-white text-brand-800 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                className={`px-3 py-1 rounded-md text-sm font-semibold transition-all cursor-pointer ${
+                  signMode === 'type' ? 'bg-white text-teal-700 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 <span className="flex items-center gap-1">
                   <Type className="w-3.5 h-3.5" />
-                  Nhập họ tên
+                  Gõ họ tên
                 </span>
               </button>
             </div>
           </div>
 
-          {/* Ô ký dạng vẽ Canvas */}
           {signMode === 'draw' ? (
             <div className="space-y-2">
-              <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-white overflow-hidden relative shadow-inner">
+              <div className="border border-slate-300 rounded-xl bg-white overflow-hidden relative">
                 <canvas
                   ref={canvasRef}
                   width={600}
-                  height={160}
+                  height={150}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
@@ -488,80 +388,73 @@ export function KH04Page() {
                   onTouchStart={startDrawing}
                   onTouchMove={draw}
                   onTouchEnd={stopDrawing}
-                  className="w-full h-40 cursor-crosshair touch-none"
+                  className="w-full h-36 cursor-crosshair touch-none"
                 />
-
                 {isCanvasEmpty && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs italic">
-                    Dùng chuột hoặc ngón tay để vẽ chữ ký của bạn vào đây
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-sm">
+                    Dùng ngón tay hoặc chuột vẽ chữ ký vào đây
                   </div>
                 )}
               </div>
 
               <div className="flex justify-end">
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={clearCanvas}
-                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-600"
+                  className="flex items-center gap-1 text-[13px] text-slate-500 hover:text-rose-600 cursor-pointer"
                 >
                   <Eraser className="w-3.5 h-3.5" />
-                  Xóa vẽ lại
-                </Button>
+                  <span>Xóa vẽ lại</span>
+                </button>
               </div>
             </div>
           ) : (
-            /* Ô ký dạng gõ tên */
             <div className="space-y-2">
               <Input
                 label="Họ và tên người ký"
                 value={typedName}
                 onChange={(e) => setTypedName(e.target.value)}
-                placeholder="Nhập đầy đủ họ tên như trên CCCD"
+                placeholder="Nhập họ và tên như trên CCCD"
                 required
               />
-              <div className="p-3 bg-slate-50 rounded-xl text-center font-serif italic text-base text-brand-800 border border-slate-200">
-                {typedName.trim() || 'Chữ ký điện tử mô phỏng'}
+              <div className="p-3 bg-slate-50 rounded-xl text-center italic text-base text-teal-800 border border-slate-200">
+                {typedName.trim() || 'Chữ ký điện tử'}
               </div>
             </div>
           )}
 
-          {/* Nút gửi chữ ký trên desktop */}
-          <div className="pt-3 border-t border-slate-100 flex justify-end">
+          {/* Nút hành động Desktop */}
+          <div className="hidden md:flex justify-end pt-2">
             <Button
               type="button"
               variant="primary"
-              size="lg"
+              size="md"
               data-testid="node-M_WaitSign"
               loading={signing}
               onClick={handleSignContract}
-              className="hidden sm:flex items-center justify-center gap-2 shadow-md"
+              className="px-8 min-w-[200px]"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Xác nhận ký hợp đồng điện tử</span>
+              <span>{COPY.ACTION.SIGN_CONTRACT}</span>
             </Button>
           </div>
         </Card>
       )}
 
-      {/* Sticky Bottom CTA Bar cho Mobile */}
+      {/* Sticky Bottom Bar trên Mobile */}
       {!isSigned && !isExpired && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 shadow-lg">
+        <StickyBottomBar className="md:hidden">
           <Button
             type="button"
             variant="primary"
-            size="lg"
+            size="md"
             fullWidth
             data-testid="node-M_WaitSign"
             loading={signing}
             onClick={handleSignContract}
-            className="flex items-center justify-center gap-2 shadow-md"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Xác nhận ký hợp đồng</span>
+            <span>{COPY.ACTION.SIGN_CONTRACT}</span>
           </Button>
-        </div>
+        </StickyBottomBar>
       )}
     </div>
   );

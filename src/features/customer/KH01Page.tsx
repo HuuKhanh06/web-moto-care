@@ -1,5 +1,5 @@
 // src/features/customer/KH01Page.tsx
-// Màn hình KH-01: Khởi tạo yêu cầu thuê (M_START, M_CheckFleet)
+// Màn hình 1: Chọn dòng xe & Thời gian thuê
 
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -10,22 +10,20 @@ import {
   Card,
   Button,
   Input,
-  Stepper,
   toast,
+  BookingProgress,
+  StickyBottomBar,
 } from '@/components/ui';
 import { formatCurrency } from '@/lib/format';
 import { getAssetUrl } from '@/lib/vehicleImages';
-import { CUSTOMER_RENTAL_STEPS } from './constants';
-import { BpmnBadge } from '@/components/common/BpmnBadge';
 import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import {
   Bike,
   ArrowRight,
-  FileText,
   Calendar,
-  Sparkles,
-  CheckCircle2,
+  Check,
 } from 'lucide-react';
+import { COPY } from '@/copy';
 
 export function KH01Page() {
   const navigate = useNavigate();
@@ -65,7 +63,7 @@ export function KH01Page() {
     tay_ga: 160000,
     xe_con: 200000,
   };
-  const estimatedPrice = (basePriceMap[vehicleType] || 150000) * diffDays;
+  const estimatedPrice = (basePriceMap[vehicleType] || 160000) * diffDays;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +74,7 @@ export function KH01Page() {
     }
 
     if (new Date(startAt) >= new Date(endAt)) {
-      toast.warning('Thời gian trả xe phải sau thời gian nhận xe ít nhất vài giờ');
+      toast.warning('Thời gian trả xe phải sau thời gian nhận xe');
       return;
     }
 
@@ -111,7 +109,6 @@ export function KH01Page() {
         return;
       }
 
-      toast.success('Yêu cầu thuê xe đã được tiếp nhận thành công!');
       navigate(`/kh/02?requestId=${requestId}`);
     } catch (err: unknown) {
       console.error('Lỗi khi gửi yêu cầu thuê:', err);
@@ -123,54 +120,31 @@ export function KH01Page() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-24 sm:pb-8 animate-in fade-in duration-300">
-      {/* Stepper tiến trình khách hàng */}
-      <Card className="p-4 border-slate-200/80 shadow-xs bg-white/90 backdrop-blur-md rounded-2xl">
-        <Stepper steps={CUSTOMER_RENTAL_STEPS} currentStepIndex={0} />
-      </Card>
+    <div className="space-y-6 max-w-2xl mx-auto pb-24 md:pb-8">
+      {/* 4 Bước tiến trình thương mại */}
+      <BookingProgress currentStep={1} />
 
-      {/* Tiêu đề & Giới thiệu phong cách Eco-Mobility */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
-              Bước 1 &bull; Chọn xe &amp; Thời gian
-            </span>
-            <BpmnBadge nodeId="M_START" name="Khởi tạo yêu cầu" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Đặt thuê xe máy trực tuyến
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Lựa chọn phân khúc xe máy phù hợp và lịch trình nhận xe mong muốn
-          </p>
-        </div>
-      </div>
+      {/* Tiêu đề trang (1-3 từ, không phụ đề) */}
+      <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+        {COPY.TITLES.HOME}
+      </h1>
 
-      {/* Form đặt xe */}
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <Card className="p-6 border-slate-200/80 shadow-md space-y-6 rounded-3xl bg-white/90">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Bike className="w-5 h-5 text-brand-600" />
-              <span>1. Lựa chọn dòng xe</span>
-            </h2>
-            <span className="text-xs text-brand-700 font-semibold flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              Đảm bảo 100% xe bảo dưỡng định kỳ
-            </span>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* 1. Chọn dòng xe */}
+        <Card className="p-4 md:p-6 border border-slate-200 rounded-xl bg-white space-y-4">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <Bike className="w-5 h-5 text-teal-700 shrink-0" />
+            <h2 className="text-lg font-semibold text-slate-900">Chọn dòng xe</h2>
           </div>
 
-          {/* Chọn dòng xe Card Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               {
                 id: 'xe_so',
                 title: 'Xe số',
-                models: 'Wave Alpha, Sirius FI 110cc',
+                models: 'Wave Alpha, Sirius 110cc',
                 price: 120000,
                 tag: 'Tiết kiệm xăng',
-                desc: 'Phù hợp di chuyển linh hoạt, đi xa',
                 image: getAssetUrl('images/vehicles/honda-wave-alpha.png'),
               },
               {
@@ -178,17 +152,15 @@ export function KH01Page() {
                 title: 'Xe tay ga',
                 models: 'Vision, Air Blade 125cc',
                 price: 160000,
-                tag: 'Được chuộng nhất',
-                desc: 'Êm ái, cốp rộng, dễ điều khiển',
+                tag: 'Phổ biến nhất',
                 image: getAssetUrl('images/vehicles/honda-vision.jpg'),
               },
               {
                 id: 'xe_con',
                 title: 'Xe côn tay',
-                models: 'Winner X, Exciter 150cc',
+                models: 'Winner X, Exciter 155cc',
                 price: 200000,
                 tag: 'Mạnh mẽ',
-                desc: 'Động cơ thể thao, thích hợp phượt',
                 image: getAssetUrl('images/vehicles/honda-winner-x.png'),
               },
             ].map((item) => {
@@ -197,47 +169,40 @@ export function KH01Page() {
                 <div
                   key={item.id}
                   onClick={() => setVehicleType(item.id)}
-                  className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 select-none ${
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-150 select-none flex flex-col justify-between ${
                     isSelected
-                      ? 'border-brand-600 bg-brand-50/70 shadow-md shadow-brand-600/10 scale-[1.01]'
-                      : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
+                      ? 'border-teal-600 bg-teal-50/50 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="font-bold text-slate-900 text-sm">{item.title}</span>
-                      <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{item.models}</div>
+                      <span className="font-semibold text-slate-900 text-base">{item.title}</span>
+                      <p className="text-[13px] text-slate-500 mt-0.5 line-clamp-1">{item.models}</p>
                     </div>
-                    {isSelected ? (
-                      <div className="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />
-                    )}
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                        isSelected ? 'bg-teal-600 text-white' : 'border border-slate-300'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    </div>
                   </div>
 
-                  {/* Ảnh thực tế của dòng xe */}
-                  <div className="h-28 my-2 rounded-xl bg-slate-50/80 flex items-center justify-center overflow-hidden p-2">
+                  <div className="h-24 my-3 flex items-center justify-center overflow-hidden">
                     <img
                       src={item.image}
                       alt={item.title}
-                      className="h-full w-full object-contain filter drop-shadow-xs hover:scale-105 transition-transform"
+                      className="h-full w-full object-contain"
                       loading="lazy"
                     />
                   </div>
 
                   <div className="pt-2 border-t border-slate-100 flex items-baseline justify-between">
-                    <span className="font-extrabold text-brand-700 text-base">
-                      {formatCurrency(item.price)}
+                    <span className="font-semibold text-teal-700 text-base">
+                      {item.price.toLocaleString('vi-VN')} ₫
                     </span>
-                    <span className="text-[11px] text-slate-400">/ ngày</span>
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-between text-[11px]">
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
-                      {item.tag}
-                    </span>
+                    <span className="text-[13px] text-slate-500">/ ngày</span>
                   </div>
                 </div>
               );
@@ -245,15 +210,15 @@ export function KH01Page() {
           </div>
         </Card>
 
-        {/* Lịch trình thuê */}
-        <Card className="p-6 border-slate-200/80 shadow-md space-y-5 rounded-3xl bg-white/90">
+        {/* 2. Thời gian thuê */}
+        <Card className="p-4 md:p-6 border border-slate-200 rounded-xl bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-brand-600" />
-              <span>2. Lịch trình thuê & Trả xe</span>
-            </h2>
-            <span className="text-xs text-slate-500 font-semibold">
-              Tổng cộng: <strong className="text-brand-700">{diffDays} ngày</strong>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-teal-700 shrink-0" />
+              <h2 className="text-lg font-semibold text-slate-900">Thời gian thuê</h2>
+            </div>
+            <span className="text-sm font-semibold text-slate-700">
+              Tổng số ngày: <strong className="text-teal-700 font-semibold">{diffDays} ngày</strong>
             </span>
           </div>
 
@@ -275,109 +240,101 @@ export function KH01Page() {
             />
           </div>
 
-          <div className="p-4 rounded-2xl bg-brand-50/60 border border-brand-200/70 flex items-center justify-between text-xs sm:text-sm">
-            <span className="text-slate-600">Dự tính chi phí thuê ({diffDays} ngày):</span>
-            <span className="font-black text-lg text-brand-800">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-sm">
+            <span className="text-slate-600">Tổng tiền thuê ước tính ({diffDays} ngày):</span>
+            <span className="font-semibold text-lg text-slate-900">
               {formatCurrency(estimatedPrice)}
             </span>
           </div>
         </Card>
 
-        {/* Giấy tờ định danh */}
-        <Card className="p-6 border-slate-200/80 shadow-md space-y-4 rounded-3xl bg-white/90">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-brand-600" />
-              <span>3. Chuẩn bị giấy tờ định danh</span>
-            </h2>
-            <span className="text-xs text-brand-700 font-semibold">Xác thực AI tự động</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-brand-50/30 hover:border-brand-300 cursor-pointer transition-all">
+        {/* 3. Giấy tờ định danh */}
+        <Card className="p-4 md:p-6 border border-slate-200 rounded-xl bg-white space-y-3">
+          <h2 className="text-base font-semibold text-slate-900">Giấy tờ cần chuẩn bị</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-white cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={hasCccd}
                 onChange={(e) => setHasCccd(e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded text-brand-600 focus:ring-brand-500"
+                className="w-4 h-4 mt-0.5 rounded text-teal-600 focus:ring-teal-500"
               />
               <div>
-                <span className="font-bold text-slate-800 block text-xs">Căn cước công dân (CCCD)</span>
-                <span className="text-slate-500 text-[11px] leading-relaxed block mt-0.5">
-                  Chụp 2 mặt để hệ thống tự động điền thông tin hợp đồng
+                <span className="font-semibold text-slate-800 block text-sm">Căn cước công dân (CCCD)</span>
+                <span className="text-slate-500 text-[13px] block mt-0.5">
+                  Chụp 2 mặt để hoàn tất hợp đồng số
                 </span>
               </div>
             </label>
 
-            <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-brand-50/30 hover:border-brand-300 cursor-pointer transition-all">
+            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-white cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={hasGplx}
                 onChange={(e) => setHasGplx(e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded text-brand-600 focus:ring-brand-500"
+                className="w-4 h-4 mt-0.5 rounded text-teal-600 focus:ring-teal-500"
               />
               <div>
-                <span className="font-bold text-slate-800 block text-xs">Giấy phép lái xe (GPLX A1/A2)</span>
-                <span className="text-slate-500 text-[11px] leading-relaxed block mt-0.5">
-                  Bắt buộc còn hạn để đảm bảo điều kiện nhận xe
+                <span className="font-semibold text-slate-800 block text-sm">Bằng lái xe (A1 / A2)</span>
+                <span className="text-slate-500 text-[13px] block mt-0.5">
+                  Bằng lái xe máy hợp lệ còn hạn
                 </span>
               </div>
             </label>
           </div>
 
-          {/* Tùy chọn test giả lập hết xe (chỉ hiển thị khi bật chế độ BPMN) */}
           {isBpmnMode && (
             <div className="pt-2 border-t border-slate-100">
-              <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+              <label className="flex items-center gap-2 text-[13px] text-slate-400 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={simulateNoVehicle}
                   onChange={(e) => setSimulateNoVehicle(e.target.checked)}
                   className="rounded text-red-600 focus:ring-red-500"
                 />
-                <span className="text-slate-500 text-[11px]">
-                  Mô phỏng kịch bản hết xe sẵn sàng trong khung giờ chọn (Test BPMN M_CheckFleet: No)
-                </span>
+                <span>Mô phỏng hết xe sẵn sàng (Dev test)</span>
               </label>
             </div>
           )}
         </Card>
 
-        {/* Nút gửi form Desktop */}
-        <div className="hidden sm:flex justify-end pt-2">
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            loading={loading}
-            data-testid="node-M_START"
-            className="flex items-center justify-center gap-2 px-8 shadow-md"
-          >
-            <span>Tiếp tục: Báo giá & Hồ sơ</span>
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Sticky CTA Bottom Bar trên Mobile */}
-        <div className="sm:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 p-4 z-40 shadow-2xl flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[11px] text-slate-500">Ước tính ({diffDays} ngày):</div>
-            <div className="text-base font-black text-brand-700">
-              {formatCurrency(estimatedPrice)}
-            </div>
-          </div>
+        {/* Nút hành động Desktop */}
+        <div className="hidden md:flex justify-end pt-2">
           <Button
             type="submit"
             variant="primary"
             size="md"
             loading={loading}
             data-testid="node-M_START"
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-2 px-8 min-w-[200px]"
           >
-            <span>Tiếp tục</span>
+            <span>{COPY.ACTION.CONTINUE}</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* Sticky CTA trên Mobile */}
+        <StickyBottomBar className="md:hidden">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[13px] text-slate-500">Ước tính ({diffDays} ngày):</div>
+              <div className="text-lg font-semibold text-slate-900">
+                {formatCurrency(estimatedPrice)}
+              </div>
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              loading={loading}
+              data-testid="node-M_START"
+              className="flex items-center gap-2 min-w-[140px]"
+            >
+              <span>{COPY.ACTION.CONTINUE}</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </StickyBottomBar>
       </form>
     </div>
   );

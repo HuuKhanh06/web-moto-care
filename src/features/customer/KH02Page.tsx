@@ -1,6 +1,5 @@
 // src/features/customer/KH02Page.tsx
-// Màn hình KH-02: Báo giá và hồ sơ (M_SendTerms, M_CheckDocs, M_AskDocs)
-// Nâng cấp: Skeleton Shimmer & Laser Scanning khi quét AI OCR, Glassmorphism AI Card, Micro-interactions
+// Màn hình 2: Xác thực hồ sơ và xem thông tin biểu phí
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -14,34 +13,26 @@ import type { RentalRequest, Vehicle, CustomerDocument, DocumentType } from '@/d
 import {
   Card,
   Button,
-  Badge,
   Input,
-  Stepper,
   toast,
+  BookingProgress,
+  StatusChip,
+  StickyBottomBar,
   OcrScanningSkeleton,
 } from '@/components/ui';
-import {
-  formatCurrency,
-  formatDateTime,
-  getStatusBadgeVariant,
-  getStatusLabel,
-} from '@/lib/format';
+import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
-import { CUSTOMER_RENTAL_STEPS } from './constants';
 import { useBpmnStore } from '@/features/bpmn/bpmnStore';
-import { BpmnBadge } from '@/components/common/BpmnBadge';
 import {
   FileText,
   ArrowRight,
   ShieldAlert,
   Bike,
   Sparkles,
-  Bot,
-  Cpu,
   RefreshCw,
   CheckCircle2,
-  UserCheck,
 } from 'lucide-react';
+import { COPY } from '@/copy';
 
 export function KH02Page() {
   const [searchParams] = useSearchParams();
@@ -65,7 +56,6 @@ export function KH02Page() {
     address: '',
   });
   const [isAppliedToProfile, setIsAppliedToProfile] = useState(false);
-
   const [agreeTerms, setAgreeTerms] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -122,7 +112,7 @@ export function KH02Page() {
       const cId = res.documents.cccd?.id_number?.value || '079095012345';
       const cDob = res.documents.cccd?.date_of_birth?.value || '1995-05-12';
       const cLic = res.documents.gplx?.license_class?.value || 'A1';
-      const cAddr = 'TP. Hồ Chí Minh';
+      const cAddr = 'Đà Nẵng';
 
       setExtractedProfile({
         fullName: cName,
@@ -132,11 +122,10 @@ export function KH02Page() {
         address: cAddr,
       });
       setIsAppliedToProfile(false);
-
-      toast.success('AI OCR bóc tách và xác thực thông tin giấy tờ thành công!');
+      toast.success('Đã xác thực thông tin giấy tờ thành công!');
     } catch (err: unknown) {
       console.error('Lỗi AI OCR:', err);
-      toast.error('Lỗi khi chạy AI OCR');
+      toast.error('Có lỗi khi xác thực giấy tờ');
     } finally {
       setOcrLoading(false);
     }
@@ -149,25 +138,23 @@ export function KH02Page() {
       if (cccdDoc) {
         await db.customer_documents.update(cccdDoc.id, {
           is_valid: ocrResult.checks.image_quality === 'PASS',
-          check_note: `Đã xác thực qua AI Gemini OCR (m = ${ocrResult.minimum_required_confidence})`,
+          check_note: 'Đã xác thực tự động',
         });
       }
       const gplxDoc = documents.find((d) => d.doc_type === 'BANG_LAI_TRUOC');
       if (gplxDoc) {
         await db.customer_documents.update(gplxDoc.id, {
           is_valid: ocrResult.checks.name_consistency === 'PASS',
-          check_note: `Hạng ${extractedProfile.licenseClass || ocrResult.documents.gplx?.license_class?.value || 'A1'} - Khớp tên định danh`,
+          check_note: `Hạng ${extractedProfile.licenseClass || 'A1'} - Khớp tên định danh`,
         });
       }
 
-      // Cập nhật họ tên vào Profile khách hàng trong CSDL IndexedDB
       if (currentActor?.id && extractedProfile.fullName) {
         await db.profiles.update(currentActor.id, {
           full_name: extractedProfile.fullName,
         });
       }
 
-      // Đồng bộ vào variables của quy trình BPMN để hợp đồng KH-04 và bàn giao NV-05 sử dụng
       const pState = await db.process_state.get(requestId);
       if (pState) {
         await db.process_state.update(requestId, {
@@ -182,11 +169,11 @@ export function KH02Page() {
       }
 
       setIsAppliedToProfile(true);
-      toast.success('Đã áp dụng thông tin trích xuất từ AI vào hồ sơ!');
+      toast.success('Đã lưu thông tin vào hồ sơ thuê xe!');
       await loadData();
     } catch (err) {
       console.error(err);
-      toast.error('Không thể áp dụng kết quả AI');
+      toast.error('Không thể lưu kết quả');
     }
   };
 
@@ -211,7 +198,7 @@ export function KH02Page() {
         is_valid: true,
       });
     }
-    toast.success(`Đã đính kèm ảnh mẫu: ${name}`);
+    toast.success(`Đã đính kèm ảnh: ${name}`);
     await loadData();
   };
 
@@ -219,7 +206,7 @@ export function KH02Page() {
     if (!requestId || !currentActor) return;
 
     if (!agreeTerms) {
-      toast.warning('Vui lòng đồng ý với điều khoản và điều kiện dịch vụ');
+      toast.warning('Vui lòng đồng ý với điều khoản dịch vụ');
       return;
     }
 
@@ -234,16 +221,15 @@ export function KH02Page() {
 
       if (isAllValid) {
         await engine.advance(requestId, 'M_CheckDocs', undefined, currentActor);
-        toast.success('Hồ sơ đã được thẩm định đạt! Chuyển sang thanh toán tiền cọc.');
         navigate(`/kh/03?requestId=${requestId}`);
       } else {
         const newCount = await fn_request_more_docs(requestId, currentActor);
 
         if (newCount > 3) {
           await fn_end_cancel(requestId, currentActor, 'HO_SO_KHONG_DAT');
-          toast.error('Hồ sơ bị từ chối và hủy tự động do vượt quá 3 lần bổ sung.');
+          toast.error('Hồ sơ đã bị hủy do chưa đủ giấy tờ sau 3 lần thông báo.');
         } else {
-          toast.warning(`Hồ sơ thiếu hoặc chưa đạt. Đã ghi nhận lần yêu cầu bổ sung thứ ${newCount}/3.`);
+          toast.warning(`Vui lòng bổ sung đủ 3 ảnh giấy tờ (Lần ${newCount}/3).`);
         }
         await loadData();
       }
@@ -258,9 +244,9 @@ export function KH02Page() {
 
   if (loading || !request) {
     return (
-      <div className="max-w-3xl mx-auto py-12 text-center text-slate-500">
-        <RefreshCw className="w-8 h-8 mx-auto animate-spin text-brand-600 mb-2" />
-        <span>Đang nạp báo giá và hồ sơ...</span>
+      <div className="max-w-2xl mx-auto py-16 text-center text-slate-500">
+        <RefreshCw className="w-8 h-8 mx-auto animate-spin text-teal-600 mb-2" />
+        <span className="text-sm font-normal">Đang nạp thông tin hồ sơ...</span>
       </div>
     );
   }
@@ -269,79 +255,54 @@ export function KH02Page() {
   const isMovedToDeposit = ['CHO_COC', 'CHO_KY', 'CHO_BAN_GIAO', 'DANG_THUE'].includes(request.status);
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-24 sm:pb-8 animate-in fade-in duration-300">
-      {/* Stepper */}
-      <Card className="p-4 border-slate-200/80 shadow-sm bg-white/90 backdrop-blur-md">
-        <Stepper steps={CUSTOMER_RENTAL_STEPS} currentStepIndex={1} />
-      </Card>
+    <div className="space-y-6 max-w-2xl mx-auto pb-24 md:pb-8">
+      {/* 4 Bước tiến trình */}
+      <BookingProgress currentStep={2} />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/70 shadow-2xs">
-              Bước 2 &bull; Xác thực hồ sơ &amp; Báo giá
-            </span>
-            <BpmnBadge nodeId="M_CheckDocs" name="AI OCR & Thẩm định" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Xác thực hồ sơ & Báo giá
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Xem chi tiết biểu phí và tải ảnh giấy tờ để hệ thống xác thực tự động
-          </p>
-        </div>
-
-        <Badge variant={getStatusBadgeVariant(request.status)} size="md">
-          {getStatusLabel(request.status)}
-        </Badge>
+      {/* Tiêu đề trang (1-3 từ, không phụ đề) */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+          {COPY.TITLES.BOOKING_INFO}
+        </h1>
+        <StatusChip
+          status={isCancelled ? 'error' : isMovedToDeposit ? 'success' : 'pending'}
+          label={isCancelled ? 'Đã hủy' : isMovedToDeposit ? 'Hồ sơ đạt' : 'Chờ xác thực'}
+        />
       </div>
 
-      {/* Cảnh báo khi bị hủy hoặc từ chối */}
       {isCancelled && (
-        <Card className="p-5 border-red-300 bg-red-50 text-red-900 space-y-3">
-          <div className="flex items-center gap-2 font-bold text-base text-red-800">
-            <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
-            Hồ sơ thuê xe đã dừng xử lý
+        <Card className="p-4 md:p-6 border border-rose-200 bg-rose-50 rounded-xl space-y-3">
+          <div className="flex items-center gap-2 font-semibold text-base text-rose-800">
+            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>Yêu cầu thuê xe đã dừng xử lý</span>
           </div>
-          <p className="text-xs text-red-700 leading-relaxed">
+          <p className="text-sm text-rose-700">
             {request.closed_reason === 'HO_SO_KHONG_DAT'
-              ? 'Hồ sơ đã vượt quá số lần tải lại giấy tờ cho phép. Vui lòng tạo yêu cầu thuê mới khi bạn đã có sẵn ảnh chụp rõ nét.'
-              : request.closed_reason === 'QUA_HAN_COC'
-              ? 'Yêu cầu thuê xe đã bị hủy do quá thời hạn thanh toán tiền cọc.'
-              : request.closed_reason === 'QUA_HAN_KY'
-              ? 'Yêu cầu thuê xe đã bị hủy do quá thời hạn ký hợp đồng điện tử.'
-              : request.closed_reason === 'HET_XE'
-              ? 'Rất tiếc! Đã hết xe sẵn sàng trong khung giờ bạn chọn.'
-              : 'Hồ sơ thuê xe đã kết thúc hoặc bị hủy bỏ.'}
+              ? 'Hồ sơ chưa đạt sau 3 lần bổ sung. Vui lòng tạo yêu cầu mới khi có ảnh giấy tờ rõ nét.'
+              : 'Yêu cầu thuê xe đã kết thúc hoặc bị hủy.'}
           </p>
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate('/kh/01')}
-            className="bg-white text-red-700 border-red-300 hover:bg-red-50"
+            className="bg-white text-rose-700 border-rose-300"
           >
-            Tạo yêu cầu thuê mới
+            Thuê xe khác
           </Button>
         </Card>
       )}
 
-      {/* 1. Báo giá chi tiết */}
-      <Card className="p-6 border-slate-200/80 shadow-md space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Bike className="w-5 h-5 text-brand-600" />
-            <span>Phương tiện được phân bổ</span>
-          </h2>
-          <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-            #{request.id.slice(-8).toUpperCase()}
-          </span>
+      {/* 1. Xe được phân bổ & Chi phí */}
+      <Card className="p-4 md:p-6 border border-slate-200 rounded-xl bg-white space-y-4">
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Bike className="w-5 h-5 text-teal-700 shrink-0" />
+          <h2 className="text-lg font-semibold text-slate-900">Thông tin xe & Lịch thuê</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
-          <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 flex items-center gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
             {vehicle && (
-              <div className="h-12 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200/60 p-1 flex items-center justify-center shadow-xs">
+              <div className="h-12 w-16 shrink-0 rounded-lg bg-white border border-slate-200 p-1 flex items-center justify-center">
                 <img
                   src={getVehicleImageUrl(vehicle.model)}
                   alt={vehicle.model}
@@ -350,69 +311,66 @@ export function KH02Page() {
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <span className="text-slate-500 block mb-0.5 text-[11px]">Mẫu xe & Biển số</span>
-              <span className="font-extrabold text-slate-900 text-sm block truncate">
+              <span className="text-[13px] text-slate-500 block">Dòng xe</span>
+              <span className="font-semibold text-slate-900 text-sm block truncate">
                 {vehicle?.model || 'Đang phân bổ'}
               </span>
-              <span className="text-brand-700 font-mono font-semibold text-xs">
-                {vehicle?.plate || 'Chờ gán'}
+              <span className="text-teal-700 font-semibold text-[13px]">
+                {vehicle?.plate || 'Chờ bàn giao'}
               </span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100">
-            <span className="text-slate-500 block mb-1">Thời gian nhận xe</span>
-            <span className="font-extrabold text-slate-800 text-xs block">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-[13px] text-slate-500 block">Nhận xe</span>
+            <span className="font-semibold text-slate-900 text-sm block">
               {formatDateTime(request.start_at)}
             </span>
-            <span className="text-slate-400 text-[11px]">Đến: {formatDateTime(request.end_at)}</span>
+            <span className="text-[13px] text-slate-500 mt-1 block">
+              Trả: {formatDateTime(request.end_at)}
+            </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-brand-50/60 border border-brand-200/60">
-            <span className="text-brand-800 font-medium block mb-1">Tiền cọc giữ xe (30%)</span>
-            <span className="font-black text-brand-800 text-base font-mono block">
+          <div className="p-4 rounded-xl bg-teal-50 border border-teal-200">
+            <span className="text-[13px] text-teal-900 font-semibold block">Tiền cọc giữ xe (30%)</span>
+            <span className="font-semibold text-xl text-teal-800 block mt-0.5">
               {formatCurrency(request.deposit_amount || 0)}
             </span>
-            <span className="text-brand-600 text-[11px]">
-              Tổng thuê: {formatCurrency(request.total_price || 0)}
+            <span className="text-[13px] text-teal-700 mt-1 block">
+              Tổng tiền thuê: {formatCurrency(request.total_price || 0)}
             </span>
           </div>
         </div>
       </Card>
 
-      {/* 2. Giấy tờ định danh & AI Gemini OCR */}
-      <Card className="p-6 border-slate-200/80 shadow-md space-y-5">
+      {/* 2. Giấy tờ định danh */}
+      <Card className="p-4 md:p-6 border border-slate-200 rounded-xl bg-white space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-brand-600" />
-            <span>Giấy tờ định danh bắt buộc (3/3)</span>
-          </h2>
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-slate-500">Số lần yêu cầu:</span>
-            <span className={`font-mono font-bold px-1.5 py-0.5 rounded ${
-              request.doc_request_count > 2 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
-            }`}>
-              {request.doc_request_count}/3
-            </span>
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-teal-700 shrink-0" />
+            <h2 className="text-lg font-semibold text-slate-900">Giấy tờ tùy thân (3 ảnh)</h2>
           </div>
+          <span className="text-[13px] font-normal text-slate-500">
+            {documents.filter((d) => d.is_valid).length}/3 ảnh đã tải
+          </span>
         </div>
 
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           {[
             {
               type: 'CCCD_TRUOC' as DocumentType,
               title: 'Căn cước công dân (Mặt trước)',
-              desc: 'Rõ họ tên, số CCCD, hình chân dung không bị bóng sáng',
+              desc: 'Rõ họ tên, số CCCD và ảnh chân dung',
             },
             {
               type: 'CCCD_SAU' as DocumentType,
               title: 'Căn cước công dân (Mặt sau)',
-              desc: 'Rõ đặc điểm nhận dạng, chip điện tử và ngày cấp',
+              desc: 'Rõ đặc điểm nhận dạng và ngày cấp',
             },
             {
               type: 'BANG_LAI_TRUOC' as DocumentType,
-              title: 'Giấy phép lái xe A1 / A2 (Mặt trước)',
-              desc: 'Hạng xe phù hợp với phân khúc xe bạn đã chọn',
+              title: 'Bằng lái xe máy (Mặt trước)',
+              desc: 'Hạng A1 hoặc A2 còn hạn sử dụng',
             },
           ].map((item) => {
             const doc = getDoc(item.type);
@@ -421,239 +379,116 @@ export function KH02Page() {
             return (
               <div
                 key={item.type}
-                className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-brand-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
+                className="p-4 rounded-xl border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
-                <div className="space-y-1">
+                <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-slate-900 text-sm">{item.title}</span>
-                    {isUploaded ? (
-                      <Badge variant="success">Đã đính kèm</Badge>
-                    ) : (
-                      <Badge variant="waiting">Chưa có</Badge>
-                    )}
+                    <span className="font-semibold text-slate-900 text-sm">{item.title}</span>
+                    <StatusChip
+                      status={isUploaded ? 'success' : 'pending'}
+                      label={isUploaded ? 'Đã tải' : 'Chưa có'}
+                      size="sm"
+                    />
                   </div>
-                  <p className="text-xs text-slate-500">{item.desc}</p>
+                  <p className="text-[13px] text-slate-500 mt-0.5">{item.desc}</p>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuickUpload(item.type, item.title)}
-                    className="text-xs"
-                    disabled={isCancelled}
-                  >
-                    Nạp ảnh mẫu nhanh
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickUpload(item.type, item.title)}
+                  disabled={isCancelled}
+                  className="shrink-0"
+                >
+                  {isUploaded ? 'Thay ảnh' : 'Tải ảnh lên'}
+                </Button>
               </div>
             );
           })}
         </div>
 
-        {/* KHUNG GỢI Ý AI AGENT OCR VỚI SKELETON SHIMMER VÀ LASER SCANNING */}
-        <div className="p-5 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50/60 via-white to-purple-50/30 shadow-md space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-purple-600 text-white shadow-sm shadow-purple-500/20">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="font-extrabold text-slate-900 text-sm">AI Agent OCR Trích Xuất &amp; Thẩm Định</span>
-                <span className="block text-xs text-slate-500">Bóc tách thực thể CCCD/GPLX & thẩm định độ tin cậy kép</span>
-              </div>
+        {/* Khung quét tự động */}
+        <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/40 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span className="font-semibold text-slate-900 text-sm">Xác thực thông tin tự động</span>
+              <p className="text-[13px] text-slate-500 mt-0.5">Tự động trích xuất họ tên & số giấy tờ để lập hợp đồng</p>
             </div>
-
             <Button
               type="button"
+              variant="secondary"
               size="sm"
-              variant="primary"
               loading={ocrLoading}
               onClick={() => handleRunAiOcr('HIGH_CONFIDENCE')}
-              className="bg-purple-700 hover:bg-purple-600 text-white shadow-purple-600/20"
+              className="shrink-0"
             >
-              <Cpu className="w-3.5 h-3.5 mr-1.5" />
-              Chạy AI OCR Thẩm định
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              Quét tự động
             </Button>
           </div>
 
-          {/* Khi đang quét OCR: Hiển thị Skeleton Shimmer + Laser Animation */}
           {ocrLoading && <OcrScanningSkeleton />}
 
-          {/* Hiển thị kết quả AI nếu có */}
           {!ocrLoading && ocrResult && (
-            <div className="p-4 bg-white/90 backdrop-blur-md rounded-2xl border border-purple-100 text-xs space-y-3 shadow-sm animate-in fade-in duration-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-700">Điểm tin cậy m:</span>
-                  <span className="font-mono font-black text-purple-700 text-sm">
-                    {ocrResult.minimum_required_confidence !== null
-                      ? `${(ocrResult.minimum_required_confidence * 100).toFixed(1)}%`
-                      : 'N/A'}
-                  </span>
-                </div>
-                <Badge
-                  variant={
-                    ocrResult.routing.action === 'PREFILL_FOR_RULES'
-                      ? 'success'
-                      : ocrResult.routing.action === 'MANUAL_REVIEW'
-                      ? 'waiting'
-                      : 'danger'
-                  }
-                >
-                  {ocrResult.routing.action}
-                </Badge>
+            <div className="p-4 bg-white rounded-xl border border-slate-200 text-sm space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Họ và tên"
+                  value={extractedProfile.fullName}
+                  onChange={(e) => setExtractedProfile((p) => ({ ...p, fullName: e.target.value }))}
+                />
+                <Input
+                  label="Số CCCD"
+                  value={extractedProfile.idNumber}
+                  onChange={(e) => setExtractedProfile((p) => ({ ...p, idNumber: e.target.value }))}
+                />
+                <Input
+                  label="Ngày sinh"
+                  value={extractedProfile.dob}
+                  onChange={(e) => setExtractedProfile((p) => ({ ...p, dob: e.target.value }))}
+                />
+                <Input
+                  label="Hạng bằng lái"
+                  value={extractedProfile.licenseClass}
+                  onChange={(e) => setExtractedProfile((p) => ({ ...p, licenseClass: e.target.value }))}
+                />
               </div>
 
-              {ocrResult.documents.cccd && (
-                <div className="text-xs text-slate-700 bg-slate-50/80 p-3 rounded-xl border border-slate-100 flex flex-wrap gap-x-4 gap-y-1">
-                  <div><strong>CCCD:</strong> {ocrResult.documents.cccd.full_name?.value || 'N/A'}</div>
-                  <div><strong>Ngày sinh:</strong> {ocrResult.documents.cccd.date_of_birth?.value || 'N/A'}</div>
-                  <div><strong>Số:</strong> {ocrResult.documents.cccd.id_number?.value || 'N/A'}</div>
-                </div>
-              )}
-
-              {ocrResult.documents.gplx && (
-                <div className="text-xs text-slate-700 bg-slate-50/80 p-3 rounded-xl border border-slate-100 flex flex-wrap gap-x-4 gap-y-1">
-                  <div><strong>GPLX:</strong> {ocrResult.documents.gplx.full_name?.value || 'N/A'}</div>
-                  <div><strong>Hạng:</strong> {ocrResult.documents.gplx.license_class?.value || 'N/A'}</div>
-                </div>
-              )}
-
-              {/* Form xác nhận thông tin bóc tách đưa lên giao diện FE */}
-              <div className="mt-3 pt-3 border-t border-purple-100 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                    <UserCheck className="w-4 h-4 text-purple-600" />
-                    Thông tin định danh bóc tách lên giao diện (AI Auto-fill)
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                {isAppliedToProfile && (
+                  <span className="flex items-center gap-1 text-[13px] font-semibold text-emerald-800 mr-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Đã lưu thông tin
                   </span>
-                  {isAppliedToProfile && (
-                    <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Đã lưu vào hồ sơ
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Họ và tên (CCCD/GPLX)
-                    </label>
-                    <Input
-                      value={extractedProfile.fullName}
-                      onChange={(e) =>
-                        setExtractedProfile((p) => ({ ...p, fullName: e.target.value }))
-                      }
-                      placeholder="Họ và tên khách hàng"
-                      className="text-xs font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Số Căn cước công dân (CCCD)
-                    </label>
-                    <Input
-                      value={extractedProfile.idNumber}
-                      onChange={(e) =>
-                        setExtractedProfile((p) => ({ ...p, idNumber: e.target.value }))
-                      }
-                      placeholder="Số CCCD 12 số"
-                      className="text-xs font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Ngày sinh
-                    </label>
-                    <Input
-                      value={extractedProfile.dob}
-                      onChange={(e) =>
-                        setExtractedProfile((p) => ({ ...p, dob: e.target.value }))
-                      }
-                      placeholder="YYYY-MM-DD"
-                      className="text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Hạng Giấy phép lái xe
-                    </label>
-                    <Input
-                      value={extractedProfile.licenseClass}
-                      onChange={(e) =>
-                        setExtractedProfile((p) => ({ ...p, licenseClass: e.target.value }))
-                      }
-                      placeholder="A1 / A2 / B2"
-                      className="text-xs font-bold uppercase text-purple-700"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Nơi thường trú
-                    </label>
-                    <Input
-                      value={extractedProfile.address}
-                      onChange={(e) =>
-                        setExtractedProfile((p) => ({ ...p, address: e.target.value }))
-                      }
-                      placeholder="Địa chỉ thường trú"
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="primary"
-                    onClick={handleAcceptAi}
-                    className="bg-purple-700 hover:bg-purple-600 text-white shadow-xs"
-                    data-testid="ai-accept"
-                  >
-                    <Bot className="w-3.5 h-3.5 mr-1.5" />
-                    Áp dụng & Lưu vào hồ sơ cá nhân
-                  </Button>
-                </div>
+                )}
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={handleAcceptAi}
+                  data-testid="ai-accept"
+                >
+                  Áp dụng vào hợp đồng
+                </Button>
               </div>
             </div>
           )}
 
-          {/* Các nút giả lập kịch bản demo (chỉ hiển thị khi bật chế độ BPMN) */}
           {isBpmnMode && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-purple-100/70 text-[11px] text-slate-500">
-              <span className="font-semibold text-slate-600">Thử kịch bản demo:</span>
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200 text-[13px] text-slate-500">
+              <span className="font-semibold text-slate-700">Kịch bản kiểm thử:</span>
               <button
                 type="button"
                 onClick={() => handleRunAiOcr('HIGH_CONFIDENCE')}
-                className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-[11px] font-bold border border-emerald-200 transition-colors"
+                className="px-2 py-0.5 rounded bg-white border border-slate-300 text-xs text-slate-700"
               >
-                m=96% (Tự động)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRunAiOcr('MEDIUM_CONFIDENCE')}
-                className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-bold border border-amber-200 transition-colors"
-              >
-                m=87% (Cần duyệt)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRunAiOcr('LOW_CONFIDENCE')}
-                className="px-2.5 py-1 rounded-lg bg-red-50 text-red-800 hover:bg-red-100 text-[11px] font-bold border border-red-200 transition-colors"
-              >
-                m=65% (Chụp lại)
+                Chuẩn 96%
               </button>
               <button
                 type="button"
                 onClick={() => handleRunAiOcr('NAME_MISMATCH')}
-                className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 text-[11px] font-bold border border-amber-200 transition-colors"
+                className="px-2 py-0.5 rounded bg-white border border-slate-300 text-xs text-slate-700"
               >
                 Lệch tên
               </button>
@@ -661,49 +496,25 @@ export function KH02Page() {
           )}
         </div>
 
-        {/* Checkbox chấp thuận điều khoản */}
-        <div className="pt-3 border-t border-slate-100">
-          <label className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer">
+        {/* Cam kết điều khoản */}
+        <div className="pt-2 border-t border-slate-100">
+          <label className="flex items-start gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={agreeTerms}
               onChange={(e) => setAgreeTerms(e.target.checked)}
-              className="mt-0.5 rounded text-brand-600 focus:ring-brand-500"
+              className="mt-1 rounded text-teal-600 focus:ring-teal-500"
               disabled={isCancelled}
             />
             <span>
-              Tôi xác nhận thông tin giấy tờ trên là chính chủ và hoàn toàn đồng ý với các điều khoản thuê xe, mức phí cọc 30% cùng quy chế bồi hoàn của MOTO CARE.
+              Tôi xác nhận thông tin giấy tờ là chính xác và đồng ý với điều khoản thuê xe, mức cọc 30% của MotoCare.
             </span>
           </label>
         </div>
 
         {/* Nút hành động Desktop */}
         {!isCancelled && !isMovedToDeposit && (
-          <div className="hidden sm:flex justify-end pt-2">
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              loading={submitting}
-              data-testid="node-M_CheckDocs"
-              onClick={handleVerifyDocuments}
-              className="flex items-center justify-center gap-2 px-8"
-            >
-              <span>Nộp hồ sơ & Xác nhận cọc</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Sticky Bottom Bar trên Mobile */}
-        {!isCancelled && !isMovedToDeposit && (
-          <div className="sm:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 p-4 z-40 shadow-2xl flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] text-slate-500">Cọc giữ xe (30%):</div>
-              <div className="text-base font-black text-brand-700">
-                {formatCurrency(request.deposit_amount || 0)}
-              </div>
-            </div>
+          <div className="hidden md:flex justify-end pt-2">
             <Button
               type="button"
               variant="primary"
@@ -711,12 +522,38 @@ export function KH02Page() {
               loading={submitting}
               data-testid="node-M_CheckDocs"
               onClick={handleVerifyDocuments}
-              className="flex items-center gap-1.5"
+              className="flex items-center gap-2 px-8 min-w-[200px]"
             >
-              <span>Nộp hồ sơ</span>
+              <span>{COPY.ACTION.DEPOSIT}</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
+        )}
+
+        {/* Sticky CTA trên Mobile */}
+        {!isCancelled && !isMovedToDeposit && (
+          <StickyBottomBar className="md:hidden">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-[13px] text-slate-500">Tiền cọc giữ xe (30%):</div>
+                <div className="text-lg font-semibold text-slate-900">
+                  {formatCurrency(request.deposit_amount || 0)}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                loading={submitting}
+                data-testid="node-M_CheckDocs"
+                onClick={handleVerifyDocuments}
+                className="flex items-center gap-2 min-w-[140px]"
+              >
+                <span>{COPY.ACTION.DEPOSIT}</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </StickyBottomBar>
         )}
       </Card>
     </div>
