@@ -9,33 +9,70 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   loading?: boolean;
 }
 
+/**
+ * Nút bấm chuẩn mực MotoCare theo Design System:
+ * - Nút chính: 48px, chữ 16/600, nền Teal đặc, bo góc 12px, vùng chạm >= 44x44px.
+ * - Nút phụ: viền mảnh 1px, chữ Teal, bo góc 12px.
+ * - Trạng thái focus rõ ràng cho phím Tab, active nén nhẹ tự nhiên.
+ */
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', fullWidth = false, loading = false, disabled, children, ...props }, ref) => {
-    // Micro-interactions 2026+: active:scale-95, hover:-translate-y-0.5, transition-all mượt mà
-    const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.96] hover:-translate-y-0.5 shadow-sm';
+  (
+    {
+      className,
+      variant = 'primary',
+      size = 'md',
+      fullWidth = false,
+      loading = false,
+      disabled,
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const baseStyles =
+      'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 ' +
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 ' +
+      'disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none ' +
+      'active:scale-[0.98] select-none min-h-[44px] min-w-[44px]';
 
     const variants = {
-      primary: 'bg-brand-700 text-white hover:bg-brand-600 hover:shadow-md hover:shadow-brand-700/25 active:bg-brand-800',
-      secondary: 'bg-brand-100 text-brand-900 hover:bg-brand-200 hover:shadow-sm',
-      outline: 'border-2 border-brand-500 text-brand-700 bg-white/80 backdrop-blur-sm hover:bg-brand-50 hover:border-brand-600',
-      ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 shadow-none hover:shadow-none hover:translate-y-0',
-      danger: 'bg-red-600 text-white hover:bg-red-500 hover:shadow-md hover:shadow-red-600/25 active:bg-red-700',
+      // Nút chính: Nền Teal đặc (#0d9488), hover đậm (#0f766e)
+      primary:
+        'bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 shadow-sm border border-transparent',
+      // Nút phụ: Viền mảnh 1px, chữ Teal
+      secondary:
+        'bg-teal-50 text-teal-800 hover:bg-teal-100 active:bg-teal-200 border border-teal-200',
+      outline:
+        'border border-slate-300 text-slate-800 hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100',
+      ghost:
+        'text-slate-700 hover:bg-slate-100 active:bg-slate-200 hover:text-slate-900 border border-transparent',
+      danger:
+        'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-sm border border-transparent',
     };
 
     const sizes = {
-      sm: 'px-3 py-1.5 text-xs',
-      md: 'px-4 py-2.5 text-sm',
-      lg: 'px-6 py-3.5 text-base',
+      // sm: Thao tác phụ hoặc trên bảng
+      sm: 'h-10 px-3.5 text-[14px]',
+      // md: Chuẩn 48px cho nút chính công thái học mobile & desktop
+      md: 'h-12 px-5 text-base',
+      // lg: Khối đặt cọc / thanh toán nhấn mạnh
+      lg: 'h-14 px-7 text-base font-semibold',
     };
 
     return (
       <button
         ref={ref}
         disabled={disabled || loading}
-        className={cn(baseStyles, variants[variant], sizes[size], fullWidth ? 'w-full' : '', className)}
+        className={cn(
+          baseStyles,
+          variants[variant],
+          sizes[size],
+          fullWidth ? 'w-full' : '',
+          className
+        )}
         {...props}
       >
-        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin text-current" />}
+        {loading && <Loader2 className="w-5 h-5 mr-2 animate-spin text-current shrink-0" />}
         {children}
       </button>
     );

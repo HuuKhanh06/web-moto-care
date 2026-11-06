@@ -16,3 +16,8 @@ export * from './FileUpload';
 export * from './QRBox';
 export * from './DataToolbar';
 export * from './Skeleton';
+export * from './StatusChip';
+export * from './VehicleCard';
+export * from './BookingProgress';
+export * from './StickyBottomBar';
+export * from './BottomNav';

@@ -8,6 +8,13 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   icon?: React.ReactNode;
 }
 
+/**
+ * Ô nhập liệu chuẩn hóa MotoCare:
+ * - Nhãn nằm phía trên rõ ràng (text-sm font-semibold text-slate-800).
+ * - Chiều cao 48px (h-12), cỡ chữ 16px (ngăn trình duyệt mobile tự zoom).
+ * - Bo góc 12px (rounded-xl), viền 1px xám nhẹ.
+ * - Trạng thái focus màu Teal rõ ràng, báo lỗi đỏ đạt chuẩn tương phản AA.
+ */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, helperText, icon, type = 'text', id, ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
@@ -15,13 +22,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-700">
+          <label htmlFor={inputId} className="block text-sm font-semibold text-slate-800">
             {label}
           </label>
         )}
         <div className="relative flex items-center">
           {icon && (
-            <div className="absolute left-3.5 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute left-4 flex items-center pointer-events-none text-slate-400">
               {icon}
             </div>
           )}
@@ -30,18 +37,18 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             ref={ref}
             className={cn(
-              'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400',
-              'transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
+              'w-full h-12 min-h-[48px] px-4 rounded-xl border border-slate-200 bg-white text-base text-slate-900 placeholder:text-slate-400',
+              'transition-colors duration-150 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20',
               'disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed',
-              icon ? 'pl-10' : '',
-              error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : '',
+              icon ? 'pl-11' : '',
+              error ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : '',
               className
             )}
             {...props}
           />
         </div>
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        {!error && helperText && <p className="text-xs text-slate-500">{helperText}</p>}
+        {error && <p className="text-[13px] font-normal text-rose-600 mt-1">{error}</p>}
+        {!error && helperText && <p className="text-[13px] font-normal text-slate-500 mt-1">{helperText}</p>}
       </div>
     );
   }
