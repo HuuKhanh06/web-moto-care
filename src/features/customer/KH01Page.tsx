@@ -14,6 +14,7 @@ import {
   toast,
 } from '@/components/ui';
 import { formatCurrency } from '@/lib/format';
+import { getAssetUrl } from '@/lib/vehicleImages';
 import { CUSTOMER_RENTAL_STEPS } from './constants';
 import { BpmnBadge } from '@/components/common/BpmnBadge';
 import { useBpmnStore } from '@/features/bpmn/bpmnStore';
@@ -170,7 +171,7 @@ export function KH01Page() {
                 price: 120000,
                 tag: 'Tiết kiệm xăng',
                 desc: 'Phù hợp di chuyển linh hoạt, đi xa',
-                image: '/images/vehicles/honda-wave-alpha.png',
+                image: getAssetUrl('images/vehicles/honda-wave-alpha.png'),
               },
               {
                 id: 'tay_ga',
@@ -179,7 +180,7 @@ export function KH01Page() {
                 price: 160000,
                 tag: 'Được chuộng nhất',
                 desc: 'Êm ái, cốp rộng, dễ điều khiển',
-                image: '/images/vehicles/honda-vision.jpg',
+                image: getAssetUrl('images/vehicles/honda-vision.jpg'),
               },
               {
                 id: 'xe_con',
@@ -188,7 +189,7 @@ export function KH01Page() {
                 price: 200000,
                 tag: 'Mạnh mẽ',
                 desc: 'Động cơ thể thao, thích hợp phượt',
-                image: '/images/vehicles/honda-winner-x.png',
+                image: getAssetUrl('images/vehicles/honda-winner-x.png'),
               },
             ].map((item) => {
               const isSelected = vehicleType === item.id;

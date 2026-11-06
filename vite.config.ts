@@ -2,9 +2,11 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+const isDeploy = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: './',
+  base: isDeploy ? '/web-moto-care/' : './',
   plugins: [react()],
   resolve: {
     alias: {
