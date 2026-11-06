@@ -105,8 +105,9 @@ class DataAdapter {
       }
 
       return { success: true, message: `Đã đồng bộ thành công ${rentals.length} đơn và ${vehicles.length} xe lên Supabase Cloud!` };
-    } catch (err: any) {
-      return { success: false, message: `Lỗi đồng bộ: ${err.message || err}` };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, message: `Lỗi đồng bộ: ${msg}` };
     }
   }
 }

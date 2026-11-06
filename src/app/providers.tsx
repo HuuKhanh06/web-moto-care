@@ -49,7 +49,8 @@ export function AppProviders({ children }: AppProvidersProps) {
           (payload) => {
             console.log('[Supabase Realtime] rental_requests changed:', payload);
             if (payload.eventType === 'INSERT') {
-              toast.info(`Có đơn đặt xe mới: #${(payload.new as any)?.id?.slice(-6)?.toUpperCase()}`);
+              const newRecord = payload.new as { id?: string } | null;
+              toast.info(`Có đơn đặt xe mới: #${newRecord?.id?.slice(-6)?.toUpperCase()}`);
             }
           }
         )
@@ -59,7 +60,8 @@ export function AppProviders({ children }: AppProvidersProps) {
           (payload) => {
             console.log('[Supabase Realtime] incidents changed:', payload);
             if (payload.eventType === 'INSERT') {
-              toast.warning(`SOS Khẩn cấp! Sự cố mới được báo: ${(payload.new as any)?.incident_code}`);
+              const newRecord = payload.new as { incident_code?: string } | null;
+              toast.warning(`SOS Khẩn cấp! Sự cố mới được báo: ${newRecord?.incident_code}`);
             }
           }
         )

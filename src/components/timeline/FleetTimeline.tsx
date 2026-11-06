@@ -57,7 +57,7 @@ export function FleetTimeline({
 
       // Bổ sung xe đệm DUMP1, DUMP2 nếu chưa có (học tập GOODBIKE)
       const hasDump = vList.some((v) => v.id.startsWith('dump_') || v.plate.includes('DUMP'));
-      let finalVehicles = [...vList];
+      const finalVehicles = [...vList];
       if (!hasDump) {
         finalVehicles.push(
           {
