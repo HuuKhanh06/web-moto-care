@@ -100,9 +100,9 @@ export async function seedDatabase(): Promise<void> {
     });
   }
 
-  // 2. Tạo 12 xe thuộc 3 loại (xe số, tay ga, xe côn), 11 SAN_SANG, 1 BAO_TRI
+  // 2. Tạo 30 xe thuộc 3 loại (10 xe số, 12 tay ga, 8 xe côn), 28 SAN_SANG, 2 BAO_TRI
   const vehicles: Vehicle[] = [
-    // Xe số
+    // Xe số (10 xe)
     {
       id: 'a1111111-0000-0000-0000-000000000001',
       plate: '29-B1 112.34',
@@ -137,7 +137,7 @@ export async function seedDatabase(): Promise<void> {
       status: 'SAN_SANG',
     },
 
-    // Tay ga
+    // Tay ga (12 xe)
     {
       id: 'b2222222-0000-0000-0000-000000000005',
       plate: '29-C1 334.55',
@@ -171,7 +171,7 @@ export async function seedDatabase(): Promise<void> {
       status: 'SAN_SANG',
     },
 
-    // Xe côn
+    // Xe côn (8 xe)
     {
       id: 'c3333333-0000-0000-0000-000000000009',
       plate: '29-D1 119.88',
@@ -205,6 +205,158 @@ export async function seedDatabase(): Promise<void> {
       daily_price: 250000,
       status: 'BAO_TRI',
       condition_note: 'Đang thay bộ nhông sên dĩa và lọc nhớt định kỳ',
+    },
+
+    // Bổ sung đội xe: Xe số 13 -> 18
+    {
+      id: 'a1111111-0000-0000-0000-000000000013',
+      plate: '29-B1 345.67',
+      model: 'Honda Wave Alpha 110 Đỏ Đen',
+      vehicle_type: 'xe_so',
+      daily_price: 120000,
+      status: 'SAN_SANG',
+      condition_note: 'Bảo dưỡng định kỳ, xích và phanh chuẩn',
+    },
+    {
+      id: 'a1111111-0000-0000-0000-000000000014',
+      plate: '29-B1 678.90',
+      model: 'Honda Blade 110 Thể Thao',
+      vehicle_type: 'xe_so',
+      daily_price: 130000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'a1111111-0000-0000-0000-000000000015',
+      plate: '29-B1 456.78',
+      model: 'Yamaha Sirius FI Tiết Kiệm Xăng',
+      vehicle_type: 'xe_so',
+      daily_price: 130000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'a1111111-0000-0000-0000-000000000016',
+      plate: '29-B1 789.12',
+      model: 'Honda Future 125 Cao Cấp',
+      vehicle_type: 'xe_so',
+      daily_price: 150000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'a1111111-0000-0000-0000-000000000017',
+      plate: '29-B1 890.23',
+      model: 'Honda Wave Alpha 110 Xanh Đậm',
+      vehicle_type: 'xe_so',
+      daily_price: 120000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'a1111111-0000-0000-0000-000000000018',
+      plate: '29-B1 901.34',
+      model: 'Honda Blade 110 Vành Đúc',
+      vehicle_type: 'xe_so',
+      daily_price: 135000,
+      status: 'SAN_SANG',
+    },
+
+    // Bổ sung đội xe: Xe tay ga 19 -> 26
+    {
+      id: 'b2222222-0000-0000-0000-000000000019',
+      plate: '29-C1 556.77',
+      model: 'Honda Vision 2023 Trắng Ngọc Trai',
+      vehicle_type: 'tay_ga',
+      daily_price: 160000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'b2222222-0000-0000-0000-000000000020',
+      plate: '29-C1 667.88',
+      model: 'Honda Vision 2023 Đen Nhám',
+      vehicle_type: 'tay_ga',
+      daily_price: 165000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'b2222222-0000-0000-0000-000000000021',
+      plate: '29-C1 778.01',
+      model: 'Honda Lead 125 Bạc Ánh Kim',
+      vehicle_type: 'tay_ga',
+      daily_price: 180000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'b2222222-0000-0000-0000-000000000022',
+      plate: '29-C1 889.12',
+      model: 'Honda Air Blade 160 Phanh ABS',
+      vehicle_type: 'tay_ga',
+      daily_price: 210000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'b2222222-0000-0000-0000-000000000023',
+      plate: '29-C1 990.23',
+      model: 'Honda Air Blade 125 Đỏ Đen',
+      vehicle_type: 'tay_ga',
+      daily_price: 190000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'b2222222-0000-0000-0000-000000000024',
+      plate: '29-C1 112.45',
+      model: 'Yamaha Grande Hybrid Xanh Pastel',
+      vehicle_type: 'tay_ga',
+      daily_price: 195000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'b2222222-0000-0000-0000-000000000025',
+      plate: '29-C1 223.56',
+      model: 'Honda Vision 2023 Xám Xi Măng',
+      vehicle_type: 'tay_ga',
+      daily_price: 170000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'b2222222-0000-0000-0000-000000000026',
+      plate: '29-C1 334.67',
+      model: 'Honda Lead 125 Đỏ Đô',
+      vehicle_type: 'tay_ga',
+      daily_price: 180000,
+      status: 'BAO_TRI',
+      condition_note: 'Đang bảo dưỡng định kỳ hệ thống phanh và thay dầu',
+    },
+
+    // Bổ sung đội xe: Xe côn 27 -> 30
+    {
+      id: 'c3333333-0000-0000-0000-000000000027',
+      plate: '29-D1 448.88',
+      model: 'Honda Winner X 150 Thể Thao',
+      vehicle_type: 'xe_con',
+      daily_price: 220000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'c3333333-0000-0000-0000-000000000028',
+      plate: '29-D1 559.99',
+      model: 'Yamaha Exciter 155 VVA GP',
+      vehicle_type: 'xe_con',
+      daily_price: 230000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'c3333333-0000-0000-0000-000000000029',
+      plate: '29-D1 660.11',
+      model: 'Honda Winner X 150 Đường Đua',
+      vehicle_type: 'xe_con',
+      daily_price: 225000,
+      status: 'SAN_SANG',
+    },
+    {
+      id: 'c3333333-0000-0000-0000-000000000030',
+      plate: '29-D1 771.22',
+      model: 'Yamaha Exciter 155 Monster Energy',
+      vehicle_type: 'xe_con',
+      daily_price: 235000,
+      status: 'SAN_SANG',
     },
   ];
 

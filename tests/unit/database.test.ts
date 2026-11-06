@@ -207,13 +207,13 @@ describe('GIAI ĐOẠN 1: Kiểm thử Tầng Dữ liệu, Ràng buộc Reposito
 
     const vehicleCountBefore = await db.vehicles.count();
     const userCountBefore = await db.profiles.count();
-    expect(vehicleCountBefore).toBe(12);
+    expect(vehicleCountBefore).toBe(30);
     expect(userCountBefore).toBe(6);
 
     // Xuất ra JSON
     const exported = await exportDatabase();
     expect(exported.version).toBe(1);
-    expect(exported.data.vehicles.length).toBe(12);
+    expect(exported.data.vehicles.length).toBe(30);
 
     // Xóa sạch cơ sở dữ liệu
     await db.clearAllTables();
