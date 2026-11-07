@@ -35,11 +35,26 @@ export function AppProviders({ children }: AppProvidersProps) {
     }
     initApp();
 
-    // 2. Đăng ký Service Worker cho PWA
-    if ('serviceWorker' in navigator && import.meta.env.PROD) {
-      navigator.serviceWorker.register('./sw.js').catch((err) => {
-        console.warn('PWA ServiceWorker registration failed:', err);
-      });
+    // 2. Quản lý Service Worker: Tự động hủy đăng ký và xóa cache khi ở chế độ dev
+    if ('serviceWorker' in navigator) {
+      if (!import.meta.env.PROD) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister();
+          }
+        });
+        if ('caches' in window) {
+          caches.keys().then((keys) => {
+            for (const key of keys) {
+              caches.delete(key);
+            }
+          });
+        }
+      } else {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+          console.warn('PWA ServiceWorker registration failed:', err);
+        });
+      }
     }
 
     // 3. Lắng nghe Realtime từ Supabase (nếu đã cấu hình)
