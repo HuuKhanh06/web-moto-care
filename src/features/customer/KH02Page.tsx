@@ -7,6 +7,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
+import { dataAdapter } from '@/db/adapter';
 import { fn_request_more_docs, fn_end_cancel } from '@/engine/fn';
 import { decodeCccdFrontOrBack } from '@/lib/cccdQr';
 import { extractGplxFromEdgeFunction, type GplxExtractionResult } from '@/ai/gplxClient';
@@ -459,15 +460,19 @@ export function KH02Page() {
           check_note: file.name,
           is_valid: true,
         });
+        const freshDoc = await db.customer_documents.get(existing.id);
+        if (freshDoc) dataAdapter.pushRecordToCloud('customer_documents', freshDoc as unknown as Record<string, unknown>);
       } else {
-        await db.customer_documents.add({
+        const newDoc: CustomerDocument = {
           id: crypto.randomUUID(),
           request_id: requestId,
           doc_type: type,
           file_url: dataUrl,
           check_note: file.name,
           is_valid: true,
-        });
+        };
+        await db.customer_documents.add(newDoc);
+        dataAdapter.pushRecordToCloud('customer_documents', newDoc as unknown as Record<string, unknown>);
       }
 
       toast.success(`Đã tải lên ảnh từ thiết bị: ${file.name}`);

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
+import { dataAdapter } from '@/db/adapter';
 import type { RentalRequest, Vehicle } from '@/db/types';
 import {
   Card,
@@ -49,6 +50,14 @@ export function KH06Page() {
     if (!currentActor) return;
     setLoading(true);
     try {
+      if (import.meta.env.MODE !== 'test') {
+        try {
+          await dataAdapter.pullCloudToLocal();
+        } catch {
+          // Fallback Dexie nếu offline
+        }
+      }
+
       const list = await db.rental_requests
         .where('customer_id')
         .equals(currentActor.id)

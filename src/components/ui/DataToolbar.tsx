@@ -3,11 +3,12 @@ import { clock } from '@/lib/clock';
 import { seedDatabase, SEED_USERS } from '@/db/seed';
 import { importDatabase, downloadDatabaseBackup } from '@/db/backup';
 import { db } from '@/db';
+import { dataAdapter } from '@/db/adapter';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Clock, Database, Download, Upload, RefreshCw, FastForward, CheckCircle2 } from 'lucide-react';
+import { Clock, Database, Download, Upload, RefreshCw, FastForward, CheckCircle2, Trash2, CloudDownload } from 'lucide-react';
 
 export function DataToolbar() {
   const [currentDate, setCurrentDate] = useState<string>(clock.now().toLocaleString('vi-VN'));
@@ -48,6 +49,25 @@ export function DataToolbar() {
       showNotify('Đã nạp dữ liệu mẫu thành công!');
     } catch (e) {
       showNotify('Lỗi nạp dữ liệu: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  const handleWipeCustomer = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đơn thuê của khách hàng và đưa 30 xe về trạng thái sẵn sàng?')) return;
+    try {
+      const res = await dataAdapter.wipeAllCustomerData();
+      showNotify(res.message);
+    } catch (e) {
+      showNotify('Lỗi dọn dữ liệu: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  const handlePullCloud = async () => {
+    try {
+      const res = await dataAdapter.pullCloudToLocal();
+      showNotify(res.message);
+    } catch (e) {
+      showNotify('Lỗi kéo Cloud: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -163,6 +183,26 @@ export function DataToolbar() {
             >
               <Download className="w-4 h-4" />
               <span>Xuất JSON (Backup)</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePullCloud}
+              className="flex items-center gap-1.5 text-teal-700 border-teal-300 hover:bg-teal-50"
+            >
+              <CloudDownload className="w-4 h-4" />
+              <span>Đồng bộ Cloud</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleWipeCustomer}
+              className="flex items-center gap-1.5 text-rose-600 border-rose-300 hover:bg-rose-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Xóa sạch đơn khách</span>
             </Button>
 
             <label className="cursor-pointer inline-flex items-center justify-center font-medium rounded-xl transition-colors px-3 py-1.5 text-xs border border-brand-500 text-brand-700 hover:bg-brand-50">

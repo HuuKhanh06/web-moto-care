@@ -8,6 +8,7 @@ import { bpmnGraph } from './graph';
 import { timerManager } from './timers';
 import { BUSINESS_RULES } from '@/config/rules';
 import { integrations } from '@/integrations';
+import { dataAdapter } from '@/db/adapter';
 import type { Actor, ProcessEvent, ProcessState } from '@/db/types';
 
 import {
@@ -101,8 +102,8 @@ const TASK_ROLE_MAP: Record<string, Array<Actor['role']>> = {
   SC_Escalate: ['quan_ly'],
 
   // Khách hàng
-  M_CheckDocs: ['khach_hang', 'nhan_vien', 'quan_ly', 'system'],
-  M_WaitDeposit: ['khach_hang', 'nhan_vien', 'quan_ly', 'system'],
+  M_CheckDocs: ['khach_hang', 'system'],
+  M_WaitDeposit: ['khach_hang', 'system'],
   M_WaitSign: ['khach_hang'],
   Activity_0d0qzp6: ['khach_hang'],
   M_EG: ['khach_hang'],
@@ -111,9 +112,9 @@ const TASK_ROLE_MAP: Record<string, Array<Actor['role']>> = {
   M_CatchIncident: ['khach_hang'],
   M_ReceiveReview: ['khach_hang'],
   M_ConfirmRefund: ['khach_hang', 'system'],
-  M_ReceiveExtra: ['khach_hang', 'nhan_vien', 'quan_ly', 'system'],
+  M_ReceiveExtra: ['khach_hang', 'system'],
   GH_WaitAccept: ['khach_hang'],
-  GH_VerifyQR: ['khach_hang', 'nhan_vien', 'quan_ly', 'system'],
+  GH_VerifyQR: ['khach_hang', 'system'],
 };
 
 export class ProcessEngine {
@@ -358,6 +359,12 @@ export class ProcessEngine {
     }
 
     await logEvent(requestId, nodeId, 'ENTER_WAIT_POINT', actor);
+
+    // Đồng bộ trạng thái đơn lên Supabase Cloud
+    const currentRental = await db.rental_requests.get(requestId);
+    if (currentRental) {
+      dataAdapter.pushRecordToCloud('rental_requests', currentRental as unknown as Record<string, unknown>);
+    }
 
     // Đăng ký timer boundary nếu có
     if (nodeId === 'M_WaitDeposit') {
@@ -740,6 +747,12 @@ export class ProcessEngine {
 
     await logEvent(requestId, nodeId, 'COMPLETE_TASK', actor, payload);
     await db.process_state.put(state);
+
+    // Đồng bộ tức thời lên Supabase Cloud
+    const freshRental = await db.rental_requests.get(requestId);
+    if (freshRental) {
+      dataAdapter.pushRecordToCloud('rental_requests', freshRental as unknown as Record<string, unknown>);
+    }
 
     // Tiếp tục chạy quy trình
     await this.advance(requestId, nodeId, outcome, actor);
@@ -1228,6 +1241,12 @@ export class ProcessEngine {
 
     await logEvent(requestId, endNodeId, 'END_PROCESS', actor);
 
+    // Đồng bộ trạng thái kết thúc hồ sơ lên Supabase Cloud
+    const finalRental = await db.rental_requests.get(requestId);
+    if (finalRental) {
+      dataAdapter.pushRecordToCloud('rental_requests', finalRental as unknown as Record<string, unknown>);
+    }
+
     // Kích hoạt webhook No-Code khi hồ sơ chạm nút kết thúc
     await integrations.workflowHook.triggerWebhook({
       requestId,
@@ -1248,6 +1267,23 @@ export class ProcessEngine {
     const states = await db.process_state.toArray();
     const tasks: Array<{ request_id: string; node_id: string; node_name: string }> = [];
 
+    // Danh sách các điểm chờ thuộc về khách hàng hoặc tự động (không giao cho nhân viên)
+    const customerOnlyNodes = [
+      'M_CheckDocs',
+      'M_WaitDeposit',
+      'M_WaitSign',
+      'Activity_0d0qzp6',
+      'M_EG',
+      'M_CatchReturn',
+      'M_CatchExtend',
+      'M_CatchIncident',
+      'M_ReceiveReview',
+      'M_ConfirmRefund',
+      'M_ReceiveExtra',
+      'GH_WaitAccept',
+      'GH_VerifyQR',
+    ];
+
     for (const s of states) {
       if (role === 'khach_hang') {
         const req = await db.rental_requests.get(s.request_id);
@@ -1255,6 +1291,10 @@ export class ProcessEngine {
       }
 
       for (const nodeId of s.waiting_node_ids) {
+        if (role === 'nhan_vien' && customerOnlyNodes.includes(nodeId)) {
+          continue;
+        }
+
         const allowedRoles = TASK_ROLE_MAP[nodeId] || [];
         if (allowedRoles.includes(role)) {
           const node = bpmnGraph.getNode(nodeId);

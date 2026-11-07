@@ -287,6 +287,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const updated = await db.profiles.get(current.id);
       if (updated) {
         set({ currentUser: updated });
+        if (isSupabaseConfigured && supabase && import.meta.env.MODE !== 'test') {
+          try {
+            await supabase.from('profiles').upsert(updated, { onConflict: 'id' });
+          } catch {
+            // Ignore offline network error
+          }
+        }
       }
       return { success: true };
     } catch (err) {

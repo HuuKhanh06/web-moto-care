@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
+import { dataAdapter } from '@/db/adapter';
 import type { RentalRequest, Profile, Vehicle } from '@/db/types';
 import {
   Card,
@@ -81,6 +82,15 @@ export function NV01Page() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      // Kéo đơn mới nhất từ Supabase Cloud để cập nhật đồng bộ các máy khác
+      if (import.meta.env.MODE !== 'test') {
+        try {
+          await dataAdapter.pullCloudToLocal();
+        } catch {
+          // Fallback Dexie nếu offline
+        }
+      }
+
       const pendingRaw = await engine.getPendingTasks('nhan_vien');
 
       let managerTasks: Array<{ request_id: string; node_id: string; node_name: string }> = [];

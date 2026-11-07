@@ -11,6 +11,7 @@ import { getIntegrationConfig } from '@/config/integrations';
 import { aiService } from '@/ai';
 import type { AiOcrResponse } from '@/ai/types';
 import type { Actor, RentalRequest, Payment, Contract, Statement, Settlement } from '@/db/types';
+import { dataAdapter } from '@/db/adapter';
 
 // ==============================================================
 // 1. TIẾP NHẬN & HỒ SƠ
@@ -39,6 +40,7 @@ export async function fn_create_rental_request(
   };
 
   await db.rental_requests.add(request);
+  dataAdapter.pushRecordToCloud('rental_requests', request as unknown as Record<string, unknown>);
   await logEvent(requestId, 'M_START', 'CREATE_REQUEST', actor, {
     vehicle_type: data.vehicle_type,
     start_at: data.start_at,
@@ -63,6 +65,15 @@ export async function fn_check_fleet(
   const startReq = new Date(req.start_at).getTime();
   const endReq = new Date(req.end_at).getTime();
 
+  // Đồng bộ mới nhất từ Cloud nếu không phải unit test để chống xung đột đặt trùng xe giữa nhiều người dùng
+  if (import.meta.env.MODE !== 'test') {
+    try {
+      await dataAdapter.pullCloudToLocal();
+    } catch {
+      // Bỏ qua lỗi mạng nếu đang offline
+    }
+  }
+
   // Tìm danh sách xe đang sẵn sàng
   let vehicles = await db.vehicles.where('status').equals('SAN_SANG').toArray();
   if (preferredType) {
@@ -72,7 +83,7 @@ export async function fn_check_fleet(
   let selectedVehicleId: string | null = null;
 
   for (const v of vehicles) {
-    // Kiểm tra lịch xe
+    // 1. Kiểm tra lịch xe đã khóa trong vehicle_schedule
     const schedules = await db.vehicle_schedule.where('vehicle_id').equals(v.id).toArray();
     let hasOverlap = false;
 
@@ -85,6 +96,27 @@ export async function fn_check_fleet(
       }
     }
 
+    // 2. Chống đặt trùng xe: Kiểm tra các đơn thuê KHÁC đang giữ xe trong cùng khung thời gian
+    if (!hasOverlap) {
+      const otherRentals = await db.rental_requests
+        .where('vehicle_id')
+        .equals(v.id)
+        .toArray();
+
+      for (const other of otherRentals) {
+        if (other.id === requestId) continue;
+        // Bỏ qua các đơn đã kết thúc, bị từ chối hoặc đã hủy
+        if (['TU_CHOI', 'DA_HUY', 'HOAN_TAT'].includes(other.status)) continue;
+
+        const oStart = new Date(other.start_at).getTime();
+        const oEnd = new Date(other.end_at).getTime();
+        if (startReq < oEnd && endReq > oStart) {
+          hasOverlap = true;
+          break;
+        }
+      }
+    }
+
     if (!hasOverlap) {
       selectedVehicleId = v.id;
       break;
@@ -93,6 +125,10 @@ export async function fn_check_fleet(
 
   if (selectedVehicleId) {
     await db.rental_requests.update(requestId, { vehicle_id: selectedVehicleId });
+    const fresh = await db.rental_requests.get(requestId);
+    if (fresh) {
+      dataAdapter.pushRecordToCloud('rental_requests', fresh as unknown as Record<string, unknown>);
+    }
   }
 
   await logEvent(requestId, 'M_CheckFleet', 'CHECK_FLEET_RESULT', actor, {
@@ -366,7 +402,10 @@ export async function fn_create_deposit_qr(requestId: string, actor: Actor): Pro
   };
 
   await db.payments.add(payment);
+  dataAdapter.pushRecordToCloud('payments', payment as unknown as Record<string, unknown>);
   await db.rental_requests.update(requestId, { status: 'CHO_COC' });
+  const freshReq = await db.rental_requests.get(requestId);
+  if (freshReq) dataAdapter.pushRecordToCloud('rental_requests', freshReq as unknown as Record<string, unknown>);
 
   // Tích hợp sinh mã QR VietQR (Real hoặc Mock)
   const cfg = getIntegrationConfig();
@@ -514,7 +553,10 @@ export async function fn_generate_contract(requestId: string, actor: Actor): Pro
     await db.contracts.add(contract);
   }
 
+  dataAdapter.pushRecordToCloud('contracts', contract as unknown as Record<string, unknown>);
   await db.rental_requests.update(requestId, { status: 'CHO_KY' });
+  const freshContractReq = await db.rental_requests.get(requestId);
+  if (freshContractReq) dataAdapter.pushRecordToCloud('rental_requests', freshContractReq as unknown as Record<string, unknown>);
 
   await logEvent(requestId, 'M_Contract', 'GENERATE_CONTRACT', actor, {
     contract_id: contract.id,
@@ -571,7 +613,10 @@ export async function fn_lock_schedule(requestId: string, actor: Actor): Promise
   };
 
   await db.vehicle_schedule.add(schedule);
+  dataAdapter.pushRecordToCloud('vehicle_schedule', schedule as unknown as Record<string, unknown>);
   await db.rental_requests.update(requestId, { status: 'CHO_BAN_GIAO' });
+  const freshLockReq = await db.rental_requests.get(requestId);
+  if (freshLockReq) dataAdapter.pushRecordToCloud('rental_requests', freshLockReq as unknown as Record<string, unknown>);
 
   await logEvent(requestId, 'M_SaveBooking', 'LOCK_SCHEDULE', actor, {
     schedule_id: schedule.id,
