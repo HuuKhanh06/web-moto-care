@@ -88,7 +88,7 @@ export function KH02Page() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
-  const { currentActor, currentUser } = useAuthStore();
+  const { currentActor, currentUser, updateProfileName } = useAuthStore();
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -391,9 +391,7 @@ export function KH02Page() {
 
     try {
       if (currentActor?.id && extractedProfile.fullName) {
-        await db.profiles.update(currentActor.id, {
-          full_name: extractedProfile.fullName,
-        });
+        await updateProfileName(extractedProfile.fullName);
       }
 
       const pState = await db.process_state.get(requestId);

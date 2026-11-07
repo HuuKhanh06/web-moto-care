@@ -31,9 +31,10 @@ interface AuthState {
   }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   restoreSession: () => Promise<void>;
+  updateProfileName: (newName: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   currentActor: null,
   currentUser: null,
   isAuthenticated: false,
@@ -273,6 +274,25 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
       isLoading: false,
     });
+  },
+
+  updateProfileName: async (newName: string) => {
+    const current = get().currentUser;
+    if (!current?.id) return { success: false, error: 'Chưa đăng nhập' };
+    const trimmed = newName.trim();
+    if (!trimmed) return { success: false, error: 'Họ và tên không được để trống' };
+
+    try {
+      await db.profiles.update(current.id, { full_name: trimmed });
+      const updated = await db.profiles.get(current.id);
+      if (updated) {
+        set({ currentUser: updated });
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('Lỗi cập nhật tên:', err);
+      return { success: false, error: 'Không thể cập nhật tên' };
+    }
   },
 }));
 
