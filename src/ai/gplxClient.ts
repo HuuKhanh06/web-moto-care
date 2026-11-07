@@ -15,13 +15,13 @@ export interface GplxExtractionResult {
 
 /**
  * Trích xuất thông tin GPLX qua Supabase Edge Function
- * Thời gian chờ tối đa 20 giây; quá hạn hoặc lỗi trả về trạng thái rõ ràng, không treo
+ * Thời gian chờ tối đa 7 giây; quá hạn hoặc lỗi trả về trạng thái rõ ràng, không treo
  */
 export async function extractGplxFromEdgeFunction(
   imageSource: string,
   requestId: string
 ): Promise<GplxExtractionResult> {
-  const timeoutMs = 20000;
+  const timeoutMs = 7000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -48,9 +48,9 @@ export async function extractGplxFromEdgeFunction(
       },
     });
 
-    // Bọc trong Promise.race với timeout 20s
+    // Bọc trong Promise.race với timeout 7s
     const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => {
-      setTimeout(() => reject(new Error('GPLX_TIMEOUT_20S')), timeoutMs);
+      setTimeout(() => reject(new Error('GPLX_TIMEOUT_7S')), timeoutMs);
     });
 
     const { data, error } = (await Promise.race([invokePromise, timeoutPromise])) as {

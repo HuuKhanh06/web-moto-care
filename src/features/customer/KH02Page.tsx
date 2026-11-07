@@ -9,7 +9,7 @@ import { engine } from '@/engine';
 import { db } from '@/db';
 import { fn_request_more_docs, fn_end_cancel } from '@/engine/fn';
 import { decodeCccdFrontOrBack } from '@/lib/cccdQr';
-import { extractGplxFromEdgeFunction } from '@/ai/gplxClient';
+import { extractGplxFromEdgeFunction, type GplxExtractionResult } from '@/ai/gplxClient';
 import {
   evaluateRoutingTable,
   buildUnifiedOcrResponse,
@@ -115,6 +115,10 @@ export function KH02Page() {
   const [scanState, setScanState] = useState<'idle' | 'reading' | 'success' | 'needs_review' | 'failed'>('idle');
   const [scanFailureMessage, setScanFailureMessage] = useState<string>('Ảnh chưa rõ. Chụp lại.');
 
+  // Ref chống trùng lặp tiến trình quét và chống lặp vô hạn
+  const isScanningRef = useRef(false);
+  const scannedFingerprintRef = useRef<string | null>(null);
+
   const [isCustomerConfirmed, setIsCustomerConfirmed] = useState(false);
   const [extractedProfile, setExtractedProfile] = useState<{
     fullName: string | null;
@@ -132,13 +136,17 @@ export function KH02Page() {
   const [isAppliedToProfile, setIsAppliedToProfile] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
 
-  // Watchdog Timer an toàn: Không bao giờ để trạng thái 'reading' quá 25 giây
+  // Watchdog Timer an toàn: Tối đa 8 giây nếu đang 'reading' thì dừng hẳn và thông báo
   useEffect(() => {
     if (scanState === 'reading') {
       const timer = setTimeout(() => {
-        setScanState('needs_review');
-        toast.warning('Quá trình quét quá 25 giây. Hệ thống chuyển sang trạng thái cần nhân viên hỗ trợ.');
-      }, 25000);
+        if (isScanningRef.current) {
+          isScanningRef.current = false;
+        }
+        setScanState('failed');
+        setScanFailureMessage('Thời gian đọc quá 8 giây. Ảnh chưa rõ, vui lòng bấm [Đổi ảnh] để chụp lại.');
+        toast.warning('Thời gian đọc quá 8 giây. Ảnh chưa rõ, vui lòng chụp lại.');
+      }, 8000);
       return () => clearTimeout(timer);
     }
   }, [scanState]);
@@ -158,13 +166,13 @@ export function KH02Page() {
 
   /**
    * Tự động quét và xác thực giấy tờ theo kiến trúc P0:
-   * 1. CCCD: Quét QR trực tiếp trong trình duyệt bằng module jsQR thuần (< 100ms)
-   * 2. GPLX: Gửi tới Supabase Edge Function đọc bằng AI Vision (Timeout 20s)
-   * 3. Định tuyến theo bảng ngưỡng thuần túy
+   * 1. CCCD: Quét QR trực tiếp trong trình duyệt bằng module jsQR thuần
+   * 2. GPLX: Gửi tới Supabase Edge Function đọc bằng AI Vision (Timeout tối đa 7s)
+   * 3. Thời gian đọc kĩ tầm 2.5 - 5s; nếu lỗi thì dừng hẳn và thông báo rõ ràng, không lặp lại
    */
   const triggerAutoOcr = useCallback(
-    async (currentDocs: CustomerDocument[], req: RentalRequest) => {
-      if (!req.id || scanState === 'reading') return;
+    async (currentDocs: CustomerDocument[], req: RentalRequest, force = false) => {
+      if (!req.id || isScanningRef.current) return;
 
       const hasCccdFront = currentDocs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
       const hasCccdBack = currentDocs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
@@ -174,17 +182,52 @@ export function KH02Page() {
         return;
       }
 
-      setScanState('reading');
-      try {
-        const cccdFront = currentDocs.find((d) => d.doc_type === 'CCCD_TRUOC');
-        const cccdBack = currentDocs.find((d) => d.doc_type === 'CCCD_SAU');
-        const gplxFront = currentDocs.find((d) => d.doc_type === 'BANG_LAI_TRUOC');
+      const cccdFront = currentDocs.find((d) => d.doc_type === 'CCCD_TRUOC');
+      const cccdBack = currentDocs.find((d) => d.doc_type === 'CCCD_SAU');
+      const gplxFront = currentDocs.find((d) => d.doc_type === 'BANG_LAI_TRUOC');
 
-        // 1. Quét QR CCCD độc lập bằng thư viện thuần client
-        const cccdRes = await decodeCccdFrontOrBack(cccdFront?.file_url, cccdBack?.file_url);
+      const currentComboFingerprint = `${computeImageFingerprint(cccdFront?.file_url)}_${computeImageFingerprint(cccdBack?.file_url)}_${computeImageFingerprint(gplxFront?.file_url)}`;
+
+      // Chống lặp vô hạn: Nếu tổ hợp ảnh này đã quét rồi và không có yêu cầu ép quét lại thì dừng
+      if (!force && scannedFingerprintRef.current === currentComboFingerprint) {
+        return;
+      }
+
+      isScanningRef.current = true;
+      scannedFingerprintRef.current = currentComboFingerprint;
+      setScanState('reading');
+      const scanStartTime = Date.now();
+
+      try {
+        // 1. Quét đồng thời cả CCCD và GPLX
+        const [cccdRes, gplxRes] = await Promise.all([
+          decodeCccdFrontOrBack(cccdFront?.file_url, cccdBack?.file_url),
+          gplxFront?.file_url
+            ? extractGplxFromEdgeFunction(gplxFront.file_url, req.id)
+            : Promise.resolve<GplxExtractionResult>({ success: false, isServiceError: true }),
+        ]);
+
+        // Đảm bảo thời gian đọc kĩ từ 2.5 - 4 giây để người dùng quan sát tiến trình
+        const elapsed = Date.now() - scanStartTime;
+        const targetReadingTime = 2500;
+        if (elapsed < targetReadingTime) {
+          await new Promise((resolve) => setTimeout(resolve, targetReadingTime - elapsed));
+        }
+
+        // 2. Kiểm tra kết quả quét CCCD: Nếu không đọc được mã QR thì DỪNG HẲN
+        if (!cccdRes.success) {
+          setScanState('failed');
+          const isCrossCheckFail = cccdRes.error?.startsWith('QR_INCONSISTENT');
+          const failureMsg = isCrossCheckFail
+            ? 'Mã QR chưa khớp chuẩn thông tin CCCD. Vui lòng chụp lại ảnh rõ nét hơn.'
+            : 'Chưa đọc được mã QR. Chụp lại ảnh rõ hơn.';
+          setScanFailureMessage(failureMsg);
+          toast.warning(failureMsg);
+          return;
+        }
 
         let cccdDoc: UnifiedCccdDoc | undefined = undefined;
-        if (cccdRes.success && cccdRes.data) {
+        if (cccdRes.data) {
           cccdDoc = {
             full_name: cccdRes.data.full_name,
             date_of_birth: cccdRes.data.date_of_birth,
@@ -195,19 +238,15 @@ export function KH02Page() {
           };
         }
 
-        // 2. Quét GPLX độc lập qua Supabase Edge Function (có timeout 20s)
         let gplxDoc: UnifiedGplxDoc | undefined = undefined;
         let isGplxServiceError = false;
         let isGplxQualityFail = false;
 
-        if (gplxFront?.file_url) {
-          const gplxRes = await extractGplxFromEdgeFunction(gplxFront.file_url, req.id);
-          if (gplxRes.success && gplxRes.doc) {
-            gplxDoc = gplxRes.doc;
-          } else {
-            isGplxServiceError = Boolean(gplxRes.isServiceError);
-            isGplxQualityFail = gplxRes.imageQuality === 'FAIL';
-          }
+        if (gplxRes.success && gplxRes.doc) {
+          gplxDoc = gplxRes.doc;
+        } else {
+          isGplxServiceError = Boolean(gplxRes.isServiceError);
+          isGplxQualityFail = gplxRes.imageQuality === 'FAIL';
         }
 
         // 3. Phân luồng định tuyến theo bảng ngưỡng thuần túy
@@ -246,7 +285,7 @@ export function KH02Page() {
           await db.process_state.update(req.id, {
             variables: {
               ...pState.variables,
-              extracted_cccd: cccdRes.success && cccdDoc ? {
+              extracted_cccd: cccdDoc ? {
                 full_name: cName,
                 id_number: cId,
                 dob: cDob,
@@ -268,16 +307,7 @@ export function KH02Page() {
         }
 
         // 5. Cập nhật máy trạng thái giao diện theo bảng ngưỡng & quy tắc P0
-        if (!cccdRes.success) {
-          // CCCD không có QR hợp lệ hoặc kiểm tra chéo không khớp (QR_INCONSISTENT)
-          setScanState('failed');
-          const isCrossCheckFail = cccdRes.error?.startsWith('QR_INCONSISTENT');
-          const failureMsg = isCrossCheckFail
-            ? 'Mã QR chưa khớp chuẩn thông tin CCCD. Vui lòng chụp lại ảnh rõ nét hơn.'
-            : 'Chưa đọc được mã QR. Chụp lại ảnh rõ hơn.';
-          setScanFailureMessage(failureMsg);
-          toast.warning(failureMsg);
-        } else if (routingRes.action === 'FALLBACK_MANUAL' || isGplxServiceError) {
+        if (routingRes.action === 'FALLBACK_MANUAL' || isGplxServiceError) {
           setScanState('needs_review');
           toast.info('Thông tin CCCD đã đọc thành công! Cần nhân viên kiểm tra bổ sung GPLX.');
         } else if (routingRes.action === 'PREFILL_FOR_RULES') {
@@ -304,7 +334,7 @@ export function KH02Page() {
         await db.ai_logs.add({
           request_id: req.id,
           bpmn_node_id: 'M_CheckDocs',
-          input_summary: `CCCD: ${cccdRes.success ? 'Đọc QR thành công' : 'Chưa có QR'}, GPLX: ${gplxDoc ? 'Đọc AI thành công' : 'Chưa đọc được'}`,
+          input_summary: `CCCD: Đọc QR thành công, GPLX: ${gplxDoc ? 'Đọc AI thành công' : 'Chưa đọc được'}`,
           output: unifiedResp as unknown as Record<string, unknown>,
           confidence: unifiedResp.minimum_required_confidence,
           routing_action: unifiedResp.routing.action,
@@ -317,10 +347,13 @@ export function KH02Page() {
         setDocuments(freshDocs);
       } catch (err: unknown) {
         console.error('Lỗi tự động xác thực OCR:', err);
-        setScanState('needs_review');
+        setScanState('failed');
+        setScanFailureMessage('Không thể đọc thông tin từ ảnh giấy tờ. Vui lòng thử lại.');
+      } finally {
+        isScanningRef.current = false;
       }
     },
-    [scanState]
+    []
   );
 
   const loadData = useCallback(async () => {
@@ -465,6 +498,7 @@ export function KH02Page() {
       }
       setIsCustomerConfirmed(false);
       setScanState('idle');
+      scannedFingerprintRef.current = null; // Reset để cho phép quét ảnh mới tải lên
 
       const updatedDocs = await db.customer_documents.where('request_id').equals(requestId).toArray();
       setDocuments(updatedDocs);
@@ -475,7 +509,7 @@ export function KH02Page() {
       const hasGplxFront = updatedDocs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
 
       if (hasCccdFront && hasCccdBack && hasGplxFront) {
-        await triggerAutoOcr(updatedDocs, request);
+        await triggerAutoOcr(updatedDocs, request, true);
       }
     } catch (err: unknown) {
       console.error('Lỗi tải ảnh:', err);
@@ -815,26 +849,36 @@ export function KH02Page() {
         )}
 
         {scanState === 'failed' && (
-          <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/70 space-y-3">
+          <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/80 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-rose-800 font-semibold text-sm">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{scanFailureMessage || 'Ảnh chưa rõ. Chụp lại.'}</span>
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                <span className="font-bold">{scanFailureMessage || 'Chưa đọc được mã QR. Chụp lại ảnh rõ hơn.'}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => triggerAutoOcr(documents, request)}
+                  onClick={() => triggerAutoOcr(documents, request, true)}
                   className="text-xs border-rose-300 text-rose-700 hover:bg-rose-100 cursor-pointer"
                 >
                   Thử lại
                 </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => inputRefCccdFront.current?.click()}
+                  className="text-xs bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5 mr-1" />
+                  <span>Đổi ảnh CCCD</span>
+                </Button>
               </div>
             </div>
             <p className="text-xs text-rose-600">
-              Vui lòng chụp lại ảnh rõ nét, đủ ánh sáng và không bị lóa hoặc mất góc.
+              Vui lòng chụp lại ảnh thẻ CCCD rõ nét, đủ ánh sáng, không bị lóa và thấy rõ mã QR hình vuông.
             </p>
           </div>
         )}
