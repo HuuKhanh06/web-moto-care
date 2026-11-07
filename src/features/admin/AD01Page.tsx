@@ -1,13 +1,10 @@
 // src/features/admin/AD01Page.tsx
-// Màn hình AD-01: Quản lý xe, đối tác, người dùng & Dữ liệu hệ thống
-// Phân quyền: Quản lý toàn quyền Thêm/Sửa/Sao lưu/Khôi phục; Nhân viên chỉ xem
+// Quản trị đội xe, đối tác cứu hộ & Người dùng nội bộ
+// Phân quyền: Quản lý toàn quyền Thêm/Sửa xe và Bật/Tắt đối tác; Nhân viên có quyền xem
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '@/db';
 import { seedDatabase } from '@/db/seed';
-import { downloadDatabaseBackup, importDatabase } from '@/db/backup';
-import { dataAdapter } from '@/db/adapter';
-import { isSupabaseConfigured } from '@/lib/supabase';
 import { useAuthStore } from '@/features/auth/authStore';
 import type { Vehicle, Partner, Profile, VehicleStatus } from '@/db/types';
 import {
@@ -26,12 +23,8 @@ import {
   Plus,
   Edit2,
   RefreshCw,
-  Download,
-  Upload,
-  Database,
   Search,
   Eye,
-  Cloud,
 } from 'lucide-react';
 
 interface EnrichedProfile extends Profile {
@@ -52,12 +45,6 @@ export function AD01Page() {
   // Modal thêm / sửa xe
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Partial<Vehicle> | null>(null);
-
-  // Trạng thái Cloud Supabase
-  const [syncingCloud, setSyncingCloud] = useState(false);
-  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -91,81 +78,6 @@ export function AD01Page() {
   useEffect(() => {
     loadAll();
   }, []);
-
-  // Xử lý nạp dữ liệu mẫu
-  const handleSeed = async () => {
-    if (!isManager) return;
-    if (window.confirm('Thao tác này sẽ đặt lại hệ thống về trạng thái ban đầu chuẩn (30 xe, 3 tài khoản vận hành, xóa dữ liệu ảo). Tiếp tục?')) {
-      try {
-        setLoading(true);
-        await seedDatabase();
-        await loadAll();
-        toast.success('Đã nạp dữ liệu ban đầu thành công!');
-      } catch (err) {
-        console.error(err);
-        toast.error('Lỗi khi nạp dữ liệu');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Xử lý sao lưu
-  const handleExport = async () => {
-    try {
-      await downloadDatabaseBackup();
-      toast.success('Đã tải xuống file sao lưu cơ sở dữ liệu (.json)');
-    } catch (err) {
-      console.error(err);
-      toast.error('Lỗi khi xuất file sao lưu');
-    }
-  };
-
-  // Xử lý khôi phục từ file
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isManager) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const res = await importDatabase(text);
-      if (res.success) {
-        toast.success(res.message);
-        await loadAll();
-      } else {
-        toast.error(res.message);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Không thể đọc file sao lưu');
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  // Đồng bộ lên Supabase Cloud
-  const handleSyncSupabase = async () => {
-    if (!isManager) return;
-    if (!isSupabaseConfigured) {
-      setShowSupabaseModal(true);
-      return;
-    }
-    setSyncingCloud(true);
-    try {
-      const res = await dataAdapter.syncLocalToCloud();
-      if (res.success) {
-        toast.success(res.message);
-      } else {
-        toast.error(res.message);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Lỗi khi đồng bộ lên Supabase Cloud');
-    } finally {
-      setSyncingCloud(false);
-    }
-  };
 
   // Bật/tắt đối tác cứu hộ
   const handleTogglePartner = async (partner: Partner) => {
@@ -265,82 +177,37 @@ export function AD01Page() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
-            Quản trị đội xe & Dữ liệu
+            Quản trị đội xe & Vận hành
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Cấu hình danh mục xe, đối tác cứu hộ ngoại vi và quản trị cơ sở dữ liệu hệ thống.
+            Cấu hình danh mục xe, đối tác cứu hộ ngoại vi và giám sát tình trạng kỹ thuật.
           </p>
         </div>
 
-        {/* Thanh công cụ quản trị dữ liệu */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            className="flex items-center gap-1.5"
-            title="Tải toàn bộ dữ liệu hệ thống thành file JSON"
-          >
-            <Download className="w-4 h-4 text-brand-700" />
-            <span>Sao lưu (JSON)</span>
-          </Button>
-
+        {/* Thanh công cụ hành động */}
+        <div className="flex items-center gap-2">
           {isManager && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={handleImportFile}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5"
-                title="Khôi phục dữ liệu từ file JSON"
-              >
-                <Upload className="w-4 h-4 text-brand-700" />
-                <span>Khôi phục</span>
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleSeed}
-                className="flex items-center gap-1.5"
-              >
-                <Database className="w-4 h-4" />
-                <span>Nạp dữ liệu mẫu</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSyncSupabase}
-                loading={syncingCloud}
-                className={`flex items-center gap-1.5 ${
-                  isSupabaseConfigured
-                    ? 'border-emerald-300 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-                title="Đồng bộ toàn bộ dữ liệu lên Cơ sở dữ liệu đám mây Supabase Cloud"
-              >
-                <Cloud className={`w-4 h-4 ${isSupabaseConfigured ? 'text-emerald-600' : 'text-slate-500'}`} />
-                <span>{isSupabaseConfigured ? 'Đồng bộ Supabase' : 'Cấu hình Supabase'}</span>
-              </Button>
-            </>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={openAddVehicleModal}
+              className="flex items-center gap-1.5 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm xe mới</span>
+            </Button>
           )}
 
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={loadAll}
             loading={loading}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1.5"
+            title="Làm mới danh sách"
           >
             <RefreshCw className="w-4 h-4" />
+            <span>Làm mới</span>
           </Button>
         </div>
       </div>
@@ -665,47 +532,6 @@ export function AD01Page() {
             </Button>
           </div>
         </form>
-      </Modal>
-
-      {/* MODAL HƯỚNG DẪN CẤU HÌNH SUPABASE CLOUD */}
-      <Modal
-        isOpen={showSupabaseModal}
-        onClose={() => setShowSupabaseModal(false)}
-        title="Thiết lập Cơ sở dữ liệu đám mây Supabase (PostgreSQL)"
-      >
-        <div className="space-y-4 text-xs text-slate-600">
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900">
-            <strong>Chưa phát hiện cấu hình Supabase trong môi trường:</strong>
-            <p className="mt-1">
-              Hệ thống hiện đang chạy với cơ sở dữ liệu cục bộ IndexedDB trên trình duyệt. Để dữ liệu người dùng đổ về máy chủ trung tâm bạn kiểm soát, hãy hoàn tất các bước sau:
-            </p>
-          </div>
-
-          <ol className="list-decimal pl-4 space-y-2">
-            <li>
-              Tạo tài khoản và 1 Project mới miễn phí tại <strong>https://supabase.com</strong>.
-            </li>
-            <li>
-              Vào mục <strong>SQL Editor</strong> &rarr; dán toàn bộ mã nguồn file <code>supabase/schema.sql</code> và bấm <strong>Run</strong> để khởi tạo 20 bảng và phân quyền RLS.
-            </li>
-            <li>
-              Vào <strong>Project Settings &gt; API</strong> &rarr; lấy 2 thông số:
-              <ul className="list-disc pl-4 mt-1 space-y-0.5 text-slate-700 font-mono">
-                <li>Project URL: <code>VITE_SUPABASE_URL</code></li>
-                <li>anon / public key: <code>VITE_SUPABASE_ANON_KEY</code></li>
-              </ul>
-            </li>
-            <li>
-              Thêm 2 biến này vào file <code>.env</code> (nếu chạy local) hoặc thêm vào <strong>Environment Variables</strong> trên Vercel / GitHub Secrets để web tự động đồng bộ.
-            </li>
-          </ol>
-
-          <div className="pt-2 flex justify-end">
-            <Button size="sm" onClick={() => setShowSupabaseModal(false)}>
-              Đã hiểu
-            </Button>
-          </div>
-        </div>
       </Modal>
     </div>
   );

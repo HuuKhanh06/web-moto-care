@@ -51,8 +51,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       if (!account) {
-        // Tra cứu tài khoản từ Supabase Cloud nếu trên máy cục bộ chưa có
-        if (isSupabaseConfigured && supabase) {
+        // Tra cứu tài khoản từ Supabase Cloud nếu trên máy cục bộ chưa có (bỏ qua khi chạy unit test)
+        if (isSupabaseConfigured && supabase && import.meta.env.MODE !== 'test') {
           try {
             const { data: cloudAcc } = await supabase
               .from('auth_accounts')
@@ -214,8 +214,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       await db.profiles.add(newProfile);
       await db.auth_accounts.add(newAccount);
 
-      // Đồng bộ tức thời lên Supabase Cloud nếu đã cấu hình
-      if (isSupabaseConfigured && supabase) {
+      // Đồng bộ tức thời lên Supabase Cloud nếu đã cấu hình (bỏ qua khi chạy unit test)
+      if (isSupabaseConfigured && supabase && import.meta.env.MODE !== 'test') {
         try {
           await Promise.all([
             supabase.from('profiles').upsert(newProfile, { onConflict: 'id' }),
