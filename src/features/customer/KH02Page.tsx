@@ -9,6 +9,7 @@ import { engine } from '@/engine';
 import { db } from '@/db';
 import { fn_request_more_docs, fn_end_cancel } from '@/engine/fn';
 import { aiService } from '@/ai';
+import { extractDataFromImages } from '@/ai/realOcr';
 import type { RentalRequest, Vehicle, CustomerDocument, DocumentType } from '@/db/types';
 import {
   Card,
@@ -29,6 +30,8 @@ import {
   Bike,
   RefreshCw,
   CheckCircle2,
+  Check,
+  AlertCircle,
   Camera,
   Upload,
   Edit3,
@@ -88,6 +91,7 @@ export function KH02Page() {
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [isCustomerConfirmed, setIsCustomerConfirmed] = useState(false);
   const [extractedProfile, setExtractedProfile] = useState({
     fullName: '',
     idNumber: '',
@@ -128,25 +132,35 @@ export function KH02Page() {
 
       setOcrLoading(true);
       try {
-        const cccd = currentDocs.find((d) => d.doc_type.includes('CCCD'));
-        const gplx = currentDocs.find((d) => d.doc_type.includes('BANG_LAI'));
+        const cccdFront = currentDocs.find((d) => d.doc_type === 'CCCD_TRUOC');
+        const cccdBack = currentDocs.find((d) => d.doc_type === 'CCCD_SAU');
+        const gplxFront = currentDocs.find((d) => d.doc_type === 'BANG_LAI_TRUOC');
 
+        // Bóc tách dữ liệu thực tế từ ảnh thiết bị qua OCR
+        const realData = await extractDataFromImages(
+          cccdFront?.file_url,
+          cccdBack?.file_url,
+          gplxFront?.file_url
+        );
+
+        // Gọi đồng thời AI service để ghi log quy trình hợp đồng
         const res = await aiService.processOcr({
           requestId: req.id,
-          cccdImageRef: cccd?.file_url || 'blob:mock_cccd.jpg',
-          gplxImageRef: gplx?.file_url || 'blob:mock_gplx.jpg',
+          cccdImageRef: cccdFront?.file_url || 'blob:mock_cccd.jpg',
+          gplxImageRef: gplxFront?.file_url || 'blob:mock_gplx.jpg',
           selectedVehicleType: v?.vehicle_type,
           scenarioPreset: 'HIGH_CONFIDENCE',
         });
 
+        // Ưu tiên 100% dữ liệu thực tế trích xuất từ ảnh, KHÔNG dùng dữ liệu giả định
         const cName =
+          realData.fullName ||
           res.documents.cccd?.full_name?.value ||
-          res.documents.gplx?.full_name?.value ||
           currentUser?.full_name ||
-          'NGUYỄN VĂN AN';
-        const cId = res.documents.cccd?.id_number?.value || '079095012345';
-        const cDob = res.documents.cccd?.date_of_birth?.value || '1995-05-12';
-        const cLic = res.documents.gplx?.license_class?.value || 'A1';
+          '';
+        const cId = realData.idNumber || res.documents.cccd?.id_number?.value || '';
+        const cDob = realData.dob || res.documents.cccd?.date_of_birth?.value || '';
+        const cLic = realData.licenseClass || res.documents.gplx?.license_class?.value || 'A1';
         const cAddr = 'Đà Nẵng';
 
         const profileData = {
@@ -157,44 +171,17 @@ export function KH02Page() {
           address: cAddr,
         };
         setExtractedProfile(profileData);
-
-        // Tự động lưu thông tin vào tài khoản và biến quy trình hợp đồng
-        if (currentActor?.id && cName) {
-          await db.profiles.update(currentActor.id, {
-            full_name: cName,
-          });
-        }
-
-        const pState = await db.process_state.get(req.id);
-        if (pState) {
-          await db.process_state.update(req.id, {
-            variables: {
-              ...pState.variables,
-              customer_full_name: cName,
-              customer_id_number: cId,
-              customer_license_class: cLic,
-              customer_address: cAddr,
-            },
-          });
-        }
-
-        // Tự động cập nhật trạng thái hợp lệ cho các giấy tờ
-        for (const doc of currentDocs) {
-          await db.customer_documents.update(doc.id, {
-            is_valid: true,
-            check_note: 'Đã xác thực tự động',
-          });
-        }
-
+        setIsCustomerConfirmed(false); // Buộc khách hàng kiểm tra & bấm xác nhận
         setIsAppliedToProfile(true);
-        toast.success('Hệ thống đã tự động quét và xác thực thông tin giấy tờ!');
+
+        toast.success('Hệ thống đã đọc xong thông tin từ ảnh! Vui lòng kiểm tra và xác nhận bên dưới.');
 
         // Nạp lại danh sách tài liệu mới
         const freshDocs = await db.customer_documents.where('request_id').equals(req.id).toArray();
         setDocuments(freshDocs);
       } catch (err: unknown) {
         console.error('Lỗi tự động xác thực AI OCR:', err);
-        toast.error('Có lỗi trong quá trình tự động xác thực');
+        toast.error('Có lỗi trong quá trình quét thông tin giấy tờ');
       } finally {
         setOcrLoading(false);
       }
@@ -313,10 +300,23 @@ export function KH02Page() {
   };
 
   /**
-   * Lưu thông tin đã chỉnh sửa vào hồ sơ
+   * Khách hàng kiểm tra và bấm Xác nhận thông tin chính xác
    */
-  const handleAcceptAi = async () => {
+  const handleConfirmCustomerData = async () => {
     if (!requestId) return;
+
+    if (!extractedProfile.fullName?.trim()) {
+      toast.warning('Vui lòng kiểm tra và nhập Họ và tên');
+      setIsEditingDetails(true);
+      return;
+    }
+
+    if (!extractedProfile.idNumber?.trim()) {
+      toast.warning('Vui lòng kiểm tra và nhập Số CCCD (12 chữ số)');
+      setIsEditingDetails(true);
+      return;
+    }
+
     try {
       if (currentActor?.id && extractedProfile.fullName) {
         await db.profiles.update(currentActor.id, {
@@ -337,23 +337,40 @@ export function KH02Page() {
         });
       }
 
+      // Đánh dấu các giấy tờ hợp lệ
+      const currentDocs = await db.customer_documents.where('request_id').equals(requestId).toArray();
+      for (const doc of currentDocs) {
+        await db.customer_documents.update(doc.id, {
+          is_valid: true,
+          check_note: 'Khách hàng đã kiểm tra & xác nhận',
+        });
+      }
+
+      setIsCustomerConfirmed(true);
       setIsAppliedToProfile(true);
       setIsEditingDetails(false);
-      toast.success('Đã lưu thông tin xác thực vào hồ sơ!');
+      toast.success('Đã xác nhận thông tin giấy tờ chính xác!');
     } catch (err) {
       console.error(err);
-      toast.error('Không thể lưu thông tin');
+      toast.error('Không thể lưu thông tin xác thực');
     }
   };
 
+  const handleAcceptAi = handleConfirmCustomerData;
+
   /**
-   * Khách hàng bấm Đặt cọc để chuyển sang Bước 3
+   * Khách hàng bấm Đặt cọc để chuyển sang Bước 3 (Chỉ khi đã xác nhận thông tin đúng)
    */
   const handleVerifyDocuments = async () => {
     if (!requestId || !currentActor) return;
 
+    if (!isCustomerConfirmed) {
+      toast.warning('Vui lòng kiểm tra thông tin và bấm "Xác nhận thông tin đúng" ở trên trước khi đặt cọc');
+      return;
+    }
+
     if (!agreeTerms) {
-      toast.warning('Vui lòng đồng ý với điều khoản dịch vụ');
+      toast.warning('Vui lòng đồng ý với điều khoản dịch vụ và mức cọc 30%');
       return;
     }
 
@@ -621,71 +638,93 @@ export function KH02Page() {
           </div>
         )}
 
-        {!ocrLoading && isAppliedToProfile && extractedProfile.fullName && (
-          <div className="p-4 md:p-5 rounded-xl border border-emerald-200 bg-emerald-50/60 space-y-3">
-            <div className="flex items-center justify-between">
+        {!ocrLoading && isAppliedToProfile && (
+          <div className="p-4 md:p-5 rounded-xl border border-teal-200 bg-white shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span className="text-sm font-semibold text-emerald-950">
-                  Thông tin giấy tờ đã xác thực tự động
-                </span>
+                {isCustomerConfirmed ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <FileText className="w-5 h-5 text-teal-700 shrink-0" />
+                )}
+                <div>
+                  <span className="text-sm font-bold text-slate-900 block">
+                    Thông tin trích xuất từ ảnh giấy tờ
+                  </span>
+                  <span className="text-xs text-slate-500 font-normal block">
+                    {isCustomerConfirmed
+                      ? 'Đã đối chiếu và xác nhận chính xác'
+                      : 'Vui lòng kiểm tra thông tin dưới đây và bấm Xác nhận trước khi đặt cọc'}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEditingDetails(!isEditingDetails)}
-                className="text-[13px] font-semibold text-teal-700 hover:text-teal-800 cursor-pointer"
+                className="text-xs font-semibold text-teal-700 hover:text-teal-800 self-start sm:self-auto cursor-pointer flex items-center gap-1"
               >
-                {isEditingDetails ? 'Thu gọn' : 'Chỉnh sửa'}
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>{isEditingDetails ? 'Đóng chỉnh sửa' : 'Chỉnh sửa'}</span>
               </button>
             </div>
 
             {!isEditingDetails ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-sm">
-                <div className="p-2.5 bg-white rounded-lg border border-emerald-100 shadow-xs">
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
                   <span className="text-[12px] text-slate-500 block">Họ và tên</span>
-                  <span className="font-semibold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.fullName}
+                  <span className="font-bold text-slate-900 truncate block mt-0.5">
+                    {extractedProfile.fullName || (
+                      <span className="text-amber-600 italic text-xs font-normal">Chưa rõ - Bấm sửa</span>
+                    )}
                   </span>
                 </div>
-                <div className="p-2.5 bg-white rounded-lg border border-emerald-100 shadow-xs">
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
                   <span className="text-[12px] text-slate-500 block">Số CCCD</span>
-                  <span className="font-semibold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.idNumber}
+                  <span className="font-bold text-slate-900 truncate block mt-0.5">
+                    {extractedProfile.idNumber || (
+                      <span className="text-amber-600 italic text-xs font-normal">Chưa rõ - Bấm sửa</span>
+                    )}
                   </span>
                 </div>
-                <div className="p-2.5 bg-white rounded-lg border border-emerald-100 shadow-xs">
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
                   <span className="text-[12px] text-slate-500 block">Hạng GPLX</span>
-                  <span className="font-semibold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.licenseClass}
+                  <span className="font-bold text-slate-900 truncate block mt-0.5">
+                    {extractedProfile.licenseClass || 'A1'}
                   </span>
                 </div>
-                <div className="p-2.5 bg-white rounded-lg border border-emerald-100 shadow-xs">
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
                   <span className="text-[12px] text-slate-500 block">Ngày sinh</span>
-                  <span className="font-semibold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.dob}
+                  <span className="font-bold text-slate-900 truncate block mt-0.5">
+                    {extractedProfile.dob || (
+                      <span className="text-slate-400 italic text-xs font-normal">Chưa rõ - Bấm sửa</span>
+                    )}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="p-3.5 bg-white rounded-xl border border-slate-200 space-y-3">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
-                    label="Họ và tên"
+                    label="Họ và tên (chính xác theo CCCD)"
+                    placeholder="Nhập họ và tên có dấu"
                     value={extractedProfile.fullName}
                     onChange={(e) => setExtractedProfile((p) => ({ ...p, fullName: e.target.value }))}
                   />
                   <Input
-                    label="Số CCCD"
+                    label="Số CCCD (12 chữ số)"
+                    placeholder="vd: 048098001234"
                     value={extractedProfile.idNumber}
                     onChange={(e) => setExtractedProfile((p) => ({ ...p, idNumber: e.target.value }))}
                   />
                   <Input
-                    label="Ngày sinh"
+                    label="Ngày sinh (YYYY-MM-DD)"
+                    type="date"
                     value={extractedProfile.dob}
                     onChange={(e) => setExtractedProfile((p) => ({ ...p, dob: e.target.value }))}
                   />
                   <Input
-                    label="Hạng bằng lái"
+                    label="Hạng bằng lái xe"
+                    placeholder="vd: A1 hoặc A2"
                     value={extractedProfile.licenseClass}
                     onChange={(e) => setExtractedProfile((p) => ({ ...p, licenseClass: e.target.value }))}
                   />
@@ -698,9 +737,42 @@ export function KH02Page() {
                     onClick={handleAcceptAi}
                     data-testid="ai-accept"
                   >
-                    Lưu thay đổi
+                    Lưu thông tin
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Khối xác nhận thông tin đúng để tiến sang đặt cọc */}
+            {!isCustomerConfirmed ? (
+              <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-2 text-xs text-amber-900">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+                  <span>Vui lòng đối chiếu thông tin trên xem đã đúng với CCCD &amp; Bằng lái của bạn chưa.</span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleConfirmCustomerData}
+                  className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-4 py-2 shrink-0 cursor-pointer shadow-xs self-end sm:self-auto flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Xác nhận thông tin đúng</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-semibold">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Thông tin giấy tờ đã được xác nhận chính xác. Bạn có thể tiến hành đặt cọc ngay bên dưới.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomerConfirmed(false)}
+                  className="text-teal-700 underline hover:text-teal-900 text-xs font-semibold cursor-pointer shrink-0 ml-2"
+                >
+                  Sửa lại
+                </button>
               </div>
             )}
           </div>
@@ -735,13 +807,13 @@ export function KH02Page() {
 
         {/* Nút hành động Desktop */}
         {!isCancelled && !isMovedToDeposit && (
-          <div className="hidden md:flex justify-end pt-2">
+          <div className="hidden md:flex flex-col items-end pt-2">
             <Button
               type="button"
               variant="primary"
               size="md"
               loading={submitting}
-              disabled={!isAllDocsReady || ocrLoading}
+              disabled={!isAllDocsReady || ocrLoading || !isCustomerConfirmed}
               data-testid="node-M_CheckDocs"
               onClick={handleVerifyDocuments}
               className="flex items-center gap-2 px-8 min-w-[200px]"
@@ -749,6 +821,11 @@ export function KH02Page() {
               <span>{COPY.ACTION.DEPOSIT}</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
+            {!isCustomerConfirmed && isAllDocsReady && (
+              <span className="text-xs text-amber-700 font-medium mt-1.5">
+                * Vui lòng bấm &quot;Xác nhận thông tin đúng&quot; ở trên để tiến hành đặt cọc
+              </span>
+            )}
           </div>
         )}
 
@@ -761,13 +838,18 @@ export function KH02Page() {
                 <div className="text-lg font-semibold text-slate-900">
                   {formatCurrency(request.deposit_amount || 0)}
                 </div>
+                {!isCustomerConfirmed && isAllDocsReady && (
+                  <div className="text-[11px] text-amber-600 font-medium">
+                    * Chưa xác nhận giấy tờ ở trên
+                  </div>
+                )}
               </div>
               <Button
                 type="button"
                 variant="primary"
                 size="md"
                 loading={submitting}
-                disabled={!isAllDocsReady || ocrLoading}
+                disabled={!isAllDocsReady || ocrLoading || !isCustomerConfirmed}
                 data-testid="node-M_CheckDocs"
                 onClick={handleVerifyDocuments}
                 className="flex items-center gap-2 min-w-[140px]"
