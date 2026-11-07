@@ -1,6 +1,6 @@
 // src/components/timeline/FleetTimeline.tsx
-// Sơ đồ xe trực quan dạng Gantt Chart theo ngày giờ - Kế thừa phong cách chuẩn từ GOODBIKE
-// Hỗ trợ hiển thị xe thật, dòng xe đệm ảo DUMP, thanh booking màu sắc theo trạng thái BPMN
+// Sơ đồ xe trực quan dạng Gantt Chart theo ngày giờ
+// Hỗ trợ hiển thị 30 xe thực tế và hàng đợi Overbook (chứa các đơn quá hạn / khách không đến lấy xe)
 
 import { useState, useEffect, useMemo } from 'react';
 import {
@@ -55,28 +55,34 @@ export function FleetTimeline({
         dataAdapter.getRentalRequests(),
       ]);
 
-      // Bổ sung xe đệm DUMP1, DUMP2 nếu chưa có (học tập GOODBIKE)
-      const hasDump = vList.some((v) => v.id.startsWith('dump_') || v.plate.includes('DUMP'));
+      // Bổ sung hàng đợi Overbook (chứa các đơn quá hạn hoặc khách không đến lấy xe)
+      const hasOverbook = vList.some(
+        (v) =>
+          v.id.startsWith('overbook_') ||
+          v.id.startsWith('dump_') ||
+          v.plate.includes('OVERBOOK') ||
+          v.plate.includes('DUMP')
+      );
       const finalVehicles = [...vList];
-      if (!hasDump) {
+      if (!hasOverbook) {
         finalVehicles.push(
           {
-            id: 'dump_1',
-            plate: 'DUMP-01 (Đệm)',
-            model: 'Xe điều phối tạm thời',
+            id: 'overbook_1',
+            plate: 'OVERBOOK-01',
+            model: 'Đơn quá hạn & Khách chưa nhận xe',
             vehicle_type: 'tay_ga',
-            daily_price: 150000,
+            daily_price: 0,
             status: 'SAN_SANG',
-            condition_note: 'Dùng giữ chỗ khi đổi xe / sự cố',
+            condition_note: 'Khu vực chứa các đơn quá hạn thanh toán cọc hoặc khách không đến nhận xe',
           },
           {
-            id: 'dump_2',
-            plate: 'DUMP-02 (Đệm)',
-            model: 'Xe điều phối tạm thời',
+            id: 'overbook_2',
+            plate: 'OVERBOOK-02',
+            model: 'Đơn chờ điều phối lại xe',
             vehicle_type: 'xe_so',
-            daily_price: 120000,
+            daily_price: 0,
             status: 'SAN_SANG',
-            condition_note: 'Dùng giữ chỗ khi đổi xe / sự cố',
+            condition_note: 'Khu vực chứa các đơn cần phân bổ xe thay thế',
           }
         );
       }
@@ -108,7 +114,12 @@ export function FleetTimeline({
   // Lọc xe theo phân loại
   const filteredVehicles = useMemo(() => {
     if (selectedType === 'ALL') return vehicles;
-    return vehicles.filter((v) => v.vehicle_type === selectedType || v.id.startsWith('dump_'));
+    return vehicles.filter(
+      (v) =>
+        v.vehicle_type === selectedType ||
+        v.id.startsWith('overbook_') ||
+        v.id.startsWith('dump_')
+    );
   }, [vehicles, selectedType]);
 
   // Màu sắc trạng thái thẻ booking theo BPMN
@@ -303,24 +314,36 @@ export function FleetTimeline({
           {/* Body: Danh sách xe và các thanh booking */}
           <div className="divide-y divide-slate-100">
             {filteredVehicles.map((vehicle) => {
-              const isDump = vehicle.id.startsWith('dump_') || vehicle.plate.includes('DUMP');
-              const vehicleRentals = rentals.filter(
-                (r) =>
+              const isOverbook =
+                vehicle.id.startsWith('overbook_') ||
+                vehicle.id.startsWith('dump_') ||
+                vehicle.plate.includes('OVERBOOK') ||
+                vehicle.plate.includes('DUMP');
+              const vehicleRentals = rentals.filter((r) => {
+                if (vehicle.id.startsWith('overbook_') || vehicle.id.startsWith('dump_')) {
+                  return (
+                    r.vehicle_id === vehicle.id ||
+                    !r.vehicle_id ||
+                    r.status === 'CONG_NO'
+                  );
+                }
+                return (
                   r.vehicle_id === vehicle.id &&
                   !['DA_HUY', 'TU_CHOI'].includes(r.status)
-              );
+                );
+              });
 
               return (
                 <div
                   key={vehicle.id}
                   className={`flex group hover:bg-slate-50/60 transition-colors relative ${
-                    isDump ? 'bg-amber-50/30' : ''
+                    isOverbook ? 'bg-amber-50/30' : ''
                   }`}
                 >
                   {/* Cột thông tin xe (Sticky trái) */}
                   <div
                     className={`p-3 border-r border-slate-200 flex flex-col justify-center sticky left-0 z-10 transition-colors ${
-                      isDump
+                      isOverbook
                         ? 'bg-amber-50/90 border-l-4 border-l-amber-500'
                         : 'bg-white group-hover:bg-slate-50/90'
                     }`}
@@ -330,9 +353,9 @@ export function FleetTimeline({
                       <span className="font-bold text-xs text-slate-900 truncate">
                         {vehicle.plate}
                       </span>
-                      {isDump ? (
+                      {isOverbook ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
-                          ĐỆM ẢO
+                          OVERBOOK
                         </span>
                       ) : (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold">
@@ -347,9 +370,15 @@ export function FleetTimeline({
                     <div className="text-[11px] text-slate-500 truncate mt-0.5">
                       {vehicle.model}
                     </div>
-                    <div className="text-[10px] text-brand-700 font-semibold mt-0.5">
-                      {formatCurrency(vehicle.daily_price)}/ngày
-                    </div>
+                    {isOverbook ? (
+                      <div className="text-[10px] text-amber-700 font-semibold mt-0.5 truncate" title={vehicle.condition_note}>
+                        Đơn quá hạn / trễ nhận xe
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-brand-700 font-semibold mt-0.5">
+                        {formatCurrency(vehicle.daily_price)}/ngày
+                      </div>
+                    )}
                   </div>
 
                   {/* Vùng Timeline cho xe này */}
@@ -438,7 +467,7 @@ export function FleetTimeline({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block" />
-            <span>Xe đệm ảo (DUMP)</span>
+            <span>Hàng đợi Overbook (Quá hạn / Khách trễ)</span>
           </div>
         </div>
       </div>
