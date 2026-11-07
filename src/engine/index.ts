@@ -504,6 +504,7 @@ export class ProcessEngine {
         attempt_no: attemptNo,
         customer_accepted: customerAccepted,
         customer_note: (payload.customer_note as string) || '',
+        accessories: (payload.customer_inspection as Record<string, unknown>) || {},
       });
       state.variables.last_customer_accepted = customerAccepted;
     } else if (nodeId === 'M_Handover') {

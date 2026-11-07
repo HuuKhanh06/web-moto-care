@@ -28,7 +28,9 @@ import {
   Check,
   Eye,
   X,
+  Zap,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function KH05Page() {
   const [searchParams] = useSearchParams();
@@ -46,6 +48,14 @@ export function KH05Page() {
 
   const [customerNote, setCustomerNote] = useState('');
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<string | null>(null);
+
+  // Dữ liệu kiểm tra thực tế do khách tự quan sát và tự nhập
+  const [customerOdometer, setCustomerOdometer] = useState<string>('');
+  const [customerFuelLevel, setCustomerFuelLevel] = useState<string>('Đầy bình (100%)');
+  const [brakeStatus, setBrakeStatus] = useState<'DAT' | 'CHUA_DAT'>('DAT');
+  const [lightStatus, setLightStatus] = useState<'TOT' | 'LOI'>('TOT');
+  const [tireStatus, setTireStatus] = useState<'CHUAN' | 'NON_HOI'>('CHUAN');
+  const [mirrorStatus, setMirrorStatus] = useState<'DU_2' | 'THIEU'>('DU_2');
 
   const loadData = useCallback(async () => {
     if (!requestId) return;
@@ -81,6 +91,17 @@ export function KH05Page() {
         .equals(requestId)
         .toArray();
       setHandovers(hList);
+
+      const lastH = hList[hList.length - 1];
+      if (lastH?.accessories) {
+        const savedInsp = (lastH.accessories.customer_inspection || lastH.accessories) as Record<string, unknown>;
+        if (savedInsp?.odometer) setCustomerOdometer(String(savedInsp.odometer));
+        if (savedInsp?.fuel_level) setCustomerFuelLevel(String(savedInsp.fuel_level));
+        if (savedInsp?.brakes) setBrakeStatus(savedInsp.brakes as 'DAT' | 'CHUA_DAT');
+        if (savedInsp?.lights) setLightStatus(savedInsp.lights as 'TOT' | 'LOI');
+        if (savedInsp?.tires) setTireStatus(savedInsp.tires as 'CHUAN' | 'NON_HOI');
+        if (savedInsp?.mirrors) setMirrorStatus(savedInsp.mirrors as 'DU_2' | 'THIEU');
+      }
     } catch (err) {
       console.error('Lỗi nạp thông tin nhận xe:', err);
     } finally {
@@ -131,6 +152,11 @@ export function KH05Page() {
       return;
     }
 
+    if (accepted && !customerOdometer.trim()) {
+      toast.warning('Vui lòng nhìn đồng hồ xe và nhập số km (ODO) thực tế trước khi nhận xe');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await engine.complete(
@@ -140,6 +166,15 @@ export function KH05Page() {
           customer_accepted: accepted,
           customer_note: customerNote,
           attempt_no: attemptNo,
+          customer_inspection: {
+            odometer: customerOdometer.trim(),
+            fuel_level: customerFuelLevel,
+            brakes: brakeStatus,
+            lights: lightStatus,
+            tires: tireStatus,
+            mirrors: mirrorStatus,
+            inspected_at: new Date().toISOString(),
+          },
         },
         currentActor
       );
@@ -159,7 +194,6 @@ export function KH05Page() {
     }
   };
 
-  const checklistObj = (inspection?.checklist || {}) as Record<string, unknown>;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-24 md:pb-8">
@@ -198,47 +232,260 @@ export function KH05Page() {
         </Card>
       )}
 
-      {/* Bảng kiểm tra an toàn kỹ thuật */}
-      <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-teal-600" />
-            <h2 className="text-base font-semibold text-slate-900">
-              Biên bản an toàn kỹ thuật
-            </h2>
+      {/* Bảng kiểm tra an toàn kỹ thuật do Khách tự quan sát và nhập */}
+      {!isAccepted ? (
+        <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0" />
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">
+                  Khách tự kiểm tra & ghi nhận xe thực tế
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Hãy quan sát xe trước mặt bạn và tự nhập các thông số thực tế trước khi nhận xe
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setBrakeStatus('DAT');
+                setLightStatus('TOT');
+                setTireStatus('CHUAN');
+                setMirrorStatus('DU_2');
+                setCustomerFuelLevel('Đầy bình (100%)');
+                toast.success('Đã chọn nhanh tất cả bộ phận đạt chuẩn an toàn');
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 cursor-pointer self-start sm:self-auto transition-colors"
+            >
+              <Zap className="w-3.5 h-3.5 text-teal-600" />
+              <span>Chọn nhanh tất cả Đạt chuẩn</span>
+            </button>
           </div>
-          <span className="text-[13px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-            {inspection?.result === 'DAT' ? 'Đạt an toàn 100%' : 'Đang rà soát'}
-          </span>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="text-slate-700">Hệ thống phanh: <strong className="text-slate-900">Đạt</strong></span>
+          {/* 1. Nhập Số km (ODO) và Mức xăng thực tế */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-1.5">
+                <Gauge className="w-4 h-4 text-teal-600" />
+                <span>Số km trên đồng hồ (ODO): <span className="text-rose-500">*</span></span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={customerOdometer}
+                  onChange={(e) => setCustomerOdometer(e.target.value)}
+                  placeholder="Nhìn đồng hồ xe và nhập số km (vd: 12450)"
+                  className="w-full px-3 py-2 pr-12 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:font-normal placeholder:text-slate-400"
+                />
+                <span className="absolute right-3 top-2.5 text-xs font-medium text-slate-400 pointer-events-none">
+                  km
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Ghi lại chính xác số km trên đồng hồ để làm căn cứ đối soát lúc trả xe.
+              </p>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-1.5">
+                <Fuel className="w-4 h-4 text-teal-600" />
+                <span>Mức xăng quan sát được: <span className="text-rose-500">*</span></span>
+              </label>
+              <select
+                value={customerFuelLevel}
+                onChange={(e) => setCustomerFuelLevel(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent cursor-pointer"
+              >
+                <option value="Đầy bình (100%)">Đầy bình (100%)</option>
+                <option value="3/4 bình (75%)">3/4 bình (75%)</option>
+                <option value="Nửa bình (50%)">Nửa bình (50%)</option>
+                <option value="1/4 bình (25%)">1/4 bình (25%)</option>
+                <option value="Gần hết / Vạch đỏ (E)">Gần hết / Vạch đỏ (E)</option>
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Khách sẽ trả xe với mức xăng tương đương lúc nhận.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="text-slate-700">Đèn & xi-nhan: <strong className="text-slate-900">Tốt</strong></span>
+
+          {/* 2. Khách tự kiểm tra các bộ phận */}
+          <div className="space-y-2.5">
+            <span className="text-xs font-bold text-slate-700 block">
+              Kiểm tra các bộ phận an toàn thực tế:
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {/* Phanh */}
+              <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                <span className="font-semibold text-slate-800 block">1. Hệ thống phanh (trước & sau)</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBrakeStatus('DAT')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      brakeStatus === 'DAT'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✓ Đạt (Ăn phanh)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBrakeStatus('CHUA_DAT')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      brakeStatus === 'CHUA_DAT'
+                        ? 'bg-rose-50 text-rose-800 border-rose-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✕ Cần chỉnh lại
+                  </button>
+                </div>
+              </div>
+
+              {/* Đèn & xi-nhan */}
+              <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                <span className="font-semibold text-slate-800 block">2. Đèn chiếu sáng & Xi-nhan</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLightStatus('TOT')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      lightStatus === 'TOT'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✓ Hoạt động tốt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLightStatus('LOI')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      lightStatus === 'LOI'
+                        ? 'bg-rose-50 text-rose-800 border-rose-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✕ Chập chờn / Hỏng
+                  </button>
+                </div>
+              </div>
+
+              {/* Lốp & áp suất */}
+              <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                <span className="font-semibold text-slate-800 block">3. Lốp xe & Áp suất hơi</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTireStatus('CHUAN')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      tireStatus === 'CHUAN'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✓ Căng chuẩn
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTireStatus('NON_HOI')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      tireStatus === 'NON_HOI'
+                        ? 'bg-rose-50 text-rose-800 border-rose-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✕ Non hơi / Mòn
+                  </button>
+                </div>
+              </div>
+
+              {/* Gương chiếu hậu */}
+              <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                <span className="font-semibold text-slate-800 block">4. Gương chiếu hậu</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMirrorStatus('DU_2')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      mirrorStatus === 'DU_2'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✓ Đủ 2 gương
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMirrorStatus('THIEU')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-lg font-medium border text-center transition-all cursor-pointer',
+                      mirrorStatus === 'THIEU'
+                        ? 'bg-rose-50 text-rose-800 border-rose-400 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    ✕ Thiếu gương
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="text-slate-700">Lốp & áp suất: <strong className="text-slate-900">Chuẩn</strong></span>
+        </Card>
+      ) : (
+        /* KHI ĐÃ NHẬN XE: BIÊN BẢN BÀN GIAO ĐÃ XÁC NHẬN */
+        <Card className="p-4 md:p-6 border border-emerald-200 bg-emerald-50/40 rounded-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-emerald-100 pb-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-base font-semibold text-slate-900">
+                Biên bản bàn giao thực tế (Khách đã xác nhận)
+              </h2>
+            </div>
+            <span className="text-[13px] font-semibold text-emerald-700 bg-white px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Khách đã tự kiểm tra
+            </span>
           </div>
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="text-slate-700">Gương chiếu hậu: <strong className="text-slate-900">Đủ 2 gương</strong></span>
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+              <Gauge className="w-4 h-4 text-teal-600 shrink-0" />
+              <span className="text-slate-700">Số km (ODO): <strong className="text-slate-900">{customerOdometer || 'Chưa ghi nhận'} km</strong></span>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+              <Fuel className="w-4 h-4 text-teal-600 shrink-0" />
+              <span className="text-slate-700">Mức xăng: <strong className="text-slate-900">{customerFuelLevel}</strong></span>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="text-slate-700">Phanh: <strong className="text-slate-900">{brakeStatus === 'DAT' ? 'Đạt chuẩn' : 'Cần chỉnh'}</strong></span>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="text-slate-700">Đèn & xi-nhan: <strong className="text-slate-900">{lightStatus === 'TOT' ? 'Tốt' : 'Lỗi'}</strong></span>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="text-slate-700">Lốp xe: <strong className="text-slate-900">{tireStatus === 'CHUAN' ? 'Căng chuẩn' : 'Non hơi'}</strong></span>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="text-slate-700">Gương chiếu hậu: <strong className="text-slate-900">{mirrorStatus === 'DU_2' ? 'Đủ 2 gương' : 'Thiếu gương'}</strong></span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <Gauge className="w-4 h-4 text-teal-600 shrink-0" />
-            <span className="text-slate-700">Số km (ODO): <strong className="text-slate-900">{String(checklistObj.odometer || '12.450')} km</strong></span>
-          </div>
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <Fuel className="w-4 h-4 text-teal-600 shrink-0" />
-            <span className="text-slate-700">Mức xăng: <strong className="text-slate-900">{String(checklistObj.fuel_level || 'Đầy bình')}</strong></span>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Ảnh chụp thực tế bàn giao */}
       <Card className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
