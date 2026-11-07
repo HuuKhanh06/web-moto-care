@@ -74,26 +74,6 @@ async function compressImageToDataUrl(file: File, maxDimension = 1280, quality =
   });
 }
 
-/**
- * Tạo ảnh mẫu hợp lệ để người dùng thử nghiệm nhanh khi chưa có sẵn ảnh CCCD trên máy
- */
-function generateSampleDocImage(label: string): string {
-  const canvas = document.createElement('canvas');
-  canvas.width = 640;
-  canvas.height = 400;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-  ctx.fillStyle = '#0f766e';
-  ctx.fillRect(0, 0, 640, 400);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 26px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(label, 320, 190);
-  ctx.font = '16px sans-serif';
-  ctx.fillText('MOTO CARE - Ảnh chụp giấy tờ hợp lệ', 320, 230);
-  return canvas.toDataURL('image/jpeg', 0.85);
-}
-
 export function KH02Page() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
@@ -329,55 +309,6 @@ export function KH02Page() {
     } finally {
       setUploadingType(null);
       e.target.value = '';
-    }
-  };
-
-  /**
-   * Hỗ trợ nạp ảnh mẫu nhanh cho kiểm thử / chấm bài khi không có sẵn ảnh CCCD trên máy
-   */
-  const handleFillDemoPhotos = async () => {
-    if (!requestId || !request) return;
-    setUploadingType('CCCD_TRUOC');
-    try {
-      const sampleFront = generateSampleDocImage('CCCD MẶT TRƯỚC');
-      const sampleBack = generateSampleDocImage('CCCD MẶT SAU');
-      const sampleGplx = generateSampleDocImage('BẰNG LÁI XE MÁY A1');
-
-      const docConfigs: Array<{ type: DocumentType; url: string; name: string }> = [
-        { type: 'CCCD_TRUOC', url: sampleFront, name: 'cccd_mat_truoc.jpg' },
-        { type: 'CCCD_SAU', url: sampleBack, name: 'cccd_mat_sau.jpg' },
-        { type: 'BANG_LAI_TRUOC', url: sampleGplx, name: 'gplx_mat_truoc.jpg' },
-      ];
-
-      for (const item of docConfigs) {
-        const existing = getDoc(item.type);
-        if (existing) {
-          await db.customer_documents.update(existing.id, {
-            file_url: item.url,
-            check_note: item.name,
-            is_valid: true,
-          });
-        } else {
-          await db.customer_documents.add({
-            id: crypto.randomUUID(),
-            request_id: requestId,
-            doc_type: item.type,
-            file_url: item.url,
-            check_note: item.name,
-            is_valid: true,
-          });
-        }
-      }
-
-      toast.success('Đã nạp 3 ảnh giấy tờ mẫu hợp lệ');
-      const updatedDocs = await db.customer_documents.where('request_id').equals(requestId).toArray();
-      setDocuments(updatedDocs);
-      await triggerAutoOcr(updatedDocs, request, vehicle);
-    } catch (err) {
-      console.error(err);
-      toast.error('Không thể nạp ảnh mẫu');
-    } finally {
-      setUploadingType(null);
     }
   };
 
@@ -785,18 +716,6 @@ export function KH02Page() {
         >
           Áp dụng vào hợp đồng
         </button>
-
-        {/* Liên kết thử nghiệm nhanh khi người dùng không có sẵn ảnh CCCD trên máy tính */}
-        <div className="flex justify-between items-center text-xs text-slate-400 pt-1">
-          <span>Hệ thống tự động bảo mật dữ liệu theo quy định.</span>
-          <button
-            type="button"
-            onClick={handleFillDemoPhotos}
-            className="text-[13px] text-teal-700 hover:text-teal-800 underline cursor-pointer"
-          >
-            Dùng ảnh mẫu để thử nghiệm nhanh
-          </button>
-        </div>
 
         {/* Cam kết điều khoản */}
         <div className="pt-2 border-t border-slate-100">
