@@ -70,7 +70,12 @@ export class GeminiAiProvider implements IAiProvider {
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: AI_OCR_SYSTEM_PROMPT }] },
               contents: [{ role: 'user', parts }],
-              generationConfig: { responseMimeType: 'application/json', responseSchema: GEMINI_OCR_SCHEMA, temperature: 0.1 },
+              generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: GEMINI_OCR_SCHEMA,
+                temperature: 0.1,
+                thinkingConfig: { thinkingBudget: 0 },
+              },
             }),
           });
         } catch {

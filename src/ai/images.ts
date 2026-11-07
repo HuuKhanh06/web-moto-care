@@ -59,8 +59,8 @@ export async function compressImageToDataUrl(file: File, timeoutMs = 15000): Pro
         if (!img.width || !img.height || img.width * img.height > 40_000_000) {
           throw new OcrError('INVALID_FILE', 'Ảnh không hợp lệ hoặc vượt quá 40 triệu điểm ảnh.');
         }
-        // Giữ 2000px cho ảnh giấy tờ: thu nhỏ hơn làm chữ trên CCCD/GPLX quá bé để OCR đọc đúng.
-        const scale = Math.min(1, 2000 / Math.max(img.width, img.height));
+        // Giữ 1400px cho ảnh giấy tờ: vừa đủ nét cho AI đọc CCCD/GPLX, vừa tối ưu tốc độ truyền tải tránh timeout.
+        const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
@@ -69,7 +69,7 @@ export async function compressImageToDataUrl(file: File, timeoutMs = 15000): Pro
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const data = canvas.toDataURL('image/jpeg', 0.9);
+        const data = canvas.toDataURL('image/jpeg', 0.85);
         if (!data.startsWith('data:image/jpeg;base64,')) throw new OcrError('IMAGE_DECODE', 'Không thể chuyển đổi ảnh.');
         finish(undefined, data);
       } catch (error) {
