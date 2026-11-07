@@ -41,8 +41,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (email, password) => {
     try {
-      const normalizedEmail = email.trim().toLowerCase();
+      let normalizedEmail = email.trim().toLowerCase();
       let account = await db.auth_accounts.where('email').equalsIgnoreCase(normalizedEmail).first();
+
+      // Hỗ trợ linh hoạt cả admin@motocare.vn và quanly@motocare.vn cho tài khoản quản lý
+      if (!account && (normalizedEmail === 'admin@motocare.vn' || normalizedEmail === 'quanly@motocare.vn')) {
+        const alt = normalizedEmail === 'admin@motocare.vn' ? 'quanly@motocare.vn' : 'admin@motocare.vn';
+        account = await db.auth_accounts.where('email').equalsIgnoreCase(alt).first();
+      }
 
       if (!account) {
         // Tra cứu tài khoản từ Supabase Cloud nếu trên máy cục bộ chưa có

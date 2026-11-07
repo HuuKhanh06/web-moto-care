@@ -182,16 +182,16 @@ export function DataToolbar() {
           </div>
         </div>
 
-        {/* Danh sách tài khoản mẫu để demo đăng nhập */}
+        {/* Danh sách tài khoản vận hành */}
         <div className="mt-4 pt-4 border-t border-slate-100">
-          <span className="text-xs font-bold text-slate-700 block mb-2">Tài khoản mẫu đăng nhập (Mật khẩu chung: password123):</span>
+          <span className="text-xs font-bold text-slate-700 block mb-2">Tài khoản vận hành hệ thống (Mật khẩu: password123):</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-            {SEED_USERS.map((u) => (
+            {SEED_USERS.slice(0, 3).map((u) => (
               <div key={u.id} className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/70">
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold text-slate-800">{u.full_name}</span>
-                  <Badge variant={u.role === 'quan_ly' ? 'danger' : u.role === 'nhan_vien' ? 'processing' : 'waiting'}>
-                    {u.role}
+                  <Badge variant={u.role === 'quan_ly' ? 'danger' : 'processing'}>
+                    {u.role === 'quan_ly' ? 'Quản lý' : 'Nhân viên'}
                   </Badge>
                 </div>
                 <div className="text-[11px] text-slate-500 font-mono truncate">{u.email}</div>

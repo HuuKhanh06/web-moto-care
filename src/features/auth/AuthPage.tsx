@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './authStore';
-import { SEED_USERS, seedDatabase } from '@/db/seed';
+import { seedDatabase } from '@/db/seed';
 import { db } from '@/db';
 import { Button, Input, Card } from '@/components/ui';
 import { toast } from '@/components/ui/toastStore';
@@ -120,26 +120,6 @@ export function AuthPage() {
       setRegConfirmPassword('');
     } else {
       toast.error(res.error || 'Đăng ký tài khoản chưa thành công');
-    }
-  };
-
-  const handleQuickLogin = async (email: string) => {
-    setLoading(true);
-    try {
-      const count = await db.auth_accounts.count();
-      if (count === 0) {
-        await seedDatabase();
-      }
-      const res = await login(email, 'password123');
-      if (res.success) {
-        const currentActor = useAuthStore.getState().currentActor;
-        toast.success(`Đăng nhập thành công!`);
-        if (currentActor) redirectAfterLogin(currentActor.role);
-      } else {
-        toast.error(res.error || 'Đăng nhập không thành công');
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -270,61 +250,6 @@ export function AuthPage() {
               </Button>
             </form>
           )}
-
-          {/* Danh sách tài khoản thử nghiệm nhanh */}
-          <div className="pt-4 border-t border-slate-100 space-y-3">
-            <span className="text-[13px] font-semibold text-slate-500 uppercase tracking-wider block">
-              Tài khoản nghiệm thu hệ thống
-            </span>
-
-            <div className="space-y-2">
-              {SEED_USERS.map((user) => {
-                const roleBadge =
-                  user.role === 'quan_ly'
-                    ? 'Quản lý'
-                    : user.role === 'nhan_vien'
-                    ? 'Nhân viên'
-                    : 'Khách hàng';
-
-                const badgeClass =
-                  user.role === 'quan_ly'
-                    ? 'bg-purple-50 text-purple-800 border-purple-200'
-                    : user.role === 'nhan_vien'
-                    ? 'bg-blue-50 text-blue-800 border-blue-200'
-                    : 'bg-emerald-50 text-emerald-800 border-emerald-200';
-
-                return (
-                  <div
-                    key={user.id}
-                    className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-900 text-sm truncate">
-                          {user.full_name}
-                        </span>
-                        <span className={`text-[13px] px-2 py-0.5 rounded-full border font-semibold ${badgeClass}`}>
-                          {roleBadge}
-                        </span>
-                      </div>
-                      <span className="text-[13px] text-slate-500 block truncate">
-                        {user.email}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => handleQuickLogin(user.email)}
-                      className="px-3 py-1.5 text-[13px] font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white shrink-0 transition-colors cursor-pointer"
-                    >
-                      Đăng nhập
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
         </Card>
 
         {/* Thông tin bảo mật */}

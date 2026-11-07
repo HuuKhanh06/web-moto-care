@@ -22,7 +22,7 @@ import type {
 export const SEED_USERS = [
   {
     id: '11111111-1111-4111-8111-111111111111',
-    email: 'quanly@motocare.vn',
+    email: 'admin@motocare.vn',
     password: 'password123',
     full_name: 'Trần Văn Quản Lý',
     phone: '0901112233',
@@ -75,12 +75,14 @@ export async function seedDatabase(): Promise<void> {
 
   const now = clock.now();
   const nowISO = clock.nowISO();
+  const isTest = import.meta.env.MODE === 'test';
 
-  // 1. Tạo Tài khoản và Hồ sơ (1 Quản lý, 2 Nhân viên, 3 Khách hàng)
+  // 1. Tạo Tài khoản và Hồ sơ (Chỉ nạp 3 tài khoản vận hành: 1 Quản lý/Admin và 2 Nhân viên. Khách hàng thực tế tự đăng ký).
   const profiles: Profile[] = [];
   const authAccounts: AuthAccount[] = [];
+  const targetUsers = isTest ? SEED_USERS : SEED_USERS.slice(0, 3);
 
-  for (const u of SEED_USERS) {
+  for (const u of targetUsers) {
     const salt = 'salt_' + u.id.slice(0, 8);
     const { hash } = await hashPassword(u.password, salt);
 
@@ -392,7 +394,7 @@ export async function seedDatabase(): Promise<void> {
     },
   ];
 
-  // 4. Tạo các hồ sơ thuê mẫu ở các giai đoạn BPMN nghiệp vụ
+  // 4. Tạo các hồ sơ thuê mẫu ở các giai đoạn BPMN nghiệp vụ (chỉ dùng cho môi trường kiểm thử unit test)
   const startDay1 = new Date(now.getTime() - 2 * 24 * 3600 * 1000).toISOString();
   const endDay1 = new Date(now.getTime() + 1 * 24 * 3600 * 1000).toISOString();
 
@@ -411,246 +413,258 @@ export async function seedDatabase(): Promise<void> {
   const startDay6 = new Date(now.getTime() - 10 * 24 * 3600 * 1000).toISOString();
   const endDay6 = new Date(now.getTime() - 8 * 24 * 3600 * 1000).toISOString();
 
-  const rentalRequests: RentalRequest[] = [
-    // Hồ sơ 1: Đang thuê (DANG_THUE) -> Cổng M_EG
-    {
-      id: 'r1111111-0000-0000-0000-000000000001',
-      customer_id: SEED_USERS[3].id, // Khách 1
-      vehicle_id: vehicles[4].id,    // Honda Vision
-      start_at: startDay1,
-      end_at: endDay1,
-      status: 'DANG_THUE',
-      total_price: 480000,
-      deposit_amount: 1000000,
-      doc_request_count: 0,
-    },
-    // Hồ sơ 2: Chờ ký hợp đồng (CHO_KY) -> M_WaitSign
-    {
-      id: 'r2222222-0000-0000-0000-000000000002',
-      customer_id: SEED_USERS[4].id, // Khách 2
-      vehicle_id: vehicles[8].id,    // Honda Winner X
-      start_at: startDay2,
-      end_at: endDay2,
-      status: 'CHO_KY',
-      total_price: 660000,
-      deposit_amount: 1500000,
-      doc_request_count: 0,
-    },
-    // Hồ sơ 3: Đã hoàn tất thuê & thanh lý (HOAN_TAT)
-    {
-      id: 'r3333333-0000-0000-0000-000000000003',
-      customer_id: SEED_USERS[5].id, // Khách 3
-      vehicle_id: vehicles[0].id,    // Honda Wave Alpha
-      start_at: startDay3,
-      end_at: endDay3,
-      status: 'HOAN_TAT',
-      total_price: 360000,
-      deposit_amount: 1000000,
-      doc_request_count: 0,
-      returned_at: endDay3,
-      closed_at: endDay3,
-    },
-    // Hồ sơ 4: Chờ nhân viên kiểm tra kỹ thuật tiền bàn giao (CHO_BAN_GIAO -> M_InspectPre)
-    {
-      id: 'r4444444-0000-0000-0000-000000000004',
-      customer_id: SEED_USERS[3].id, // Khách 1
-      vehicle_id: vehicles[1].id,    // Honda Blade
-      start_at: startDay4,
-      end_at: endDay4,
-      status: 'CHO_BAN_GIAO',
-      total_price: 390000,
-      deposit_amount: 1000000,
-      doc_request_count: 0,
-    },
-    // Hồ sơ 5: Khách khiếu nại bảng kê -> Quản lý phân giải hòa giải (CHO_KHACH_XAC_NHAN_BANG_KE -> M_Resolve)
-    {
-      id: 'r5555555-0000-0000-0000-000000000005',
-      customer_id: SEED_USERS[4].id, // Khách 2
-      vehicle_id: vehicles[7].id,    // Yamaha Grande
-      start_at: startDay5,
-      end_at: endDay5,
-      status: 'CHO_KHACH_XAC_NHAN_BANG_KE',
-      total_price: 570000,
-      deposit_amount: 1000000,
-      doc_request_count: 0,
-      returned_at: endDay5,
-    },
-    // Hồ sơ 6: Hồ sơ công nợ tồn đọng (CONG_NO -> M_END_DEBT)
-    {
-      id: 'r6666666-0000-0000-0000-000000000006',
-      customer_id: SEED_USERS[5].id, // Khách 3
-      vehicle_id: vehicles[3].id,    // Honda Future
-      start_at: startDay6,
-      end_at: endDay6,
-      status: 'CONG_NO',
-      total_price: 300000,
-      deposit_amount: 0,
-      doc_request_count: 0,
-      returned_at: endDay6,
-      closed_at: endDay6,
-    },
-  ];
+  const rentalRequests: RentalRequest[] = isTest
+    ? [
+        // Hồ sơ 1: Đang thuê (DANG_THUE) -> Cổng M_EG
+        {
+          id: 'r1111111-0000-0000-0000-000000000001',
+          customer_id: SEED_USERS[3].id, // Khách 1
+          vehicle_id: vehicles[4].id,    // Honda Vision
+          start_at: startDay1,
+          end_at: endDay1,
+          status: 'DANG_THUE',
+          total_price: 480000,
+          deposit_amount: 1000000,
+          doc_request_count: 0,
+        },
+        // Hồ sơ 2: Chờ ký hợp đồng (CHO_KY) -> M_WaitSign
+        {
+          id: 'r2222222-0000-0000-0000-000000000002',
+          customer_id: SEED_USERS[4].id, // Khách 2
+          vehicle_id: vehicles[8].id,    // Honda Winner X
+          start_at: startDay2,
+          end_at: endDay2,
+          status: 'CHO_KY',
+          total_price: 660000,
+          deposit_amount: 1500000,
+          doc_request_count: 0,
+        },
+        // Hồ sơ 3: Đã hoàn tất thuê & thanh lý (HOAN_TAT)
+        {
+          id: 'r3333333-0000-0000-0000-000000000003',
+          customer_id: SEED_USERS[5].id, // Khách 3
+          vehicle_id: vehicles[0].id,    // Honda Wave Alpha
+          start_at: startDay3,
+          end_at: endDay3,
+          status: 'HOAN_TAT',
+          total_price: 360000,
+          deposit_amount: 1000000,
+          doc_request_count: 0,
+          returned_at: endDay3,
+          closed_at: endDay3,
+        },
+        // Hồ sơ 4: Chờ nhân viên kiểm tra kỹ thuật tiền bàn giao (CHO_BAN_GIAO -> M_InspectPre)
+        {
+          id: 'r4444444-0000-0000-0000-000000000004',
+          customer_id: SEED_USERS[3].id, // Khách 1
+          vehicle_id: vehicles[1].id,    // Honda Blade
+          start_at: startDay4,
+          end_at: endDay4,
+          status: 'CHO_BAN_GIAO',
+          total_price: 390000,
+          deposit_amount: 1000000,
+          doc_request_count: 0,
+        },
+        // Hồ sơ 5: Khách khiếu nại bảng kê -> Quản lý phân giải hòa giải (CHO_KHACH_XAC_NHAN_BANG_KE -> M_Resolve)
+        {
+          id: 'r5555555-0000-0000-0000-000000000005',
+          customer_id: SEED_USERS[4].id, // Khách 2
+          vehicle_id: vehicles[7].id,    // Yamaha Grande
+          start_at: startDay5,
+          end_at: endDay5,
+          status: 'CHO_KHACH_XAC_NHAN_BANG_KE',
+          total_price: 570000,
+          deposit_amount: 1000000,
+          doc_request_count: 0,
+          returned_at: endDay5,
+        },
+        // Hồ sơ 6: Hồ sơ công nợ tồn đọng (CONG_NO -> M_END_DEBT)
+        {
+          id: 'r6666666-0000-0000-0000-000000000006',
+          customer_id: SEED_USERS[5].id, // Khách 3
+          vehicle_id: vehicles[3].id,    // Honda Future
+          start_at: startDay6,
+          end_at: endDay6,
+          status: 'CONG_NO',
+          total_price: 300000,
+          deposit_amount: 0,
+          doc_request_count: 0,
+          returned_at: endDay6,
+          closed_at: endDay6,
+        },
+      ]
+    : [];
 
   // Lịch xe
-  const schedules: VehicleSchedule[] = [
-    {
-      id: 's1111111-0000-0000-0000-000000000001',
-      vehicle_id: vehicles[4].id,
-      request_id: rentalRequests[0].id,
-      kind: 'RENTAL',
-      start_at: startDay1,
-      end_at: endDay1,
-    },
-    {
-      id: 's4444444-0000-0000-0000-000000000004',
-      vehicle_id: vehicles[1].id,
-      request_id: rentalRequests[3].id,
-      kind: 'RENTAL',
-      start_at: startDay4,
-      end_at: endDay4,
-    },
-  ];
+  const schedules: VehicleSchedule[] = isTest
+    ? [
+        {
+          id: 's1111111-0000-0000-0000-000000000001',
+          vehicle_id: vehicles[4].id,
+          request_id: rentalRequests[0]?.id || '',
+          kind: 'RENTAL',
+          start_at: startDay1,
+          end_at: endDay1,
+        },
+        {
+          id: 's4444444-0000-0000-0000-000000000004',
+          vehicle_id: vehicles[1].id,
+          request_id: rentalRequests[3]?.id || '',
+          kind: 'RENTAL',
+          start_at: startDay4,
+          end_at: endDay4,
+        },
+      ]
+    : [];
 
   // Hợp đồng
-  const contracts: Contract[] = [
-    {
-      id: 'ct111111-0000-0000-0000-000000000001',
-      request_id: rentalRequests[0].id,
-      status: 'SIGNED',
-      sent_at: startDay1,
-      signed_at: startDay1,
-      expires_at: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
-    },
-    {
-      id: 'ct222222-0000-0000-0000-000000000002',
-      request_id: rentalRequests[1].id,
-      status: 'SENT',
-      sent_at: nowISO,
-      expires_at: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
-    },
-    {
-      id: 'ct444444-0000-0000-0000-000000000004',
-      request_id: rentalRequests[3].id,
-      status: 'SIGNED',
-      sent_at: startDay4,
-      signed_at: startDay4,
-      expires_at: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
-    },
-  ];
+  const contracts: Contract[] = isTest
+    ? [
+        {
+          id: 'ct111111-0000-0000-0000-000000000001',
+          request_id: rentalRequests[0]?.id || '',
+          status: 'SIGNED',
+          sent_at: startDay1,
+          signed_at: startDay1,
+          expires_at: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+        },
+        {
+          id: 'ct222222-0000-0000-0000-000000000002',
+          request_id: rentalRequests[1]?.id || '',
+          status: 'SENT',
+          sent_at: nowISO,
+          expires_at: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+        },
+        {
+          id: 'ct444444-0000-0000-0000-000000000004',
+          request_id: rentalRequests[3]?.id || '',
+          status: 'SIGNED',
+          sent_at: startDay4,
+          signed_at: startDay4,
+          expires_at: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+        },
+      ]
+    : [];
 
   // Bản ghi thanh toán cọc
-  const payments: Payment[] = [
-    {
-      id: 'pay11111-0000-0000-0000-000000000001',
-      request_id: rentalRequests[0].id,
-      kind: 'DEPOSIT',
-      amount: 1000000,
-      paid_amount: 1000000,
-      qr_ref: 'MC_DEP_R1',
-      status: 'VERIFIED',
-      provider_txn_id: 'VNPAY_99881122',
-      paid_at: startDay1,
-      verified_at: startDay1,
-      match_result: 'DU',
-    },
-    {
-      id: 'pay22222-0000-0000-0000-000000000002',
-      request_id: rentalRequests[1].id,
-      kind: 'DEPOSIT',
-      amount: 1500000,
-      paid_amount: 1500000,
-      qr_ref: 'MC_DEP_R2',
-      status: 'VERIFIED',
-      provider_txn_id: 'VNPAY_99882233',
-      paid_at: startDay2,
-      verified_at: startDay2,
-      match_result: 'DU',
-    },
-    {
-      id: 'pay44444-0000-0000-0000-000000000004',
-      request_id: rentalRequests[3].id,
-      kind: 'DEPOSIT',
-      amount: 1000000,
-      paid_amount: 1000000,
-      qr_ref: 'MC_DEP_R4',
-      status: 'VERIFIED',
-      provider_txn_id: 'VNPAY_99884455',
-      paid_at: startDay4,
-      verified_at: startDay4,
-      match_result: 'DU',
-    },
-  ];
+  const payments: Payment[] = isTest
+    ? [
+        {
+          id: 'pay11111-0000-0000-0000-000000000001',
+          request_id: rentalRequests[0]?.id || '',
+          kind: 'DEPOSIT',
+          amount: 1000000,
+          paid_amount: 1000000,
+          qr_ref: 'MC_DEP_R1',
+          status: 'VERIFIED',
+          provider_txn_id: 'VNPAY_99881122',
+          paid_at: startDay1,
+          verified_at: startDay1,
+          match_result: 'DU',
+        },
+        {
+          id: 'pay22222-0000-0000-0000-000000000002',
+          request_id: rentalRequests[1]?.id || '',
+          kind: 'DEPOSIT',
+          amount: 1500000,
+          paid_amount: 1500000,
+          qr_ref: 'MC_DEP_R2',
+          status: 'VERIFIED',
+          provider_txn_id: 'VNPAY_99882233',
+          paid_at: startDay2,
+          verified_at: startDay2,
+          match_result: 'DU',
+        },
+        {
+          id: 'pay44444-0000-0000-0000-000000000004',
+          request_id: rentalRequests[3]?.id || '',
+          kind: 'DEPOSIT',
+          amount: 1000000,
+          paid_amount: 1000000,
+          qr_ref: 'MC_DEP_R4',
+          status: 'VERIFIED',
+          provider_txn_id: 'VNPAY_99884455',
+          paid_at: startDay4,
+          verified_at: startDay4,
+          match_result: 'DU',
+        },
+      ]
+    : [];
 
   // Bảng kê thanh lý (cho hồ sơ 5 đang có khiếu nại)
-  const statements: Statement[] = [
-    {
-      id: 'st555555-0000-0000-0000-000000000005',
-      request_id: rentalRequests[4].id,
-      version: 1,
-      items: [
-        { name: 'Tiền thuê xe thực tế (3 ngày)', amount: 570000 },
-        { name: 'Phụ phí xử lý trầy xước dàn áo bên trái', amount: 350000, note: 'Trầy xước sâu 15cm yếm trước' },
-      ],
-      total_fee: 920000,
-      status: 'DISPUTED',
-      customer_answer: 'KHIEU_NAI',
-      dispute_reason: 'Tôi không đồng ý phụ phí 350.000đ vì vết xước nhỏ này đã có sẵn khi nhận xe từ nhân viên.',
-      sent_at: endDay5,
-      answered_at: endDay5,
-    },
-  ];
+  const statements: Statement[] = isTest
+    ? [
+        {
+          id: 'st555555-0000-0000-0000-000000000005',
+          request_id: rentalRequests[4]?.id || '',
+          version: 1,
+          items: [
+            { name: 'Tiền thuê xe thực tế (3 ngày)', amount: 570000 },
+            { name: 'Phụ phí xử lý trầy xước dàn áo bên trái', amount: 350000, note: 'Trầy xước sâu 15cm yếm trước' },
+          ],
+          total_fee: 920000,
+          status: 'DISPUTED',
+          customer_answer: 'KHIEU_NAI',
+          dispute_reason: 'Tôi không đồng ý phụ phí 350.000đ vì vết xước nhỏ này đã có sẵn khi nhận xe từ nhân viên.',
+          sent_at: endDay5,
+          answered_at: endDay5,
+        },
+      ]
+    : [];
 
   // Đồng bộ hóa trạng thái quy trình BPMN ProcessState cho từng hồ sơ
-  const processStates: ProcessState[] = [
-    // Hồ sơ 1: Đang thuê -> Sẵn sàng bấm sự kiện M_EG (Gia hạn, Cứu hộ, Trả xe)
-    {
-      request_id: rentalRequests[0].id,
-      waiting_node_ids: ['M_EG'],
-      loop_counters: {},
-      variables: { preferred_vehicle_type: 'tay_ga' },
-      updated_at: nowISO,
-    },
-    // Hồ sơ 2: Chờ ký -> Điểm chờ M_WaitSign (KH-04)
-    {
-      request_id: rentalRequests[1].id,
-      waiting_node_ids: ['M_WaitSign'],
-      loop_counters: {},
-      variables: { preferred_vehicle_type: 'xe_con' },
-      updated_at: nowISO,
-    },
-    // Hồ sơ 3: Hoàn tất
-    {
-      request_id: rentalRequests[2].id,
-      waiting_node_ids: [],
-      loop_counters: {},
-      variables: { preferred_vehicle_type: 'xe_so' },
-      updated_at: nowISO,
-    },
-    // Hồ sơ 4: Chờ nhân viên kiểm tra bàn giao xe NV-03 (M_InspectPre)
-    {
-      request_id: rentalRequests[3].id,
-      waiting_node_ids: ['M_InspectPre'],
-      loop_counters: {},
-      variables: { preferred_vehicle_type: 'xe_so' },
-      updated_at: nowISO,
-    },
-    // Hồ sơ 5: Khách khiếu nại -> Điểm chờ Quản lý giải quyết tranh chấp QL-01 (M_Resolve)
-    {
-      request_id: rentalRequests[4].id,
-      waiting_node_ids: ['M_Resolve'],
-      loop_counters: { dispute_count: 1 },
-      variables: { preferred_vehicle_type: 'tay_ga' },
-      updated_at: nowISO,
-    },
-    // Hồ sơ 6: Hồ sơ công nợ
-    {
-      request_id: rentalRequests[5].id,
-      waiting_node_ids: [],
-      loop_counters: {},
-      variables: { preferred_vehicle_type: 'xe_so' },
-      updated_at: nowISO,
-    },
-  ];
+  const processStates: ProcessState[] = isTest
+    ? [
+        // Hồ sơ 1: Đang thuê -> Sẵn sàng bấm sự kiện M_EG (Gia hạn, Cứu hộ, Trả xe)
+        {
+          request_id: rentalRequests[0]?.id || '',
+          waiting_node_ids: ['M_EG'],
+          loop_counters: {},
+          variables: { preferred_vehicle_type: 'tay_ga' },
+          updated_at: nowISO,
+        },
+        // Hồ sơ 2: Chờ ký -> Điểm chờ M_WaitSign (KH-04)
+        {
+          request_id: rentalRequests[1]?.id || '',
+          waiting_node_ids: ['M_WaitSign'],
+          loop_counters: {},
+          variables: { preferred_vehicle_type: 'xe_con' },
+          updated_at: nowISO,
+        },
+        // Hồ sơ 3: Hoàn tất
+        {
+          request_id: rentalRequests[2]?.id || '',
+          waiting_node_ids: [],
+          loop_counters: {},
+          variables: { preferred_vehicle_type: 'xe_so' },
+          updated_at: nowISO,
+        },
+        // Hồ sơ 4: Chờ nhân viên kiểm tra bàn giao xe NV-03 (M_InspectPre)
+        {
+          request_id: rentalRequests[3]?.id || '',
+          waiting_node_ids: ['M_InspectPre'],
+          loop_counters: {},
+          variables: { preferred_vehicle_type: 'xe_so' },
+          updated_at: nowISO,
+        },
+        // Hồ sơ 5: Khách khiếu nại -> Điểm chờ Quản lý giải quyết tranh chấp QL-01 (M_Resolve)
+        {
+          request_id: rentalRequests[4]?.id || '',
+          waiting_node_ids: ['M_Resolve'],
+          loop_counters: { dispute_count: 1 },
+          variables: { preferred_vehicle_type: 'tay_ga' },
+          updated_at: nowISO,
+        },
+        // Hồ sơ 6: Hồ sơ công nợ
+        {
+          request_id: rentalRequests[5]?.id || '',
+          waiting_node_ids: [],
+          loop_counters: {},
+          variables: { preferred_vehicle_type: 'xe_so' },
+          updated_at: nowISO,
+        },
+      ]
+    : [];
 
   // Ghi đồng loạt vào Dexie (dùng bulkPut để an toàn nếu cập nhật/nạp thêm dữ liệu mà không bị lỗi trùng khóa)
   await db.transaction('rw', db.tables, async () => {

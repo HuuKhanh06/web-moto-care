@@ -17,13 +17,15 @@ export function AppProviders({ children }: AppProvidersProps) {
   const restoreSession = useAuthStore((s) => s.restoreSession);
 
   useEffect(() => {
-    // 1. Tự động kiểm tra và khởi tạo dữ liệu mẫu nếu IndexedDB trống hoặc chưa đủ 30 xe
+    // 1. Tự động kiểm tra và khởi tạo dữ liệu sạch (30 xe, 3 tài khoản vận hành, 0 tài khoản/đơn ảo)
     async function initApp() {
       try {
         const count = await db.auth_accounts.count();
         const vCount = await db.vehicles.count();
-        if (count === 0 || vCount < 30) {
-          console.log(`[AutoSync] Phát hiện dữ liệu xe (${vCount}/30 xe) hoặc DB mới -> Nạp lại 30 xe`);
+        // Kiểm tra nếu còn tài khoản khách mẫu cũ thì đồng bộ lại DB sạch sẽ
+        const legacyCustomer = await db.auth_accounts.where('email').equalsIgnoreCase('khachhang1@gmail.com').first();
+        if (count === 0 || vCount < 30 || legacyCustomer) {
+          console.log(`[AutoSync] Khởi tạo dữ liệu sạch (30 xe, 3 tài khoản vận hành)`);
           await seedDatabase();
         }
       } catch (err) {

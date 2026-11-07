@@ -95,15 +95,15 @@ export function AD01Page() {
   // Xử lý nạp dữ liệu mẫu
   const handleSeed = async () => {
     if (!isManager) return;
-    if (window.confirm('Thao tác này sẽ ghi đè dữ liệu mẫu chuẩn (bao gồm 6 tài khoản, xe, đối tác, đơn thuê mẫu). Tiếp tục?')) {
+    if (window.confirm('Thao tác này sẽ đặt lại hệ thống về trạng thái ban đầu chuẩn (30 xe, 3 tài khoản vận hành, xóa dữ liệu ảo). Tiếp tục?')) {
       try {
         setLoading(true);
         await seedDatabase();
         await loadAll();
-        toast.success('Đã nạp dữ liệu mẫu thành công!');
+        toast.success('Đã nạp dữ liệu ban đầu thành công!');
       } catch (err) {
         console.error(err);
-        toast.error('Lỗi khi nạp dữ liệu mẫu');
+        toast.error('Lỗi khi nạp dữ liệu');
       } finally {
         setLoading(false);
       }
