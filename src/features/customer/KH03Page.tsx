@@ -32,7 +32,9 @@ import {
   Copy,
   Check,
   CreditCard,
+  Lock,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { COPY } from '@/copy';
 
 export function KH03Page() {
@@ -47,6 +49,7 @@ export function KH03Page() {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(1800);
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [hasTransferred, setHasTransferred] = useState(false);
 
   // Modal Giả lập ngân hàng (Demo & Testing)
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
@@ -352,20 +355,77 @@ export function KH03Page() {
               </p>
             </Card>
 
-            {/* Nút hành động Desktop */}
+            {/* Khung xác nhận và Nút hành động Desktop */}
             {!isPaidSuccess && (
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                fullWidth
-                data-testid="node-M_WaitDeposit"
-                onClick={() => setIsSimulatorOpen(true)}
-                className="hidden md:flex items-center justify-center gap-2"
-              >
-                <span>Tôi đã chuyển khoản</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <div className="hidden md:flex flex-col space-y-3">
+                <div
+                  onClick={() => setHasTransferred(!hasTransferred)}
+                  className={cn(
+                    'p-3.5 rounded-xl border transition-all cursor-pointer select-none flex items-start gap-3',
+                    hasTransferred
+                      ? 'border-teal-500 bg-teal-50/70 shadow-xs ring-1 ring-teal-500/30'
+                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100/70'
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    id="confirm-transferred-desktop"
+                    checked={hasTransferred}
+                    onChange={(e) => setHasTransferred(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                  />
+                  <div className="text-xs leading-relaxed">
+                    <label
+                      htmlFor="confirm-transferred-desktop"
+                      className="font-semibold text-slate-900 block cursor-pointer"
+                    >
+                      Tôi xác nhận đã chuyển tiền thành công
+                    </label>
+                    <span className="text-slate-500">
+                      Đã quét mã VietQR và hoàn tất chuyển tiền từ ứng dụng ngân hàng.
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant={hasTransferred ? 'primary' : 'secondary'}
+                  disabled={!hasTransferred}
+                  size="md"
+                  fullWidth
+                  data-testid="node-M_WaitDeposit"
+                  onClick={() => {
+                    if (!hasTransferred) return;
+                    setIsSimulatorOpen(true);
+                  }}
+                  className={cn(
+                    'flex items-center justify-center gap-2 transition-all font-medium',
+                    hasTransferred
+                      ? 'bg-teal-700 hover:bg-teal-800 text-white shadow-sm'
+                      : 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border-none shadow-none hover:bg-slate-200 pointer-events-none'
+                  )}
+                >
+                  {hasTransferred ? (
+                    <>
+                      <span>Tôi đã chuyển khoản</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4 text-slate-400" />
+                      <span>Chờ bạn chuyển khoản...</span>
+                    </>
+                  )}
+                </Button>
+
+                {!hasTransferred && (
+                  <p className="text-[11px] text-center text-slate-400 flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3 text-amber-500" />
+                    <span>Vui lòng chuyển tiền và tích xác nhận ở trên để kích hoạt nút</span>
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -373,18 +433,61 @@ export function KH03Page() {
 
       {/* Sticky Bottom Bar trên Mobile */}
       {!isPaidSuccess && !isExpired && (
-        <StickyBottomBar className="md:hidden">
+        <StickyBottomBar className="md:hidden space-y-2">
+          <div
+            onClick={() => setHasTransferred(!hasTransferred)}
+            className={cn(
+              'p-2.5 rounded-lg border transition-all cursor-pointer select-none flex items-center gap-2.5',
+              hasTransferred
+                ? 'border-teal-500 bg-teal-50 text-teal-900'
+                : 'border-slate-200 bg-slate-50 text-slate-600'
+            )}
+          >
+            <input
+              type="checkbox"
+              id="confirm-transferred-mobile"
+              checked={hasTransferred}
+              onChange={(e) => setHasTransferred(e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+              className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+            />
+            <label
+              htmlFor="confirm-transferred-mobile"
+              className="text-xs font-medium cursor-pointer leading-tight"
+            >
+              Tôi đã chuyển tiền thành công trên app ngân hàng
+            </label>
+          </div>
+
           <Button
             type="button"
-            variant="primary"
+            variant={hasTransferred ? 'primary' : 'secondary'}
+            disabled={!hasTransferred}
             size="md"
             fullWidth
             data-testid="node-M_WaitDeposit"
-            onClick={() => setIsSimulatorOpen(true)}
-            className="flex items-center justify-center gap-2"
+            onClick={() => {
+              if (!hasTransferred) return;
+              setIsSimulatorOpen(true);
+            }}
+            className={cn(
+              'flex items-center justify-center gap-2 transition-all font-medium',
+              hasTransferred
+                ? 'bg-teal-700 hover:bg-teal-800 text-white shadow-sm'
+                : 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border-none shadow-none pointer-events-none'
+            )}
           >
-            <span>Tôi đã chuyển khoản</span>
-            <ArrowRight className="w-4 h-4" />
+            {hasTransferred ? (
+              <>
+                <span>Tôi đã chuyển khoản</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4 text-slate-400" />
+                <span>Chờ bạn chuyển khoản...</span>
+              </>
+            )}
           </Button>
         </StickyBottomBar>
       )}
