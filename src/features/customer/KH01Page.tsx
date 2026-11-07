@@ -1,10 +1,12 @@
 // src/features/customer/KH01Page.tsx
 // Màn hình 1: Chọn dòng xe & Thời gian thuê
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
+import { findAvailableVehicle, rentalDays } from '@/engine/fleet';
 import { db } from '@/db';
 import {
   Card,
@@ -24,9 +26,35 @@ import {
 } from 'lucide-react';
 import { COPY } from '@/copy';
 
+const VEHICLE_OPTIONS = [
+  {
+    id: 'xe_so',
+    title: 'Xe số',
+    models: 'Wave Alpha, Sirius 110cc',
+    tag: 'Tiết kiệm xăng',
+    image: 'images/vehicles/honda-wave-alpha.png',
+  },
+  {
+    id: 'tay_ga',
+    title: 'Xe tay ga',
+    models: 'Vision, Air Blade 125cc',
+    tag: 'Phổ biến nhất',
+    image: 'images/vehicles/honda-vision.jpg',
+  },
+  {
+    id: 'xe_con',
+    title: 'Xe côn tay',
+    models: 'Winner X, Exciter 155cc',
+    tag: 'Mạnh mẽ',
+    image: 'images/vehicles/honda-winner-x.png',
+  },
+];
+
+const isVehicleType = (value: string | null): value is string => VEHICLE_OPTIONS.some((option) => option.id === value);
+
 export function KH01Page() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentActor = useAuthStore((s) => s.currentActor);
 
   const tomorrow = new Date();
@@ -43,23 +71,69 @@ export function KH01Page() {
   const paramStart = searchParams.get('startAt');
   const paramEnd = searchParams.get('endAt');
 
-  const [vehicleType, setVehicleType] = useState(paramType || 'tay_ga');
+  // Vào từ menu "Dòng xe" (?vehicleType=...): chỉ hiện dòng xe đó. Không có tham số: hiện đủ 3 dòng.
+  const typeFromUrl = isVehicleType(paramType) ? paramType : null;
+  const [vehicleType, setVehicleType] = useState(typeFromUrl || 'tay_ga');
+
+  // Đang ở KH-01 mà chọn dòng khác trên menu: URL đổi nhưng component không mount lại, nên phải đồng bộ.
+  useEffect(() => {
+    if (typeFromUrl) setVehicleType(typeFromUrl);
+  }, [typeFromUrl]);
+
+  const visibleOptions = typeFromUrl ? VEHICLE_OPTIONS.filter((option) => option.id === typeFromUrl) : VEHICLE_OPTIONS;
+
+  const showAllTypes = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('vehicleType');
+    next.delete('type');
+    setSearchParams(next, { replace: true });
+  };
+
+  // Các mẫu xe thực có trong kho thuộc dòng đang lọc (hệ thống tự phân bổ một xe sẵn sàng khi gửi yêu cầu).
+  const fleetModels = useLiveQuery(async () => {
+    if (!typeFromUrl) return [];
+    const vehicles = await db.vehicles.where('vehicle_type').equals(typeFromUrl).toArray();
+    const byModel = new Map<string, { model: string; available: number; total: number; minPrice: number }>();
+    for (const vehicle of vehicles) {
+      const entry = byModel.get(vehicle.model) ?? { model: vehicle.model, available: 0, total: 0, minPrice: vehicle.daily_price };
+      entry.total += 1;
+      if (vehicle.status === 'SAN_SANG') entry.available += 1;
+      entry.minPrice = Math.min(entry.minPrice, vehicle.daily_price);
+      byModel.set(vehicle.model, entry);
+    }
+    return [...byModel.values()].sort((a, b) => a.minPrice - b.minPrice || a.model.localeCompare(b.model));
+  }, [typeFromUrl]);
   const [startAt, setStartAt] = useState(paramStart || toInputDate(tomorrow));
   const [endAt, setEndAt] = useState(paramEnd || toInputDate(dayAfter));
   const [hasCccd, setHasCccd] = useState(true);
   const [hasGplx, setHasGplx] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const startDate = new Date(startAt);
-  const endDate = new Date(endAt);
-  const diffDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
+  const startMs = new Date(startAt).getTime();
+  const endMs = new Date(endAt).getTime();
+  const validRange = Number.isFinite(startMs) && Number.isFinite(endMs) && startMs < endMs;
+  const diffDays = validRange ? rentalDays(startMs, endMs) : 1;
 
-  const basePriceMap: Record<string, number> = {
-    xe_so: 120000,
-    tay_ga: 160000,
-    xe_con: 200000,
-  };
-  const estimatedPrice = (basePriceMap[vehicleType] || 160000) * diffDays;
+  // Giá "từ" của mỗi dòng = giá thấp nhất trong kho (ưu tiên xe đang sẵn sàng). Tự cập nhật khi admin đổi giá.
+  const fromPrices = useLiveQuery(async () => {
+    const vehicles = await db.vehicles.toArray();
+    const prices: Record<string, number | null> = {};
+    for (const option of VEHICLE_OPTIONS) {
+      const ofType = vehicles.filter((v) => v.vehicle_type === option.id);
+      const pool = ofType.some((v) => v.status === 'SAN_SANG') ? ofType.filter((v) => v.status === 'SAN_SANG') : ofType;
+      prices[option.id] = pool.length ? Math.min(...pool.map((v) => v.daily_price)) : null;
+    }
+    return prices;
+  }, []);
+
+  // Xe mà engine sẽ gán cho khung giờ này (cùng quy tắc M_CheckFleet) → giá ước tính khớp báo giá ở KH-02.
+  // undefined = đang tải, null = hết xe trong khung giờ.
+  const predictedVehicle = useLiveQuery(
+    async () => (validRange ? findAvailableVehicle(startMs, endMs, vehicleType) : null),
+    [startMs, endMs, vehicleType, validRange],
+  );
+  const estimatedPrice = predictedVehicle ? predictedVehicle.daily_price * diffDays : null;
+  const estimateText = predictedVehicle === undefined ? 'Đang tính…' : estimatedPrice === null ? 'Hết xe' : formatCurrency(estimatedPrice);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,38 +187,26 @@ export function KH01Page() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 1. Chọn dòng xe */}
         <Card className="p-4 md:p-6 border border-slate-200 rounded-xl bg-white space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Bike className="w-5 h-5 text-teal-700 shrink-0" />
-            <h2 className="text-lg font-semibold text-slate-900">Chọn dòng xe</h2>
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <Bike className="w-5 h-5 text-teal-700 shrink-0" />
+              <h2 className="text-lg font-semibold text-slate-900">
+                {typeFromUrl ? visibleOptions[0].title : 'Chọn dòng xe'}
+              </h2>
+            </div>
+            {typeFromUrl && (
+              <button
+                type="button"
+                onClick={showAllTypes}
+                className="text-sm font-semibold text-teal-700 hover:text-teal-800 hover:underline"
+              >
+                Xem tất cả dòng xe
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              {
-                id: 'xe_so',
-                title: 'Xe số',
-                models: 'Wave Alpha, Sirius 110cc',
-                price: 120000,
-                tag: 'Tiết kiệm xăng',
-                image: getAssetUrl('images/vehicles/honda-wave-alpha.png'),
-              },
-              {
-                id: 'tay_ga',
-                title: 'Xe tay ga',
-                models: 'Vision, Air Blade 125cc',
-                price: 160000,
-                tag: 'Phổ biến nhất',
-                image: getAssetUrl('images/vehicles/honda-vision.jpg'),
-              },
-              {
-                id: 'xe_con',
-                title: 'Xe côn tay',
-                models: 'Winner X, Exciter 155cc',
-                price: 200000,
-                tag: 'Mạnh mẽ',
-                image: getAssetUrl('images/vehicles/honda-winner-x.png'),
-              },
-            ].map((item) => {
+          <div className={`grid grid-cols-1 gap-3 ${typeFromUrl ? '' : 'sm:grid-cols-3'}`}>
+            {visibleOptions.map((option) => ({ ...option, image: getAssetUrl(option.image) })).map((item) => {
               const isSelected = vehicleType === item.id;
               return (
                 <div
@@ -170,7 +232,7 @@ export function KH01Page() {
                     </div>
                   </div>
 
-                  <div className="h-24 my-3 flex items-center justify-center overflow-hidden">
+                  <div className={`${typeFromUrl ? 'h-40' : 'h-24'} my-3 flex items-center justify-center overflow-hidden`}>
                     <img
                       src={item.image}
                       alt={item.title}
@@ -181,7 +243,11 @@ export function KH01Page() {
 
                   <div className="pt-2 border-t border-slate-100 flex items-baseline justify-between">
                     <span className="font-semibold text-teal-700 text-base">
-                      {item.price.toLocaleString('vi-VN')} ₫
+                      {fromPrices === undefined
+                        ? '…'
+                        : fromPrices[item.id] == null
+                          ? 'Tạm hết xe'
+                          : `Từ ${formatCurrency(fromPrices[item.id])}`}
                     </span>
                     <span className="text-[13px] text-slate-500">/ ngày</span>
                   </div>
@@ -189,6 +255,35 @@ export function KH01Page() {
               );
             })}
           </div>
+
+          {typeFromUrl && fleetModels && fleetModels.length > 0 && (
+            <div className="space-y-2" data-testid="kh01-fleet-models">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-sm font-semibold text-slate-900">Các mẫu xe trong dòng này</h3>
+                <span className="text-[13px] text-slate-500">
+                  {fleetModels.reduce((sum, m) => sum + m.available, 0)} xe sẵn sàng
+                </span>
+              </div>
+              <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                {fleetModels.map((m) => (
+                  <li key={m.model} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{m.model}</p>
+                      <p className={`text-[13px] ${m.available > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
+                        {m.available > 0 ? `Còn ${m.available}/${m.total} xe` : 'Tạm hết xe'}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-700 shrink-0">
+                      từ {formatCurrency(m.minPrice)}/ngày
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[13px] text-slate-500">
+                Hệ thống tự phân bổ một xe sẵn sàng thuộc dòng này khi bạn gửi yêu cầu.
+              </p>
+            </div>
+          )}
         </Card>
 
         {/* 2. Thời gian thuê */}
@@ -221,11 +316,23 @@ export function KH01Page() {
             />
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-sm">
-            <span className="text-slate-600">Tổng tiền thuê ước tính ({diffDays} ngày):</span>
-            <span className="font-semibold text-lg text-slate-900">
-              {formatCurrency(estimatedPrice)}
-            </span>
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-sm" data-testid="kh01-estimate">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Tổng tiền thuê ước tính ({diffDays} ngày):</span>
+              <span className={`font-semibold text-lg ${estimatedPrice === null && predictedVehicle !== undefined ? 'text-rose-600' : 'text-slate-900'}`}>
+                {estimateText}
+              </span>
+            </div>
+            {predictedVehicle && (
+              <p className="text-[13px] text-slate-500">
+                Dự kiến xe {predictedVehicle.model} · {formatCurrency(predictedVehicle.daily_price)}/ngày
+              </p>
+            )}
+            {predictedVehicle === null && validRange && (
+              <p className="text-[13px] text-rose-600">
+                Dòng xe này đã hết xe trống trong khung giờ đã chọn. Vui lòng đổi thời gian hoặc dòng xe khác.
+              </p>
+            )}
           </div>
         </Card>
 
@@ -286,7 +393,7 @@ export function KH01Page() {
             <div>
               <div className="text-[13px] text-slate-500">Ước tính ({diffDays} ngày):</div>
               <div className="text-lg font-semibold text-slate-900">
-                {formatCurrency(estimatedPrice)}
+                {estimateText}
               </div>
             </div>
             <Button

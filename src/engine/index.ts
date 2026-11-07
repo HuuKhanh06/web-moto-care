@@ -8,6 +8,7 @@ import { bpmnGraph } from './graph';
 import { timerManager } from './timers';
 import { BUSINESS_RULES } from '@/config/rules';
 import { integrations } from '@/integrations';
+import { isVehicleFree } from './fleet';
 import type { Actor, ProcessEvent, ProcessState } from '@/db/types';
 
 import {
@@ -475,6 +476,11 @@ export class ProcessEngine {
         await db.inspections.update(lastInsp.id, { rework_note: reworkNote });
       }
       if (newVehicleId) {
+        // Chặn đổi sang xe đã khóa lịch hoặc đang giữ cho hồ sơ khác trong cùng khung giờ.
+        const current = await db.rental_requests.get(requestId);
+        if (current && !(await isVehicleFree(newVehicleId, new Date(current.start_at).getTime(), new Date(current.end_at).getTime(), requestId))) {
+          throw new Error('Xe thay thế đã có lịch hoặc đang được giữ cho hồ sơ khác trong khung giờ này. Vui lòng chọn xe khác.');
+        }
         await db.rental_requests.update(requestId, { vehicle_id: newVehicleId });
         const oldSched = await db.vehicle_schedule.where('request_id').equals(requestId).first();
         if (oldSched) {

@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
+import { isVehicleFree } from '@/engine/fleet';
 import { db } from '@/db';
 import type { RentalRequest, Vehicle, Inspection } from '@/db/types';
 import {
@@ -144,14 +145,18 @@ export function NV03Page() {
         .sortBy('attempt_no');
       setInspectionsHistory(history);
 
-      // Lấy danh sách xe khả dụng cùng phân hạng nếu cần đổi xe
+      // Lấy danh sách xe khả dụng cùng phân hạng nếu cần đổi xe.
+      // Chỉ liệt kê xe còn trống trong khung giờ thuê: loại xe đã khóa lịch hoặc đang giữ cho hồ sơ khác.
       if (v) {
-        const altVehicles = await db.vehicles
+        const candidates = await db.vehicles
           .where('vehicle_type')
           .equals(v.vehicle_type)
           .and((veh) => veh.id !== v?.id && veh.status === 'SAN_SANG')
           .toArray();
-        setAvailableVehicles(altVehicles);
+        const startMs = new Date(req.start_at).getTime();
+        const endMs = new Date(req.end_at).getTime();
+        const free = await Promise.all(candidates.map((veh) => isVehicleFree(veh.id, startMs, endMs, targetId)));
+        setAvailableVehicles(candidates.filter((_, i) => free[i]));
       }
     } catch (err) {
       console.error('Lỗi nạp NV-03:', err);

@@ -59,7 +59,8 @@ export async function compressImageToDataUrl(file: File, timeoutMs = 15000): Pro
         if (!img.width || !img.height || img.width * img.height > 40_000_000) {
           throw new OcrError('INVALID_FILE', 'Ảnh không hợp lệ hoặc vượt quá 40 triệu điểm ảnh.');
         }
-        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        // Giữ 2000px cho ảnh giấy tờ: thu nhỏ hơn làm chữ trên CCCD/GPLX quá bé để OCR đọc đúng.
+        const scale = Math.min(1, 2000 / Math.max(img.width, img.height));
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);

@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { clock } from '@/lib/clock';
 import { logEvent } from '@/db/repo';
 import { BUSINESS_RULES } from '@/config/rules';
+import { findAvailableVehicle, isVehicleFree, rentalDays as countRentalDays } from '@/engine/fleet';
 import { integrations } from '@/integrations';
 import { getIntegrationConfig } from '@/config/integrations';
 import { aiService } from '@/ai';
@@ -63,33 +64,8 @@ export async function fn_check_fleet(
   const startReq = new Date(req.start_at).getTime();
   const endReq = new Date(req.end_at).getTime();
 
-  // Tìm danh sách xe đang sẵn sàng
-  let vehicles = await db.vehicles.where('status').equals('SAN_SANG').toArray();
-  if (preferredType) {
-    vehicles = vehicles.filter((v) => v.vehicle_type === preferredType);
-  }
-
-  let selectedVehicleId: string | null = null;
-
-  for (const v of vehicles) {
-    // Kiểm tra lịch xe
-    const schedules = await db.vehicle_schedule.where('vehicle_id').equals(v.id).toArray();
-    let hasOverlap = false;
-
-    for (const s of schedules) {
-      const sStart = new Date(s.start_at).getTime();
-      const sEnd = new Date(s.end_at).getTime();
-      if (startReq < sEnd && endReq > sStart) {
-        hasOverlap = true;
-        break;
-      }
-    }
-
-    if (!hasOverlap) {
-      selectedVehicleId = v.id;
-      break;
-    }
-  }
+  // Xe sẵn sàng đầu tiên đúng loại, không trùng lịch (quy tắc dùng chung với KH-01).
+  const selectedVehicleId = (await findAvailableVehicle(startReq, endReq, preferredType, requestId))?.id ?? null;
 
   if (selectedVehicleId) {
     await db.rental_requests.update(requestId, { vehicle_id: selectedVehicleId });
@@ -150,7 +126,7 @@ export async function fn_send_quote(requestId: string, actor: Actor): Promise<vo
 
   const startMs = new Date(req.start_at).getTime();
   const endMs = new Date(req.end_at).getTime();
-  const rentalDays = Math.max(1, Math.ceil((endMs - startMs) / (24 * 3600 * 1000)));
+  const rentalDays = countRentalDays(startMs, endMs);
 
   const totalPrice = rentalDays * vehicle.daily_price;
   const depositAmount = Math.round(totalPrice * BUSINESS_RULES.DEPOSIT_RATE);
@@ -569,9 +545,27 @@ export async function fn_lock_schedule(requestId: string, actor: Actor): Promise
   const req = await db.rental_requests.get(requestId);
   if (!req || !req.vehicle_id) throw new Error(`Hồ sơ ${requestId} chưa gán xe`);
 
+  // Kiểm tra lại trước khi khóa: xe có thể đã bị gán cho hồ sơ khác (vd. dữ liệu đồng bộ từ thiết bị khác).
+  const startMs = new Date(req.start_at).getTime();
+  const endMs = new Date(req.end_at).getTime();
+  let vehicleId = req.vehicle_id;
+  if (!(await isVehicleFree(vehicleId, startMs, endMs, requestId))) {
+    const current = await db.vehicles.get(vehicleId);
+    const replacement = await findAvailableVehicle(startMs, endMs, current?.vehicle_type, requestId);
+    if (!replacement) {
+      throw new Error('Xe đã được giữ cho hồ sơ khác trong khung giờ này và không còn xe cùng dòng để thay thế. Vui lòng liên hệ nhân viên.');
+    }
+    await logEvent(requestId, 'M_SaveBooking', 'REASSIGN_VEHICLE_CONFLICT', actor, {
+      from_vehicle_id: vehicleId,
+      to_vehicle_id: replacement.id,
+    });
+    vehicleId = replacement.id;
+    await db.rental_requests.update(requestId, { vehicle_id: vehicleId });
+  }
+
   const schedule = {
     id: crypto.randomUUID(),
-    vehicle_id: req.vehicle_id,
+    vehicle_id: vehicleId,
     request_id: requestId,
     kind: 'RENTAL' as const,
     start_at: req.start_at,
@@ -583,7 +577,7 @@ export async function fn_lock_schedule(requestId: string, actor: Actor): Promise
 
   await logEvent(requestId, 'M_SaveBooking', 'LOCK_SCHEDULE', actor, {
     schedule_id: schedule.id,
-    vehicle_id: req.vehicle_id,
+    vehicle_id: vehicleId,
   });
 }
 

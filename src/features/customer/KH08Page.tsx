@@ -32,6 +32,12 @@ import {
   Navigation,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { RentalRequestStatus } from '@/db/types';
+
+/** Chỉ chuyến đã nhận xe mới báo sự cố / theo dõi cứu hộ được. */
+const INCIDENT_ELIGIBLE_STATUSES: RentalRequestStatus[] = ['DANG_THUE', 'DANG_XU_LY_SU_CO'];
+/** Chuyến chưa tới bước nhận xe. */
+const PRE_HANDOVER_STATUSES: RentalRequestStatus[] = ['MOI', 'CHO_HO_SO', 'CHO_COC', 'CHO_KY', 'CHO_BAN_GIAO', 'CHO_KHACH_NHAN'];
 
 const COMMON_INCIDENTS = [
   'Chết máy / Không nổ được',
@@ -66,25 +72,15 @@ export function KH08Page() {
   const liveData = useLiveQuery(async () => {
     let targetId = rawRequestId;
 
+    // Chỉ chuyến đã nhận xe mới báo sự cố được. Không lấy "đơn gần nhất" khi khách chưa nhận xe
+    // (trước đây hiện xe của đơn đang chờ cọc/chờ giao và cho điền form, rồi engine mới báo lỗi).
     if (!targetId && currentActor) {
       const activeReq = await db.rental_requests
         .where('customer_id')
         .equals(currentActor.id)
-        .and((r) => r.status === 'DANG_XU_LY_SU_CO' || r.status === 'DANG_THUE')
+        .and((r) => INCIDENT_ELIGIBLE_STATUSES.includes(r.status))
         .first();
-
-      if (activeReq) {
-        targetId = activeReq.id;
-      } else {
-        const list = await db.rental_requests
-          .where('customer_id')
-          .equals(currentActor.id)
-          .reverse()
-          .sortBy('created_at');
-        if (list.length > 0) {
-          targetId = list[0].id;
-        }
-      }
+      targetId = activeReq?.id ?? null;
     }
 
     if (!targetId) return null;
@@ -94,6 +90,8 @@ export function KH08Page() {
       db.process_state.get(targetId),
     ]);
     if (!req) return null;
+    // Mở bằng ?requestId= của chuyến chưa nhận xe / đã kết thúc: không hiện xe và form.
+    if (!INCIDENT_ELIGIBLE_STATUSES.includes(req.status)) return { ineligible: true as const, request: req };
 
     const [v, inc] = await Promise.all([
       req.vehicle_id ? db.vehicles.get(req.vehicle_id) : Promise.resolve(undefined),
@@ -115,6 +113,7 @@ export function KH08Page() {
     }
 
     return {
+      ineligible: false as const,
       targetId,
       request: req,
       vehicle: v,
@@ -202,10 +201,29 @@ export function KH08Page() {
     );
   }
 
-  // Khách chưa có đơn thuê nào cần cứu hộ trực tiếp
-  if (liveData === null) {
+  // Khách chưa có chuyến đã nhận xe (hoặc mở KH-08 cho chuyến chưa nhận xe / đã kết thúc)
+  if (liveData === null || liveData.ineligible) {
+    const ineligibleRequest = liveData?.ineligible ? liveData.request : null;
     return (
       <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
+        <Card className="p-4 border border-amber-200 bg-amber-50 rounded-xl flex items-start gap-3" data-testid="kh08-not-eligible">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-2 text-sm text-amber-900">
+            <p className="font-semibold">
+              {ineligibleRequest && PRE_HANDOVER_STATUSES.includes(ineligibleRequest.status)
+                ? 'Chuyến đi này chưa nhận xe nên chưa thể báo sự cố.'
+                : ineligibleRequest
+                  ? 'Chuyến đi này đã kết thúc hoặc đang ở bước trả xe nên không thể báo sự cố.'
+                  : 'Bạn chưa có chuyến đi nào đang thuê xe.'}
+            </p>
+            <p className="text-amber-800">
+              Chức năng báo sự cố chỉ mở sau khi bạn đã nhận xe. Nếu cần hỗ trợ gấp, vui lòng gọi hotline bên dưới.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => navigate('/kh/06')}>
+              Chuyến đi của tôi
+            </Button>
+          </div>
+        </Card>
         <div className="text-center space-y-2">
           <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-2 border border-rose-200">
             <PhoneCall className="w-8 h-8" />
@@ -237,7 +255,9 @@ export function KH08Page() {
     );
   }
 
-  const { vehicle, incident, partner } = liveData;
+  const { vehicle, incident, partner, processState } = liveData;
+  // Engine chỉ nhận báo sự cố khi đang chờ sự kiện thuê (M_EG); vd. đang xử lý gia hạn thì chưa được.
+  const canReport = Boolean(processState?.waiting_node_ids?.includes('M_EG'));
   const isIncidentInProgress = incident && ['MOI', 'DANG_HO_TRO', 'VUOT_SLA'].includes(incident.status);
 
   return (
@@ -278,7 +298,14 @@ export function KH08Page() {
       )}
 
       {/* FORM BÁO SỰ CỐ MỚI */}
-      {!isIncidentInProgress && incident?.status !== 'DONG_TIEP_TUC' && incident?.status !== 'DONG_TRA_SOM' && (
+      {!isIncidentInProgress && !canReport && incident?.status !== 'DONG_TIEP_TUC' && incident?.status !== 'DONG_TRA_SOM' && (
+        <Card className="p-4 border border-amber-200 bg-amber-50 rounded-xl text-sm text-amber-900" data-testid="kh08-busy">
+          Chuyến đi đang có một yêu cầu khác cần xử lý xong trước (ví dụ gia hạn), nên tạm thời chưa thể báo sự cố.
+          Nếu cần hỗ trợ gấp, vui lòng gọi hotline 1900 6868.
+        </Card>
+      )}
+
+      {!isIncidentInProgress && canReport && incident?.status !== 'DONG_TIEP_TUC' && incident?.status !== 'DONG_TRA_SOM' && (
         <Card data-testid="node-SC_Create" className="p-4 md:p-6 border border-slate-200 bg-white rounded-xl space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <Wrench className="w-5 h-5 text-rose-600" />

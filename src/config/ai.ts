@@ -19,7 +19,7 @@ export const DEFAULT_AI_CONFIG: AiConfig = {
   mode: (import.meta.env.VITE_AI_MODE as AiConfig['mode']) || 'LOCAL',
   provider: 'gemini',
   apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
-  model: import.meta.env.VITE_GEMINI_MODEL || 'gemini-flash-latest',
+  model: import.meta.env.VITE_GEMINI_MODEL || 'gemini-3.5-flash',
   thresholdX: 0.95, // 95% theo đặc tả
   thresholdY: 0.80, // 80% theo đặc tả
   timeoutMs: 60000,

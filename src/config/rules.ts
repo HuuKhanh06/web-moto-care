@@ -23,6 +23,7 @@ export const BUSINESS_RULES = {
     EXTENSION_PAY_MINUTES: 30, // GH_TimerPay (2B): 30 phút
     DISPATCH_ACK_MINUTES: 15,  // SC_AckTimer (2B): 15 phút
     INCIDENT_SLA_HOURS: 2,     // SC_ResultTimer (2B): 2 giờ
+    PRE_DEPOSIT_HOLD_MINUTES: 30, // Giữ xe cho hồ sơ chưa đặt cọc (MOI/CHO_HO_SO) kể từ lần hoạt động gần nhất
   },
 
   // 6. Quy tắc thanh toán lại (Repayment rule):

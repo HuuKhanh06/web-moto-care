@@ -54,7 +54,7 @@ Nhằm đảm bảo buổi thuyết trình diễn ra liền mạch **100% không
 ## 4. TÍCH HỢP AI AGENT & TÍCH HỢP BÊN NGOÀI
 
 ### 4.1. AI Agent Thẩm định Hồ sơ OCR (`M_CheckDocs`)
-- **Kiến trúc Hybrid:** Kết hợp AI trích xuất thực thể (Gemini 1.5 Flash / Flash-Lite) với bộ quy tắc thẩm định doanh nghiệp cứng (Zod Rule Engine).
+- **Kiến trúc Hybrid:** Kết hợp AI trích xuất thực thể (Gemini 3.5 Flash; dự phòng `gemini-flash-lite-latest` khi quá tải) với bộ quy tắc thẩm định doanh nghiệp cứng (Zod Rule Engine).
 - **Phân loại ngưỡng độ tin cậy kép (Dual-Threshold X/Y):**
   - **Ngưỡng X = 85%:** Độ tin cậy $\ge 85\%$ và đủ giấy tờ hợp lệ $\rightarrow$ Tự động phê duyệt hồ sơ và chuyển sang bước cọc (`M_CreateDeposit`).
   - **Ngưỡng Y = 60%:** $60\% \le \text{Độ tin cậy} < 85\%$ $\rightarrow$ Gửi cảnh báo yêu cầu bổ sung giấy tờ (`M_AskDocs`, tối đa 3 lần).

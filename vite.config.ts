@@ -6,10 +6,13 @@ const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
 const isVercel = process.env.VERCEL === '1';
 
 // Tự động phân giải đường dẫn gốc:
-// - GitHub Pages: yêu cầu subpath '/web-moto-care/'
+// - GitHub Pages: tự động lấy subpath từ GITHUB_REPOSITORY (hoặc fallback '/web-moto-care/')
 // - Vercel / Tên miền riêng: chạy trên root '/'
 // - Môi trường nội bộ / file preview: './'
-const basePath = isGitHubActions ? '/web-moto-care/' : isVercel ? '/' : './';
+const repoSubpath = process.env.GITHUB_REPOSITORY
+  ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/`
+  : '/web-moto-care/';
+const basePath = isGitHubActions ? repoSubpath : isVercel ? '/' : './';
 
 // https://vitejs.dev/config/
 export default defineConfig({
