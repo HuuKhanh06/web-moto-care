@@ -8,8 +8,14 @@ import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
 import { fn_request_more_docs, fn_end_cancel } from '@/engine/fn';
-import { aiService } from '@/ai';
-import { extractDataFromImages } from '@/ai/realOcr';
+import { decodeCccdFrontOrBack } from '@/lib/cccdQr';
+import { extractGplxFromEdgeFunction } from '@/ai/gplxClient';
+import {
+  evaluateRoutingTable,
+  buildUnifiedOcrResponse,
+  type UnifiedCccdDoc,
+  type UnifiedGplxDoc,
+} from '@/ai/routingEngine';
 import type { RentalRequest, Vehicle, CustomerDocument, DocumentType } from '@/db/types';
 import {
   Card,
@@ -32,6 +38,7 @@ import {
   CheckCircle2,
   Check,
   AlertCircle,
+  AlertTriangle,
   Camera,
   Upload,
   Edit3,
@@ -41,7 +48,7 @@ import { COPY } from '@/copy';
 /**
  * Nén ảnh từ thiết bị thật qua Canvas HTML5 và chuyển sang Base64 Data URL
  */
-async function compressImageToDataUrl(file: File, maxDimension = 1280, quality = 0.85): Promise<string> {
+async function compressImageToDataUrl(file: File, maxDimension = 1920, quality = 0.92): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh'));
@@ -89,7 +96,11 @@ export function KH02Page() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
-  const [ocrLoading, setOcrLoading] = useState(false);
+  
+  // Máy trạng thái đọc hồ sơ P0: idle -> reading -> success | needs_review | failed
+  const [scanState, setScanState] = useState<'idle' | 'reading' | 'success' | 'needs_review' | 'failed'>('idle');
+  const [scanFailureMessage, setScanFailureMessage] = useState<string>('Ảnh chưa rõ. Chụp lại.');
+
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCustomerConfirmed, setIsCustomerConfirmed] = useState(false);
   const [extractedProfile, setExtractedProfile] = useState({
@@ -101,6 +112,17 @@ export function KH02Page() {
   });
   const [isAppliedToProfile, setIsAppliedToProfile] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
+
+  // Watchdog Timer an toàn: Không bao giờ để trạng thái 'reading' quá 25 giây
+  useEffect(() => {
+    if (scanState === 'reading') {
+      const timer = setTimeout(() => {
+        setScanState('needs_review');
+        toast.warning('Quá trình quét quá 25 giây. Hệ thống chuyển sang trạng thái cần nhân viên hỗ trợ.');
+      }, 25000);
+      return () => clearTimeout(timer);
+    }
+  }, [scanState]);
 
   // Tham chiếu input file thực tế cho từng loại giấy tờ
   const inputRefCccdFront = useRef<HTMLInputElement>(null);
@@ -116,11 +138,14 @@ export function KH02Page() {
   const getDoc = (type: DocumentType) => documents.find((d) => d.doc_type === type);
 
   /**
-   * Tự động quét và xác thực giấy tờ bằng AI Agent OCR trong nền
+   * Tự động quét và xác thực giấy tờ theo kiến trúc P0:
+   * 1. CCCD: Quét QR trực tiếp trong trình duyệt bằng module jsQR thuần (< 100ms)
+   * 2. GPLX: Gửi tới Supabase Edge Function đọc bằng AI Vision (Timeout 20s)
+   * 3. Định tuyến theo bảng ngưỡng thuần túy
    */
   const triggerAutoOcr = useCallback(
-    async (currentDocs: CustomerDocument[], req: RentalRequest, v: Vehicle | null) => {
-      if (!req.id || ocrLoading) return;
+    async (currentDocs: CustomerDocument[], req: RentalRequest) => {
+      if (!req.id || scanState === 'reading') return;
 
       const hasCccdFront = currentDocs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
       const hasCccdBack = currentDocs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
@@ -130,38 +155,57 @@ export function KH02Page() {
         return;
       }
 
-      setOcrLoading(true);
+      setScanState('reading');
       try {
         const cccdFront = currentDocs.find((d) => d.doc_type === 'CCCD_TRUOC');
         const cccdBack = currentDocs.find((d) => d.doc_type === 'CCCD_SAU');
         const gplxFront = currentDocs.find((d) => d.doc_type === 'BANG_LAI_TRUOC');
 
-        // Bóc tách dữ liệu thực tế từ ảnh thiết bị qua OCR
-        const realData = await extractDataFromImages(
-          cccdFront?.file_url,
-          cccdBack?.file_url,
-          gplxFront?.file_url
-        );
+        // 1. Quét QR CCCD độc lập bằng thư viện thuần client
+        const cccdRes = await decodeCccdFrontOrBack(cccdFront?.file_url, cccdBack?.file_url);
 
-        // Gọi đồng thời AI service để ghi log quy trình hợp đồng
-        const res = await aiService.processOcr({
-          requestId: req.id,
-          cccdImageRef: cccdFront?.file_url || 'blob:mock_cccd.jpg',
-          gplxImageRef: gplxFront?.file_url || 'blob:mock_gplx.jpg',
-          selectedVehicleType: v?.vehicle_type,
-          scenarioPreset: 'HIGH_CONFIDENCE',
+        let cccdDoc: UnifiedCccdDoc | undefined = undefined;
+        if (cccdRes.success && cccdRes.data) {
+          cccdDoc = {
+            full_name: cccdRes.data.full_name,
+            date_of_birth: cccdRes.data.date_of_birth,
+            id_number: cccdRes.data.id_number,
+            gender: cccdRes.data.gender,
+            address: cccdRes.data.address,
+            issue_date: cccdRes.data.issue_date,
+          };
+        }
+
+        // 2. Quét GPLX độc lập qua Supabase Edge Function (có timeout 20s)
+        let gplxDoc: UnifiedGplxDoc | undefined = undefined;
+        let isGplxServiceError = false;
+        let isGplxQualityFail = false;
+
+        if (gplxFront?.file_url) {
+          const gplxRes = await extractGplxFromEdgeFunction(gplxFront.file_url, req.id);
+          if (gplxRes.success && gplxRes.doc) {
+            gplxDoc = gplxRes.doc;
+          } else {
+            isGplxServiceError = Boolean(gplxRes.isServiceError);
+            isGplxQualityFail = gplxRes.imageQuality === 'FAIL';
+          }
+        }
+
+        // 3. Phân luồng định tuyến theo bảng ngưỡng thuần túy
+        const routingRes = evaluateRoutingTable({
+          isServiceError: isGplxServiceError,
+          imageQuality: isGplxQualityFail ? 'FAIL' : 'PASS',
+          cccd: cccdDoc,
+          gplx: gplxDoc,
+          thresholds: { X: 0.95, Y: 0.80 },
         });
 
-        // Ưu tiên 100% dữ liệu thực tế trích xuất từ ảnh, KHÔNG dùng dữ liệu giả định
-        const cName =
-          realData.fullName ||
-          res.documents.cccd?.full_name?.value ||
-          currentUser?.full_name ||
-          '';
-        const cId = realData.idNumber || res.documents.cccd?.id_number?.value || '';
-        const cDob = realData.dob || res.documents.cccd?.date_of_birth?.value || '';
-        const cLic = realData.licenseClass || res.documents.gplx?.license_class?.value || 'A1';
-        const cAddr = 'Đà Nẵng';
+        // 4. Ưu tiên 100% dữ liệu thực tế trích xuất được từ ảnh
+        const cName = cccdDoc?.full_name?.value || gplxDoc?.full_name?.value || currentUser?.full_name || '';
+        const cId = cccdDoc?.id_number?.value || '';
+        const cDob = cccdDoc?.date_of_birth?.value || '';
+        const cLic = gplxDoc?.license_class?.value || 'A1';
+        const cAddr = cccdDoc?.address?.value || 'Đà Nẵng';
 
         const profileData = {
           fullName: cName,
@@ -174,19 +218,48 @@ export function KH02Page() {
         setIsCustomerConfirmed(false); // Buộc khách hàng kiểm tra & bấm xác nhận
         setIsAppliedToProfile(true);
 
-        toast.success('Hệ thống đã đọc xong thông tin từ ảnh! Vui lòng kiểm tra và xác nhận bên dưới.');
+        // 5. Cập nhật máy trạng thái giao diện
+        if (routingRes.action === 'PREFILL_FOR_RULES') {
+          setScanState('success');
+          toast.success('Đã đọc xong thông tin từ giấy tờ! Vui lòng kiểm tra và xác nhận.');
+        } else if (routingRes.action === 'MANUAL_REVIEW' || routingRes.action === 'FALLBACK_MANUAL') {
+          setScanState('needs_review');
+          toast.info('Thông tin đã được ghi nhận. Cần nhân viên hỗ trợ kiểm tra.');
+        } else if (routingRes.action === 'REQUEST_REUPLOAD') {
+          setScanState('failed');
+          setScanFailureMessage('Ảnh chưa rõ. Chụp lại.');
+          toast.warning('Ảnh chưa rõ hoặc thiếu góc. Vui lòng chụp lại.');
+        }
+
+        // 6. Ghi log kiểm toán quy trình
+        const unifiedResp = buildUnifiedOcrResponse({
+          requestId: req.id,
+          cccd: cccdDoc,
+          gplx: gplxDoc,
+          isServiceError: isGplxServiceError,
+          imageQuality: isGplxQualityFail ? 'FAIL' : 'PASS',
+        });
+
+        await db.ai_logs.add({
+          request_id: req.id,
+          bpmn_node_id: 'M_CheckDocs',
+          input_summary: `CCCD: ${cccdRes.success ? 'Đọc QR thành công' : 'Chưa có QR'}, GPLX: ${gplxDoc ? 'Đọc AI thành công' : 'Chưa đọc được'}`,
+          output: unifiedResp as unknown as Record<string, unknown>,
+          confidence: unifiedResp.minimum_required_confidence,
+          routing_action: unifiedResp.routing.action,
+          is_overridden: false,
+          created_at: new Date().toISOString(),
+        });
 
         // Nạp lại danh sách tài liệu mới
         const freshDocs = await db.customer_documents.where('request_id').equals(req.id).toArray();
         setDocuments(freshDocs);
       } catch (err: unknown) {
-        console.error('Lỗi tự động xác thực AI OCR:', err);
-        toast.error('Có lỗi trong quá trình quét thông tin giấy tờ');
-      } finally {
-        setOcrLoading(false);
+        console.error('Lỗi tự động xác thực OCR:', err);
+        setScanState('needs_review');
       }
     },
-    [currentActor?.id, currentUser?.full_name, ocrLoading]
+    [currentUser?.full_name, scanState]
   );
 
   const loadData = useCallback(async () => {
@@ -205,11 +278,9 @@ export function KH02Page() {
       }
       setRequest(req);
 
-      let foundVehicle: Vehicle | null = null;
       if (req.vehicle_id) {
         const v = await db.vehicles.get(req.vehicle_id);
         if (v) {
-          foundVehicle = v;
           setVehicle(v);
         }
       }
@@ -223,18 +294,19 @@ export function KH02Page() {
         setExtractedProfile({
           fullName: String(pState.variables.customer_full_name || currentUser?.full_name || ''),
           idNumber: String(pState.variables.customer_id_number || ''),
-          dob: '1995-05-12',
+          dob: String(pState.variables.customer_dob || ''),
           licenseClass: String(pState.variables.customer_license_class || 'A1'),
           address: String(pState.variables.customer_address || 'Đà Nẵng'),
         });
         setIsAppliedToProfile(true);
+        setScanState('success');
       } else {
         // Kiểm tra nếu đã đủ 3 ảnh mà chưa quét thì tự động quét
         const hasCccdFront = docs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
         const hasCccdBack = docs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
         const hasGplxFront = docs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
         if (hasCccdFront && hasCccdBack && hasGplxFront) {
-          triggerAutoOcr(docs, req, foundVehicle);
+          triggerAutoOcr(docs, req);
         }
       }
     } catch (err) {
@@ -288,7 +360,7 @@ export function KH02Page() {
       const hasGplxFront = updatedDocs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
 
       if (hasCccdFront && hasCccdBack && hasGplxFront) {
-        await triggerAutoOcr(updatedDocs, request, vehicle);
+        await triggerAutoOcr(updatedDocs, request);
       }
     } catch (err: unknown) {
       console.error('Lỗi tải ảnh:', err);
@@ -331,6 +403,7 @@ export function KH02Page() {
             ...pState.variables,
             customer_full_name: extractedProfile.fullName,
             customer_id_number: extractedProfile.idNumber,
+            customer_dob: extractedProfile.dob,
             customer_license_class: extractedProfile.licenseClass,
             customer_address: extractedProfile.address,
           },
@@ -593,9 +666,9 @@ export function KH02Page() {
                       />
                     </div>
                     <p className="text-[13px] text-slate-500 mt-0.5 truncate">{item.desc}</p>
-                    {isUploaded && doc?.check_note && doc.check_note !== 'Đã xác thực tự động' && (
+                    {isUploaded && (
                       <p className="text-[12px] text-teal-700 font-medium truncate mt-0.5">
-                        {doc.check_note}
+                        Đã tải lên
                       </p>
                     )}
                   </div>
@@ -608,7 +681,7 @@ export function KH02Page() {
                   loading={isUploadingThis}
                   onClick={() => inputRef.current?.click()}
                   disabled={isCancelled}
-                  className="shrink-0 flex items-center gap-1.5"
+                  className="shrink-0 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isUploaded ? (
                     <>
@@ -627,18 +700,55 @@ export function KH02Page() {
           })}
         </div>
 
-        {/* Khối quét & xác thực tự động (HOÀN TOÀN TỰ ĐỘNG, KHÔNG BẮT KHÁCH BẤM NÚT) */}
-        {ocrLoading && (
+        {/* Khối trạng thái đọc hồ sơ P0 */}
+        {scanState === 'reading' && (
           <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/50 space-y-3 animate-pulse">
             <div className="flex items-center gap-2 text-teal-800 font-semibold text-sm">
               <RefreshCw className="w-4 h-4 animate-spin text-teal-600 shrink-0" />
-              <span>Hệ thống đang tự động quét và xác thực thông tin giấy tờ...</span>
+              <span>Đang đọc giấy tờ…</span>
             </div>
             <OcrScanningSkeleton />
           </div>
         )}
 
-        {!ocrLoading && isAppliedToProfile && (
+        {scanState === 'failed' && (
+          <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/70 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-rose-800 font-semibold text-sm">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{scanFailureMessage || 'Ảnh chưa rõ. Chụp lại.'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => triggerAutoOcr(documents, request)}
+                  className="text-xs border-rose-300 text-rose-700 hover:bg-rose-100 cursor-pointer"
+                >
+                  Thử lại
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-rose-600">
+              Vui lòng chụp lại ảnh rõ nét, đủ ánh sáng và không bị lóa hoặc mất góc.
+            </p>
+          </div>
+        )}
+
+        {scanState === 'needs_review' && isAppliedToProfile && (
+          <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/80 space-y-1">
+            <div className="flex items-center gap-2 text-amber-900 font-semibold text-sm">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Cần nhân viên kiểm tra</span>
+            </div>
+            <p className="text-xs text-amber-800">
+              Hệ thống cần nhân viên đối chiếu trực tiếp khi giao xe. Bạn vẫn có thể kiểm tra thông tin dưới đây và tiếp tục đặt cọc.
+            </p>
+          </div>
+        )}
+
+        {scanState !== 'reading' && scanState !== 'failed' && isAppliedToProfile && (
           <div className="p-4 md:p-5 rounded-xl border border-teal-200 bg-white shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -813,7 +923,7 @@ export function KH02Page() {
               variant="primary"
               size="md"
               loading={submitting}
-              disabled={!isAllDocsReady || ocrLoading || !isCustomerConfirmed}
+              disabled={!isAllDocsReady || scanState === 'reading' || !isCustomerConfirmed}
               data-testid="node-M_CheckDocs"
               onClick={handleVerifyDocuments}
               className="flex items-center gap-2 px-8 min-w-[200px]"
@@ -849,7 +959,7 @@ export function KH02Page() {
                 variant="primary"
                 size="md"
                 loading={submitting}
-                disabled={!isAllDocsReady || ocrLoading || !isCustomerConfirmed}
+                disabled={!isAllDocsReady || scanState === 'reading' || !isCustomerConfirmed}
                 data-testid="node-M_CheckDocs"
                 onClick={handleVerifyDocuments}
                 className="flex items-center gap-2 min-w-[140px]"

@@ -40,9 +40,9 @@ export async function extractDataFromImages(
         }
 
         // Trích xuất Ngày sinh (DD/MM/YYYY hoặc DD-MM-YYYY)
-        const dobMatch = text.match(/\b([0-3]?[0-9][\/\-.][0-1]?[0-9][\/\-.](?:19|20)[0-9]{2})\b/);
+        const dobMatch = text.match(/\b([0-3]?[0-9][/.-][0-1]?[0-9][/.-](?:19|20)[0-9]{2})\b/);
         if (dobMatch) {
-          const parts = dobMatch[1].split(/[\/\-.]/);
+          const parts = dobMatch[1].split(/[/.-]/);
           if (parts.length === 3) {
             const day = parts[0].padStart(2, '0');
             const month = parts[1].padStart(2, '0');

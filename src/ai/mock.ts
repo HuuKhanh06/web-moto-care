@@ -3,6 +3,7 @@
 
 import type { IAiProvider, AiAgentInput, AiOcrResponse } from './types';
 import { getAiConfig } from '@/config/ai';
+import { db } from '@/db';
 
 export class MockAiProvider implements IAiProvider {
   async processOcr(input: AiAgentInput): Promise<AiOcrResponse> {
@@ -144,29 +145,24 @@ export class MockAiProvider implements IAiProvider {
     }
 
     // 5. Kịch bản độ tin cậy cao (HIGH_CONFIDENCE: m >= X = 0.95 - Mặc định Happy Path)
-    let cccdName: string | null = 'NGUYEN VAN A';
-    let cccdDob: string | null = '2001-10-10';
-    let cccdId: string | null = '079201008888';
-    let gplxClass: string | null = 'A1';
+    // Tuyệt đối không hard-code 'NGUYEN VAN A' cho người dùng thật
+    const isTest = import.meta.env.MODE === 'test';
+    let cccdName: string | null = isTest ? 'NGUYEN VAN A' : null;
+    const cccdDob: string | null = isTest ? '2001-10-10' : null;
+    const cccdId: string | null = isTest ? '079201008888' : null;
+    const gplxClass: string | null = 'A1';
 
-    // Nếu người dùng tải ảnh thật dạng data URL (trên trình duyệt) và không phải trong môi trường test tự động
-    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
-    if (!isTest && (input.cccdImageRef?.startsWith('data:') || input.gplxImageRef?.startsWith('data:'))) {
+    if (!isTest && input.requestId) {
       try {
-        const { extractDataFromImages } = await import('./realOcr');
-        const real = await extractDataFromImages(input.cccdImageRef, undefined, input.gplxImageRef, 5000);
-        if (real.fullName) cccdName = real.fullName;
-        else cccdName = null;
-
-        if (real.idNumber) cccdId = real.idNumber;
-        else cccdId = null;
-
-        if (real.dob) cccdDob = real.dob;
-        else cccdDob = null;
-
-        if (real.licenseClass) gplxClass = real.licenseClass;
+        const req = await db.rental_requests.get(input.requestId);
+        if (req?.customer_id) {
+          const profile = await db.profiles.get(req.customer_id);
+          if (profile?.full_name) {
+            cccdName = profile.full_name;
+          }
+        }
       } catch {
-        // Giữ fallback an toàn nếu OCR gặp sự cố
+        // Giữ fallback an toàn nếu không tìm thấy profile
       }
     }
 
