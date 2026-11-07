@@ -24,7 +24,6 @@ import {
   Edit2,
   RefreshCw,
   Search,
-  Eye,
 } from 'lucide-react';
 
 interface EnrichedProfile extends Profile {
@@ -212,15 +211,6 @@ export function AD01Page() {
         </div>
       </div>
 
-      {/* Thông báo quyền nếu là nhân viên */}
-      {!isManager && (
-        <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex items-center gap-2 text-xs text-slate-700">
-          <Eye className="w-4 h-4 text-slate-500 flex-shrink-0" />
-          <span>
-            Bạn đang đăng nhập với vai trò <strong>Nhân viên</strong> (Chỉ có quyền xem dữ liệu danh mục). Quản lý mới có quyền Thêm/Sửa/Bật tắt.
-          </span>
-        </div>
-      )}
 
       {/* Tabs */}
       <Tabs
