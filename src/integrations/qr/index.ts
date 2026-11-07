@@ -4,13 +4,18 @@
 import QRCode from 'qrcode';
 import { safeExecuteWithRetry } from '../client';
 import type { IPaymentQrGenerator, QrGenerationParams, QrGenerationResult } from '../types';
+import { buildVietQrPayload } from '@/lib/vietQr';
 
 /**
  * Tạo chuỗi text chuẩn định dạng VietQR EMVCo cơ bản
  */
 export function buildVietQrPayloadText(params: QrGenerationParams): string {
-  const { accountNo, bankBin, amount, description } = params;
-  return `00020101021238540010A00000072701240006${bankBin}01${accountNo.length.toString().padStart(2, '0')}${accountNo}530370454${amount.toString().length.toString().padStart(2, '0')}${amount}5802VN62${description.length.toString().padStart(2, '0')}${description}6304`;
+  return buildVietQrPayload({
+    accountNo: params.accountNo,
+    bankBin: params.bankBin,
+    amount: params.amount,
+    description: params.description,
+  });
 }
 
 /**

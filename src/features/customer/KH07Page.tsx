@@ -383,8 +383,11 @@ export function KH07Page() {
             <QRBox
               qrRef={payment.qr_ref}
               amount={payment.amount}
-              accountName="CONG TY CP MOTOCARE DA NANG"
-              bankName="Vietcombank - Chi nhánh Đà Nẵng"
+              accountName="NGUYEN HUU KHANH"
+              accountNo="9911120060"
+              bankName="Vietcombank (Napas 247)"
+              bankBin="970436"
+              cardImageUrl="/images/vietqr-nguyen-huu-khanh.jpg"
             />
 
             <div className="space-y-3 w-full sm:max-w-xs text-sm">

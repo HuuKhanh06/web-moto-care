@@ -270,8 +270,11 @@ export function KH03Page() {
                 <QRBox
                   qrRef={payment.qr_ref}
                   amount={payment.amount}
-                  bankName="MB Bank (Napas 247)"
-                  accountName="CONG TY CP MOTO CARE"
+                  bankName="Vietcombank (Napas 247)"
+                  accountName="NGUYEN HUU KHANH"
+                  accountNo="9911120060"
+                  bankBin="970436"
+                  cardImageUrl="/images/vietqr-nguyen-huu-khanh.jpg"
                   size={200}
                 />
               </div>
@@ -303,16 +306,16 @@ export function KH03Page() {
 
                 <div className="flex justify-between items-center py-2">
                   <span className="text-slate-500">Ngân hàng:</span>
-                  <span className="font-semibold text-slate-800">MB Bank (Quân Đội)</span>
+                  <span className="font-semibold text-slate-800">Vietcombank (Napas 247)</span>
                 </div>
 
                 <div className="flex justify-between items-center py-2">
                   <span className="text-slate-500">Số tài khoản:</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-mono font-semibold text-slate-900">99998888MC</span>
+                    <span className="font-mono font-semibold text-slate-900">9911120060</span>
                     <button
                       type="button"
-                      onClick={() => copyToClipboard('99998888MC', 'acc')}
+                      onClick={() => copyToClipboard('9911120060', 'acc')}
                       className="p-1 rounded text-slate-400 hover:text-teal-600 cursor-pointer"
                       title="Sao chép"
                     >
@@ -323,7 +326,7 @@ export function KH03Page() {
 
                 <div className="flex justify-between items-center py-2">
                   <span className="text-slate-500">Chủ tài khoản:</span>
-                  <span className="font-semibold text-slate-800">CONG TY CP MOTO CARE</span>
+                  <span className="font-semibold text-slate-800">NGUYEN HUU KHANH</span>
                 </div>
 
                 <div className="flex justify-between items-center py-2">

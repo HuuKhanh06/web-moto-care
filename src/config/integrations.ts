@@ -24,10 +24,10 @@ const STORAGE_KEY = 'motocare_integration_config';
 
 export const DEFAULT_INTEGRATION_CONFIG: IntegrationConfig = {
   mode: (import.meta.env.VITE_INTEGRATION_MODE as 'MOCK' | 'LIVE') || 'MOCK',
-  bankName: 'Vietcombank (VCB)',
+  bankName: 'Vietcombank (Napas 247)',
   bankBin: '970436', // Mã BIN Vietcombank chuẩn Napas
-  accountNo: '0123456789',
-  accountName: 'CONG TY TNHH MOTO CARE',
+  accountNo: '9911120060',
+  accountName: 'NGUYEN HUU KHANH',
   vietQrApiUrl: 'https://api.vietqr.io/v2/generate',
   vietQrClientId: import.meta.env.VITE_VIETQR_CLIENT_ID || '',
   vietQrApiKey: import.meta.env.VITE_VIETQR_API_KEY || '',

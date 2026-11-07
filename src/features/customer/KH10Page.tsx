@@ -278,6 +278,11 @@ export function KH10Page() {
                 <QRBox
                   qrRef={extraPayment.qr_ref}
                   amount={extraPayment.amount}
+                  accountName="NGUYEN HUU KHANH"
+                  accountNo="9911120060"
+                  bankName="Vietcombank (Napas 247)"
+                  bankBin="970436"
+                  cardImageUrl="/images/vietqr-nguyen-huu-khanh.jpg"
                 />
               )}
             </div>
@@ -297,8 +302,9 @@ export function KH10Page() {
                   <Building2 className="w-4 h-4 text-teal-600" />
                   <span>Tài khoản thụ hưởng MotoCare</span>
                 </div>
-                <div>Ngân hàng: <strong>Vietcombank (Đà Nẵng)</strong></div>
-                <div>Số tài khoản: <strong className="font-mono text-slate-900">0123456789</strong></div>
+                <div>Ngân hàng: <strong>Vietcombank (Napas 247)</strong></div>
+                <div>Chủ tài khoản: <strong>NGUYEN HUU KHANH</strong></div>
+                <div>Số tài khoản: <strong className="font-mono text-slate-900">9911120060</strong></div>
               </div>
 
               {isWaitingExtraPayment && (
