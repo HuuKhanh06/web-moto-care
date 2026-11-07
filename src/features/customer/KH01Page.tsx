@@ -16,7 +16,6 @@ import {
 } from '@/components/ui';
 import { formatCurrency } from '@/lib/format';
 import { getAssetUrl } from '@/lib/vehicleImages';
-import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import {
   Bike,
   ArrowRight,
@@ -29,7 +28,6 @@ export function KH01Page() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentActor = useAuthStore((s) => s.currentActor);
-  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -51,8 +49,6 @@ export function KH01Page() {
   const [hasCccd, setHasCccd] = useState(true);
   const [hasGplx, setHasGplx] = useState(true);
   const [loading, setLoading] = useState(false);
-
-  const [simulateNoVehicle, setSimulateNoVehicle] = useState(false);
 
   const startDate = new Date(startAt);
   const endDate = new Date(endAt);
@@ -80,27 +76,12 @@ export function KH01Page() {
 
     setLoading(true);
     try {
-      let savedBackup: unknown[] = [];
-      if (simulateNoVehicle) {
-        const matchingVehicles = await db.vehicles.where('vehicle_type').equals(vehicleType).toArray();
-        savedBackup = matchingVehicles.map(v => ({ id: v.id, status: v.status }));
-        for (const v of matchingVehicles) {
-          await db.vehicles.update(v.id, { status: 'BAO_TRI' });
-        }
-      }
-
       const requestId = await engine.start(currentActor, {
         customer_id: currentActor.id,
         vehicle_type: vehicleType,
         start_at: new Date(startAt).toISOString(),
         end_at: new Date(endAt).toISOString(),
       });
-
-      if (simulateNoVehicle && savedBackup.length > 0) {
-        for (const v of savedBackup as Array<{ id: string; status: 'SAN_SANG' | 'BAO_TRI' | 'DANG_THUE' }>) {
-          await db.vehicles.update(v.id, { status: v.status });
-        }
-      }
 
       const request = await db.rental_requests.get(requestId);
       if (request?.status === 'TU_CHOI' && request?.closed_reason === 'HET_XE') {
@@ -282,20 +263,6 @@ export function KH01Page() {
               </div>
             </label>
           </div>
-
-          {isBpmnMode && (
-            <div className="pt-2 border-t border-slate-100">
-              <label className="flex items-center gap-2 text-[13px] text-slate-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={simulateNoVehicle}
-                  onChange={(e) => setSimulateNoVehicle(e.target.checked)}
-                  className="rounded text-red-600 focus:ring-red-500"
-                />
-                <span>Mô phỏng hết xe sẵn sàng (Dev test)</span>
-              </label>
-            </div>
-          )}
         </Card>
 
         {/* Nút hành động Desktop */}

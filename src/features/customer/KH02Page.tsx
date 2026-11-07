@@ -22,7 +22,6 @@ import {
 } from '@/components/ui';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
-import { useBpmnStore } from '@/features/bpmn/bpmnStore';
 import {
   FileText,
   ArrowRight,
@@ -39,7 +38,6 @@ export function KH02Page() {
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
-  const isBpmnMode = useBpmnStore((s) => s.isBpmnMode);
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -472,26 +470,6 @@ export function KH02Page() {
                   Áp dụng vào hợp đồng
                 </Button>
               </div>
-            </div>
-          )}
-
-          {isBpmnMode && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200 text-[13px] text-slate-500">
-              <span className="font-semibold text-slate-700">Kịch bản kiểm thử:</span>
-              <button
-                type="button"
-                onClick={() => handleRunAiOcr('HIGH_CONFIDENCE')}
-                className="px-2 py-0.5 rounded bg-white border border-slate-300 text-xs text-slate-700"
-              >
-                Chuẩn 96%
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRunAiOcr('NAME_MISMATCH')}
-                className="px-2 py-0.5 rounded bg-white border border-slate-300 text-xs text-slate-700"
-              >
-                Lệch tên
-              </button>
             </div>
           )}
         </div>
