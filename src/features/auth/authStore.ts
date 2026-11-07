@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (email, password) => {
     try {
-      let normalizedEmail = email.trim().toLowerCase();
+      const normalizedEmail = email.trim().toLowerCase();
       let account = await db.auth_accounts.where('email').equalsIgnoreCase(normalizedEmail).first();
 
       // Hỗ trợ linh hoạt cả admin@motocare.vn và quanly@motocare.vn cho tài khoản quản lý
