@@ -69,7 +69,7 @@ export const AiOcrResponseSchema = z.object({
   }),
   checks: QualityChecksSchema,
   thresholds: ThresholdsSchema,
-  minimum_required_confidence: z.number().nullable(), // Điểm m
+  minimum_required_confidence: z.number().min(0).max(1).nullable(), // Điểm m
   routing: RoutingDecisionSchema,
 });
 export type AiOcrResponse = z.infer<typeof AiOcrResponseSchema>;
@@ -78,6 +78,7 @@ export type AiOcrResponse = z.infer<typeof AiOcrResponseSchema>;
 export interface AiAgentInput {
   requestId: string;
   cccdImageRef?: string;
+  cccdBackImageRef?: string;
   gplxImageRef?: string;
   selectedVehicleType?: string;
   supplementCount?: number;
@@ -87,6 +88,6 @@ export interface AiAgentInput {
 
 // Giao diện chung cho AiProvider
 export interface IAiProvider {
-  processOcr(input: AiAgentInput): Promise<AiOcrResponse>;
+  processOcr(input: AiAgentInput, signal?: AbortSignal): Promise<AiOcrResponse>;
 }
 

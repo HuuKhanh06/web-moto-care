@@ -77,7 +77,7 @@ export interface CustomerDocument {
   check_note?: string;
   ai_result?: Record<string, unknown> | null;
   ai_confidence?: number | null;
-  ai_source?: 'GEMINI' | 'MOCK' | 'MANUAL';
+  ai_source?: 'GEMINI' | 'LOCAL' | 'MOCK' | 'MANUAL';
 }
 
 // 5. payments

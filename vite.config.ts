@@ -13,6 +13,9 @@ const basePath = isGitHubActions ? '/web-moto-care/' : isVercel ? '/' : './';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Chỉ quét entry của ứng dụng; không quét các bản sao lưu và bộ công cụ cục bộ.
+  optimizeDeps: { entries: ['index.html'] },
+  server: { host: '127.0.0.1', watch: { ignored: ['**/.agent/**', '**/.codex-backups/**', '**/.codex-upstream/**'] } },
   base: basePath,
   plugins: [react()],
   resolve: {

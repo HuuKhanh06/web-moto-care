@@ -6,6 +6,7 @@ import { getAiConfig } from '@/config/ai';
 
 export class MockAiProvider implements IAiProvider {
   async processOcr(input: AiAgentInput): Promise<AiOcrResponse> {
+    if (!input.scenarioPreset) throw new Error('Mock OCR chỉ được dùng với kịch bản thử nghiệm rõ ràng.');
     const config = getAiConfig();
     const X = config.thresholdX; // 0.95
     const Y = config.thresholdY; // 0.80
@@ -144,31 +145,10 @@ export class MockAiProvider implements IAiProvider {
     }
 
     // 5. Kịch bản độ tin cậy cao (HIGH_CONFIDENCE: m >= X = 0.95 - Mặc định Happy Path)
-    let cccdName: string | null = 'NGUYEN VAN A';
-    let cccdDob: string | null = '2001-10-10';
-    let cccdId: string | null = '079201008888';
-    let gplxClass: string | null = 'A1';
-
-    // Nếu người dùng tải ảnh thật dạng data URL (trên trình duyệt) và không phải trong môi trường test tự động
-    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
-    if (!isTest && (input.cccdImageRef?.startsWith('data:') || input.gplxImageRef?.startsWith('data:'))) {
-      try {
-        const { extractDataFromImages } = await import('./realOcr');
-        const real = await extractDataFromImages(input.cccdImageRef, undefined, input.gplxImageRef, 5000);
-        if (real.fullName) cccdName = real.fullName;
-        else cccdName = null;
-
-        if (real.idNumber) cccdId = real.idNumber;
-        else cccdId = null;
-
-        if (real.dob) cccdDob = real.dob;
-        else cccdDob = null;
-
-        if (real.licenseClass) gplxClass = real.licenseClass;
-      } catch {
-        // Giữ fallback an toàn nếu OCR gặp sự cố
-      }
-    }
+    const cccdName = 'NGUYEN VAN A';
+    const cccdDob = '2001-10-10';
+    const cccdId = '079201008888';
+    const gplxClass = 'A1';
 
     return {
       schema_version: '1.0',

@@ -9,7 +9,10 @@ import { engine } from '@/engine';
 import { db } from '@/db';
 import { fn_request_more_docs, fn_end_cancel } from '@/engine/fn';
 import { aiService } from '@/ai';
-import { extractDataFromImages } from '@/ai/realOcr';
+import { compressImageToDataUrl } from '@/ai/images';
+import { OcrError, safeOcrError } from '@/ai/errors';
+import { AiOcrResponseSchema, type AiOcrResponse } from '@/ai/types';
+import { isValidBirthDate } from '@/ai/validation';
 import type { RentalRequest, Vehicle, CustomerDocument, DocumentType } from '@/db/types';
 import {
   Card,
@@ -38,380 +41,282 @@ import {
 } from 'lucide-react';
 import { COPY } from '@/copy';
 
-/**
- * Nén ảnh từ thiết bị thật qua Canvas HTML5 và chuyển sang Base64 Data URL
- */
-async function compressImageToDataUrl(file: File, maxDimension = 1280, quality = 0.85): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Không thể đọc tệp ảnh'));
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Tệp tải lên không phải là hình ảnh hợp lệ'));
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(event.target?.result as string);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        resolve(dataUrl);
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+const EMPTY_PROFILE = { fullName: '', idNumber: '', dob: '', licenseClass: '', address: '' };
+const requiredTypes: DocumentType[] = ['CCCD_TRUOC', 'CCCD_SAU', 'BANG_LAI_TRUOC'];
+const hasRequiredDocuments = (docs: CustomerDocument[]) => requiredTypes.every(type => docs.some(d => d.doc_type === type && d.file_url));
+const imageSnapshot = (docs: CustomerDocument[]) => JSON.stringify(requiredTypes.map(type => {
+  const doc = docs.find(d => d.doc_type === type);
+  return [doc?.id, doc?.file_url];
+}));
 
 export function KH02Page() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
-  const { currentActor, currentUser } = useAuthStore();
-
+  const { currentActor } = useAuthStore();
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [documents, setDocuments] = useState<CustomerDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
-  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState<'IDLE' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('IDLE');
+  const [ocrError, setOcrError] = useState('');
+  const ocrLoading = ocrStatus === 'PROCESSING';
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCustomerConfirmed, setIsCustomerConfirmed] = useState(false);
-  const [extractedProfile, setExtractedProfile] = useState({
-    fullName: '',
-    idNumber: '',
-    dob: '',
-    licenseClass: '',
-    address: '',
-  });
+  const [extractedProfile, setExtractedProfile] = useState(EMPTY_PROFILE);
   const [isAppliedToProfile, setIsAppliedToProfile] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
+  const activeRequest = useRef<string | null>(requestId);
+  const mounted = useRef(false);
+  const ocrBusy = useRef(false);
+  const uploadBusy = useRef(false);
+  const confirmationBusy = useRef(false);
+  const attempt = useRef('');
+  const generation = useRef(0);
+  const loadGeneration = useRef(0);
 
-  // Tham chiếu input file thực tế cho từng loại giấy tờ
+  useEffect(() => {
+    mounted.current = true;
+    activeRequest.current = requestId;
+    attempt.current = '';
+    generation.current++;
+    ocrBusy.current = false;
+    setRequest(null); setVehicle(null); setDocuments([]); setLoading(true);
+    setIsEditingDetails(false); setUploadingType(null);
+    setOcrStatus('IDLE');
+    setOcrError('');
+    setIsCustomerConfirmed(false);
+    setIsAppliedToProfile(false);
+    setExtractedProfile(EMPTY_PROFILE);
+    return () => { mounted.current = false; };
+  }, [requestId]);
+
   const inputRefCccdFront = useRef<HTMLInputElement>(null);
   const inputRefCccdBack = useRef<HTMLInputElement>(null);
   const inputRefGplxFront = useRef<HTMLInputElement>(null);
+  const getInputRef = (type: DocumentType): React.RefObject<HTMLInputElement> =>
+    type === 'CCCD_TRUOC' ? inputRefCccdFront : type === 'CCCD_SAU' ? inputRefCccdBack : inputRefGplxFront;
+  const getDoc = (type: DocumentType) => documents.find(d => d.doc_type === type);
 
-  const getInputRef = (type: DocumentType): React.RefObject<HTMLInputElement> => {
-    if (type === 'CCCD_TRUOC') return inputRefCccdFront;
-    if (type === 'CCCD_SAU') return inputRefCccdBack;
-    return inputRefGplxFront;
-  };
+  const applyOcrResponse = useCallback((res: AiOcrResponse, announce = false) => {
+    const profile = {
+      fullName: res.documents.cccd?.full_name.value || '',
+      idNumber: res.documents.cccd?.id_number.value || '',
+      dob: res.documents.cccd?.date_of_birth.value || '',
+      licenseClass: res.documents.gplx?.license_class.value || '',
+      address: '',
+    };
+    setExtractedProfile(profile);
+    setIsCustomerConfirmed(false);
+    setIsAppliedToProfile(Object.values(profile).some(Boolean));
+    if (res.routing.action === 'FALLBACK_MANUAL') {
+      setOcrStatus('FAILED');
+      setOcrError(res.routing.reason_codes.find(code => code.startsWith('AI_ERROR:'))?.replace(/^AI_ERROR: /, '') || 'Không thể xử lý giấy tờ. Vui lòng thử lại hoặc nhập thủ công.');
+    } else if (res.routing.action === 'REQUEST_REUPLOAD' || !res.checks.required_fields_present) {
+      setOcrStatus('FAILED');
+      setOcrError('Chưa đọc đủ thông tin bắt buộc. Vui lòng đổi ảnh rõ nét hoặc kiểm tra và nhập các trường còn thiếu.');
+    } else {
+      setOcrStatus('COMPLETED');
+      setOcrError(res.checks.name_consistency === 'MISMATCH' ? 'Họ tên trên CCCD và bằng lái không khớp. Vui lòng đối chiếu lại giấy tờ.' : '');
+      setIsAppliedToProfile(true);
+      if (announce) toast.success('Đã đọc thông tin từ ảnh. Vui lòng đối chiếu và xác nhận bên dưới.');
+    }
+  }, []);
 
-  const getDoc = (type: DocumentType) => documents.find((d) => d.doc_type === type);
-
-  /**
-   * Tự động quét và xác thực giấy tờ bằng AI Agent OCR trong nền
-   */
-  const triggerAutoOcr = useCallback(
-    async (currentDocs: CustomerDocument[], req: RentalRequest, v: Vehicle | null) => {
-      if (!req.id || ocrLoading) return;
-
-      const hasCccdFront = currentDocs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
-      const hasCccdBack = currentDocs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
-      const hasGplxFront = currentDocs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
-
-      if (!hasCccdFront || !hasCccdBack || !hasGplxFront) {
-        return;
+  // Callback không phụ thuộc trạng thái loading: effect nạp dữ liệu không bị gọi lại khi OCR đổi trạng thái.
+  const triggerAutoOcr = useCallback(async (currentDocs: CustomerDocument[], req: RentalRequest, v: Vehicle | null, retry = false) => {
+    if (!hasRequiredDocuments(currentDocs)) return;
+    const key = req.id + imageSnapshot(currentDocs);
+    if (ocrBusy.current || (!retry && attempt.current === key)) return;
+    attempt.current = key;
+    ocrBusy.current = true;
+    const run = ++generation.current;
+    const current = () => mounted.current && activeRequest.current === req.id && generation.current === run;
+    setOcrStatus('PROCESSING');
+    setOcrError('');
+    setIsCustomerConfirmed(false);
+    try {
+      const res = await aiService.processOcr({
+        requestId: req.id,
+        cccdImageRef: currentDocs.find(d => d.doc_type === 'CCCD_TRUOC')?.file_url,
+        cccdBackImageRef: currentDocs.find(d => d.doc_type === 'CCCD_SAU')?.file_url,
+        gplxImageRef: currentDocs.find(d => d.doc_type === 'BANG_LAI_TRUOC')?.file_url,
+        selectedVehicleType: v?.vehicle_type,
+      });
+      if (!current()) return;
+      const freshDocs = await db.customer_documents.where('request_id').equals(req.id).toArray();
+      if (!current()) return;
+      if (imageSnapshot(freshDocs) !== imageSnapshot(currentDocs)) {
+        throw new OcrError('STALE_DOCUMENTS', 'Ảnh đã thay đổi. Vui lòng quét lại bộ ảnh mới.');
       }
-
-      setOcrLoading(true);
-      try {
-        const cccdFront = currentDocs.find((d) => d.doc_type === 'CCCD_TRUOC');
-        const cccdBack = currentDocs.find((d) => d.doc_type === 'CCCD_SAU');
-        const gplxFront = currentDocs.find((d) => d.doc_type === 'BANG_LAI_TRUOC');
-
-        // Bóc tách dữ liệu thực tế từ ảnh thiết bị qua OCR
-        const realData = await extractDataFromImages(
-          cccdFront?.file_url,
-          cccdBack?.file_url,
-          gplxFront?.file_url
-        );
-
-        // Gọi đồng thời AI service để ghi log quy trình hợp đồng
-        const res = await aiService.processOcr({
-          requestId: req.id,
-          cccdImageRef: cccdFront?.file_url || 'blob:mock_cccd.jpg',
-          gplxImageRef: gplxFront?.file_url || 'blob:mock_gplx.jpg',
-          selectedVehicleType: v?.vehicle_type,
-          scenarioPreset: 'HIGH_CONFIDENCE',
-        });
-
-        // Ưu tiên 100% dữ liệu thực tế trích xuất từ ảnh, KHÔNG dùng dữ liệu giả định
-        const cName =
-          realData.fullName ||
-          res.documents.cccd?.full_name?.value ||
-          currentUser?.full_name ||
-          '';
-        const cId = realData.idNumber || res.documents.cccd?.id_number?.value || '';
-        const cDob = realData.dob || res.documents.cccd?.date_of_birth?.value || '';
-        const cLic = realData.licenseClass || res.documents.gplx?.license_class?.value || 'A1';
-        const cAddr = 'Đà Nẵng';
-
-        const profileData = {
-          fullName: cName,
-          idNumber: cId,
-          dob: cDob,
-          licenseClass: cLic,
-          address: cAddr,
-        };
-        setExtractedProfile(profileData);
-        setIsCustomerConfirmed(false); // Buộc khách hàng kiểm tra & bấm xác nhận
-        setIsAppliedToProfile(true);
-
-        toast.success('Hệ thống đã đọc xong thông tin từ ảnh! Vui lòng kiểm tra và xác nhận bên dưới.');
-
-        // Nạp lại danh sách tài liệu mới
-        const freshDocs = await db.customer_documents.where('request_id').equals(req.id).toArray();
-        setDocuments(freshDocs);
-      } catch (err: unknown) {
-        console.error('Lỗi tự động xác thực AI OCR:', err);
-        toast.error('Có lỗi trong quá trình quét thông tin giấy tờ');
-      } finally {
-        setOcrLoading(false);
+      setDocuments(freshDocs);
+      applyOcrResponse(res, true);
+    } catch (error) {
+      if (current()) {
+        setOcrStatus('FAILED');
+        setOcrError(safeOcrError(error).message);
       }
-    },
-    [currentActor?.id, currentUser?.full_name, ocrLoading]
-  );
+    } finally {
+      if (generation.current === run) ocrBusy.current = false;
+    }
+  }, [applyOcrResponse]);
 
   const loadData = useCallback(async () => {
-    if (!requestId) {
-      toast.error('Không tìm thấy mã yêu cầu thuê xe');
-      navigate('/kh/01');
-      return;
-    }
-
+    if (!requestId) { toast.error('Không tìm thấy mã yêu cầu thuê xe'); navigate('/kh/01'); return; }
+    const load = ++loadGeneration.current;
+    const current = () => mounted.current && activeRequest.current === requestId && loadGeneration.current === load;
+    setLoading(true);
     try {
       const req = await db.rental_requests.get(requestId);
-      if (!req) {
-        toast.error('Hồ sơ không tồn tại trong hệ thống');
-        navigate('/kh/01');
-        return;
+      if (!current()) return;
+      if (!req || (currentActor?.role === 'khach_hang' && req.customer_id !== currentActor.id)) {
+        toast.error('Không tìm thấy hồ sơ của bạn'); navigate('/kh/01'); return;
       }
-      setRequest(req);
-
-      let foundVehicle: Vehicle | null = null;
-      if (req.vehicle_id) {
-        const v = await db.vehicles.get(req.vehicle_id);
-        if (v) {
-          foundVehicle = v;
-          setVehicle(v);
-        }
-      }
-
+      const foundVehicle = req.vehicle_id ? await db.vehicles.get(req.vehicle_id) || null : null;
       const docs = await db.customer_documents.where('request_id').equals(requestId).toArray();
-      setDocuments(docs);
-
-      // Nếu đã có sẵn biến từ trước, phục hồi vào extractedProfile
       const pState = await db.process_state.get(requestId);
-      if (pState?.variables?.customer_id_number) {
+      if (!current()) return;
+      setRequest(req); setVehicle(foundVehicle); setDocuments(docs);
+      if (hasRequiredDocuments(docs) && docs.every(d => d.is_valid === true) && pState?.variables.customer_id_number) {
         setExtractedProfile({
-          fullName: String(pState.variables.customer_full_name || currentUser?.full_name || ''),
+          fullName: String(pState.variables.customer_full_name || ''),
           idNumber: String(pState.variables.customer_id_number || ''),
-          dob: '1995-05-12',
-          licenseClass: String(pState.variables.customer_license_class || 'A1'),
-          address: String(pState.variables.customer_address || 'Đà Nẵng'),
+          dob: String(pState.variables.customer_date_of_birth || ''),
+          licenseClass: String(pState.variables.customer_license_class || ''),
+          address: String(pState.variables.customer_address || ''),
         });
-        setIsAppliedToProfile(true);
-      } else {
-        // Kiểm tra nếu đã đủ 3 ảnh mà chưa quét thì tự động quét
-        const hasCccdFront = docs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
-        const hasCccdBack = docs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
-        const hasGplxFront = docs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
-        if (hasCccdFront && hasCccdBack && hasGplxFront) {
-          triggerAutoOcr(docs, req, foundVehicle);
+        setIsAppliedToProfile(true); setIsCustomerConfirmed(true); setOcrStatus('COMPLETED');
+      } else if (hasRequiredDocuments(docs)) {
+        // Kết quả lưu cùng transaction với bộ ảnh; đổi ảnh xóa ai_source của cả bộ.
+        const lastLog = docs.every(d => d.ai_source) ? await db.ai_logs.where('request_id').equals(requestId).last() : undefined;
+        if (!current()) return;
+        const parsed = lastLog ? AiOcrResponseSchema.safeParse(lastLog.output) : null;
+        if (parsed?.success && parsed.data.model_version !== 'ocr-mock-v1') {
+          attempt.current = req.id + imageSnapshot(docs);
+          applyOcrResponse(parsed.data);
+        } else {
+          void triggerAutoOcr(docs, req, foundVehicle);
         }
       }
-    } catch (err) {
-      console.error('Lỗi khi nạp dữ liệu KH-02:', err);
-      toast.error('Không thể nạp dữ liệu hồ sơ');
+    } catch {
+      if (current()) toast.error('Không thể nạp dữ liệu hồ sơ. Vui lòng tải lại trang.');
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [requestId, navigate, currentUser?.full_name, triggerAutoOcr]);
+  }, [requestId, navigate, currentActor?.id, currentActor?.role, triggerAutoOcr, applyOcrResponse]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { void loadData(); }, [loadData]);
 
-  /**
-   * Khách hàng tải ảnh THẬT từ thiết bị hoặc máy ảnh của mình
-   */
   const handleRealFileSelect = async (type: DocumentType, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !requestId || !request) return;
-
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!file || !requestId || !request || uploadBusy.current || ocrBusy.current || confirmationBusy.current) return;
+    uploadBusy.current = true;
     setUploadingType(type);
+    const uploadRequestId = requestId;
+    const current = () => mounted.current && activeRequest.current === uploadRequestId;
     try {
       const dataUrl = await compressImageToDataUrl(file);
-      const existing = getDoc(type);
-
-      if (existing) {
-        await db.customer_documents.update(existing.id, {
-          file_url: dataUrl,
-          check_note: file.name,
-          is_valid: true,
+      if (!current()) return;
+      await db.transaction('rw', db.customer_documents, db.process_state, async () => {
+        const docs = await db.customer_documents.where('request_id').equals(uploadRequestId).toArray();
+        for (const doc of docs) {
+          await db.customer_documents.update(doc.id, {
+            is_valid: false, ai_result: null, ai_confidence: null, ai_source: undefined,
+            check_note: doc.check_note === 'Khách hàng đã kiểm tra & xác nhận' ? '' : doc.check_note,
+          });
+        }
+        const existing = docs.find(d => d.doc_type === type);
+        await db.customer_documents.put({
+          id: existing?.id || crypto.randomUUID(), request_id: uploadRequestId, doc_type: type,
+          file_url: dataUrl, check_note: file.name, is_valid: false,
         });
-      } else {
-        await db.customer_documents.add({
-          id: crypto.randomUUID(),
-          request_id: requestId,
-          doc_type: type,
-          file_url: dataUrl,
-          check_note: file.name,
-          is_valid: true,
-        });
-      }
-
-      toast.success(`Đã tải lên ảnh từ thiết bị: ${file.name}`);
-      const updatedDocs = await db.customer_documents.where('request_id').equals(requestId).toArray();
-      setDocuments(updatedDocs);
-
-      // Nếu đã đủ 3 ảnh thì tự động kích hoạt quét xác thực ngay lập tức
-      const hasCccdFront = updatedDocs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
-      const hasCccdBack = updatedDocs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
-      const hasGplxFront = updatedDocs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
-
-      if (hasCccdFront && hasCccdBack && hasGplxFront) {
-        await triggerAutoOcr(updatedDocs, request, vehicle);
-      }
-    } catch (err: unknown) {
-      console.error('Lỗi tải ảnh:', err);
-      toast.error('Không thể xử lý tệp ảnh. Vui lòng thử lại.');
+        const state = await db.process_state.get(uploadRequestId);
+        if (state) {
+          const variables: Record<string, unknown> = { ...state.variables, docs_all_valid: false };
+          for (const key of ['customer_full_name', 'customer_id_number', 'customer_date_of_birth', 'customer_license_class', 'customer_address']) delete variables[key];
+          await db.process_state.update(uploadRequestId, { variables });
+        }
+      });
+      if (!current()) return;
+      const docs = await db.customer_documents.where('request_id').equals(uploadRequestId).toArray();
+      if (!current()) return;
+      attempt.current = '';
+      setDocuments(docs); setIsCustomerConfirmed(false); setIsAppliedToProfile(false);
+      setExtractedProfile(EMPTY_PROFILE); setOcrError(''); setOcrStatus('IDLE');
+      toast.success('Đã lưu ảnh giấy tờ.');
+      void triggerAutoOcr(docs, request, vehicle);
+    } catch (error) {
+      if (current()) toast.error(error instanceof OcrError ? error.message : 'Không lưu được ảnh giấy tờ. Vui lòng thử lại.');
     } finally {
-      setUploadingType(null);
-      e.target.value = '';
+      uploadBusy.current = false;
+      if (current()) setUploadingType(null);
+      input.value = '';
     }
   };
 
-  /**
-   * Khách hàng kiểm tra và bấm Xác nhận thông tin chính xác
-   */
   const handleConfirmCustomerData = async () => {
-    if (!requestId) return;
-
-    if (!extractedProfile.fullName?.trim()) {
-      toast.warning('Vui lòng kiểm tra và nhập Họ và tên');
-      setIsEditingDetails(true);
-      return;
+    if (!requestId || ocrBusy.current || uploadBusy.current || confirmationBusy.current) return;
+    if (!extractedProfile.fullName.trim() || !/^0\d{11}$/.test(extractedProfile.idNumber) || !isValidBirthDate(extractedProfile.dob) || !extractedProfile.licenseClass.trim()) {
+      toast.warning('Vui lòng kiểm tra họ tên, số CCCD 12 chữ số, ngày sinh và hạng bằng lái.');
+      setIsEditingDetails(true); return;
     }
-
-    if (!extractedProfile.idNumber?.trim()) {
-      toast.warning('Vui lòng kiểm tra và nhập Số CCCD (12 chữ số)');
-      setIsEditingDetails(true);
-      return;
-    }
-
+    confirmationBusy.current = true; setSubmitting(true);
     try {
-      if (currentActor?.id && extractedProfile.fullName) {
-        await db.profiles.update(currentActor.id, {
-          full_name: extractedProfile.fullName,
-        });
+      await db.transaction('rw', db.profiles, db.process_state, db.customer_documents, async () => {
+        const docs = await db.customer_documents.where('request_id').equals(requestId).toArray();
+        if (!hasRequiredDocuments(docs) || imageSnapshot(docs) !== imageSnapshot(documents)) {
+          throw new OcrError('STALE_DOCUMENTS', 'Ảnh đã thay đổi. Vui lòng kiểm tra lại trước khi xác nhận.');
+        }
+        const state = await db.process_state.get(requestId);
+        if (!state) throw new OcrError('STORAGE_ERROR', 'Không tìm thấy trạng thái hồ sơ. Vui lòng tải lại trang.');
+        if (currentActor?.id) await db.profiles.update(currentActor.id, { full_name: extractedProfile.fullName });
+        await db.process_state.update(requestId, { variables: {
+          ...state.variables, customer_full_name: extractedProfile.fullName, customer_id_number: extractedProfile.idNumber,
+          customer_date_of_birth: extractedProfile.dob, customer_license_class: extractedProfile.licenseClass,
+          customer_address: extractedProfile.address,
+        } });
+        for (const doc of docs) await db.customer_documents.update(doc.id, { is_valid: true, check_note: 'Khách hàng đã kiểm tra & xác nhận' });
+      });
+      if (mounted.current && activeRequest.current === requestId) {
+        setIsCustomerConfirmed(true); setIsAppliedToProfile(true); setIsEditingDetails(false);
+        toast.success('Đã xác nhận thông tin giấy tờ.');
       }
-
-      const pState = await db.process_state.get(requestId);
-      if (pState) {
-        await db.process_state.update(requestId, {
-          variables: {
-            ...pState.variables,
-            customer_full_name: extractedProfile.fullName,
-            customer_id_number: extractedProfile.idNumber,
-            customer_license_class: extractedProfile.licenseClass,
-            customer_address: extractedProfile.address,
-          },
-        });
-      }
-
-      // Đánh dấu các giấy tờ hợp lệ
-      const currentDocs = await db.customer_documents.where('request_id').equals(requestId).toArray();
-      for (const doc of currentDocs) {
-        await db.customer_documents.update(doc.id, {
-          is_valid: true,
-          check_note: 'Khách hàng đã kiểm tra & xác nhận',
-        });
-      }
-
-      setIsCustomerConfirmed(true);
-      setIsAppliedToProfile(true);
-      setIsEditingDetails(false);
-      toast.success('Đã xác nhận thông tin giấy tờ chính xác!');
-    } catch (err) {
-      console.error(err);
-      toast.error('Không thể lưu thông tin xác thực');
+    } catch (error) {
+      toast.error(error instanceof OcrError ? error.message : 'Không thể lưu thông tin xác thực. Vui lòng thử lại.');
+    } finally {
+      confirmationBusy.current = false; setSubmitting(false);
     }
   };
-
   const handleAcceptAi = handleConfirmCustomerData;
 
-  /**
-   * Khách hàng bấm Đặt cọc để chuyển sang Bước 3 (Chỉ khi đã xác nhận thông tin đúng)
-   */
   const handleVerifyDocuments = async () => {
-    if (!requestId || !currentActor) return;
-
-    if (!isCustomerConfirmed) {
-      toast.warning('Vui lòng kiểm tra thông tin và bấm "Xác nhận thông tin đúng" ở trên trước khi đặt cọc');
-      return;
-    }
-
-    if (!agreeTerms) {
-      toast.warning('Vui lòng đồng ý với điều khoản dịch vụ và mức cọc 30%');
-      return;
-    }
-
+    if (!requestId || !currentActor || uploadBusy.current || ocrBusy.current || confirmationBusy.current) return;
+    if (!isCustomerConfirmed) { toast.warning('Vui lòng đối chiếu và xác nhận thông tin trước khi đặt cọc'); return; }
+    if (!agreeTerms) { toast.warning('Vui lòng đồng ý với điều khoản dịch vụ và mức cọc 30%'); return; }
     setSubmitting(true);
     try {
-      const currentDocs = await db.customer_documents.where('request_id').equals(requestId).toArray();
-      const hasCccdFront = currentDocs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
-      const hasCccdBack = currentDocs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
-      const hasGplxFront = currentDocs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
-
-      const isAllUploaded = hasCccdFront && hasCccdBack && hasGplxFront;
-
-      if (isAllUploaded) {
-        for (const doc of currentDocs) {
-          if (!doc.is_valid) {
-            await db.customer_documents.update(doc.id, { is_valid: true });
-          }
-        }
+      const docs = await db.customer_documents.where('request_id').equals(requestId).toArray();
+      if (hasRequiredDocuments(docs) && docs.every(d => d.is_valid === true) && imageSnapshot(docs) === imageSnapshot(documents)) {
         await engine.advance(requestId, 'M_CheckDocs', undefined, currentActor);
         navigate(`/kh/03?requestId=${requestId}`);
+      } else if (!hasRequiredDocuments(docs)) {
+        const count = await fn_request_more_docs(requestId, currentActor);
+        if (count > 3) await fn_end_cancel(requestId, currentActor, 'HO_SO_KHONG_DAT');
+        else toast.warning('Vui lòng tải đủ ba ảnh giấy tờ.');
+        await loadData();
       } else {
-        const newCount = await fn_request_more_docs(requestId, currentActor);
-
-        if (newCount > 3) {
-          await fn_end_cancel(requestId, currentActor, 'HO_SO_KHONG_DAT');
-          toast.error('Hồ sơ đã bị hủy do chưa đủ giấy tờ sau 3 lần thông báo.');
-        } else {
-          toast.warning(`Vui lòng tải đủ 3 ảnh giấy tờ để tiếp tục (Lần ${newCount}/3).`);
-        }
+        setIsCustomerConfirmed(false);
+        toast.warning('Giấy tờ đã thay đổi. Vui lòng đối chiếu và xác nhận lại.');
         await loadData();
       }
-    } catch (err: unknown) {
-      console.error('Lỗi thẩm định hồ sơ:', err);
-      const msg = err instanceof Error ? err.message : 'Có lỗi khi thẩm định hồ sơ';
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch {
+      toast.error('Không thể chuyển sang đặt cọc. Vui lòng thử lại.');
+    } finally { setSubmitting(false); }
   };
-
-  if (loading || !request) {
+  if (loading) {
     return (
       <div className="max-w-2xl mx-auto py-16 text-center text-slate-500">
         <RefreshCw className="w-8 h-8 mx-auto animate-spin text-teal-600 mb-2" />
@@ -420,11 +325,18 @@ export function KH02Page() {
     );
   }
 
+  if (!request) return (
+    <Card className="p-6 space-y-3" role="alert">
+      <p>Không thể nạp hồ sơ. Vui lòng thử lại.</p>
+      <Button onClick={() => void loadData()}>Tải lại hồ sơ</Button>
+    </Card>
+  );
+
   const isCancelled = request.status === 'DA_HUY' || request.status === 'TU_CHOI';
   const isMovedToDeposit = ['CHO_COC', 'CHO_KY', 'CHO_BAN_GIAO', 'DANG_THUE'].includes(request.status);
 
   const uploadedCount = documents.filter((d) => Boolean(d.file_url)).length;
-  const isAllDocsReady = uploadedCount >= 3;
+  const isAllDocsReady = hasRequiredDocuments(documents);
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-24 md:pb-8">
@@ -437,8 +349,8 @@ export function KH02Page() {
           {COPY.TITLES.BOOKING_INFO}
         </h1>
         <StatusChip
-          status={isCancelled ? 'error' : isMovedToDeposit ? 'success' : isAllDocsReady ? 'success' : 'pending'}
-          label={isCancelled ? 'Đã hủy' : isMovedToDeposit ? 'Hồ sơ đạt' : isAllDocsReady ? 'Đã xác thực' : 'Chờ giấy tờ'}
+          status={isCancelled ? 'error' : isMovedToDeposit || isCustomerConfirmed ? 'success' : 'pending'}
+          label={isCancelled ? 'Đã hủy' : isMovedToDeposit ? 'Hồ sơ đạt' : isCustomerConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}
         />
       </div>
 
@@ -559,11 +471,12 @@ export function KH02Page() {
                 <input
                   type="file"
                   ref={inputRef}
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/bmp"
+                  aria-label={item.title}
                   capture="environment"
                   className="hidden"
                   onChange={(e) => handleRealFileSelect(item.type, e)}
-                  disabled={isCancelled}
+                  disabled={isCancelled || isMovedToDeposit || ocrLoading || uploadingType !== null || submitting}
                 />
 
                 <div className="flex items-start gap-3 min-w-0">
@@ -607,7 +520,7 @@ export function KH02Page() {
                   size="sm"
                   loading={isUploadingThis}
                   onClick={() => inputRef.current?.click()}
-                  disabled={isCancelled}
+                  disabled={isCancelled || isMovedToDeposit || ocrLoading || uploadingType !== null || submitting}
                   className="shrink-0 flex items-center gap-1.5"
                 >
                   {isUploaded ? (
@@ -629,12 +542,24 @@ export function KH02Page() {
 
         {/* Khối quét & xác thực tự động (HOÀN TOÀN TỰ ĐỘNG, KHÔNG BẮT KHÁCH BẤM NÚT) */}
         {ocrLoading && (
-          <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/50 space-y-3 animate-pulse">
+          <div role="status" data-testid="ocr-processing" className="p-4 rounded-xl border border-teal-200 bg-teal-50/50 space-y-3 animate-pulse">
             <div className="flex items-center gap-2 text-teal-800 font-semibold text-sm">
               <RefreshCw className="w-4 h-4 animate-spin text-teal-600 shrink-0" />
-              <span>Hệ thống đang tự động quét và xác thực thông tin giấy tờ...</span>
+              <span>Đang đọc thông tin từ ảnh giấy tờ. Vui lòng chờ...</span>
             </div>
             <OcrScanningSkeleton />
+          </div>
+        )}
+
+        {!ocrLoading && ocrError && !isCustomerConfirmed && (
+          <div role="alert" data-testid="ocr-error" className="p-4 rounded-xl border border-amber-200 bg-amber-50 space-y-3">
+            <p className="text-sm text-amber-900">{ocrError}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" disabled={!isAllDocsReady || submitting || uploadingType !== null}
+                onClick={() => void triggerAutoOcr(documents, request, vehicle, true)}>Thử quét lại</Button>
+              <Button size="sm" variant="outline" disabled={submitting || uploadingType !== null}
+                onClick={() => { setIsAppliedToProfile(true); setIsEditingDetails(true); setIsCustomerConfirmed(false); }}>Nhập thông tin thủ công</Button>
+            </div>
           </div>
         )}
 
@@ -649,7 +574,7 @@ export function KH02Page() {
                 )}
                 <div>
                   <span className="text-sm font-bold text-slate-900 block">
-                    Thông tin trích xuất từ ảnh giấy tờ
+                    {ocrStatus === 'COMPLETED' ? 'Thông tin trích xuất từ ảnh giấy tờ' : 'Thông tin giấy tờ (cần bổ sung thủ công)'}
                   </span>
                   <span className="text-xs text-slate-500 font-normal block">
                     {isCustomerConfirmed
@@ -660,7 +585,7 @@ export function KH02Page() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsEditingDetails(!isEditingDetails)}
+                onClick={() => { setIsEditingDetails(!isEditingDetails); setIsCustomerConfirmed(false); }}
                 className="text-xs font-semibold text-teal-700 hover:text-teal-800 self-start sm:self-auto cursor-pointer flex items-center gap-1"
               >
                 <Edit3 className="w-3.5 h-3.5" />
@@ -689,7 +614,7 @@ export function KH02Page() {
                 <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
                   <span className="text-[12px] text-slate-500 block">Hạng GPLX</span>
                   <span className="font-bold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.licenseClass || 'A1'}
+                    {extractedProfile.licenseClass || 'Chưa rõ - Bấm sửa'}
                   </span>
                 </div>
                 <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
@@ -735,6 +660,7 @@ export function KH02Page() {
                     variant="primary"
                     size="sm"
                     onClick={handleAcceptAi}
+                    disabled={submitting || uploadingType !== null}
                     data-testid="ai-accept"
                   >
                     Lưu thông tin
@@ -754,6 +680,8 @@ export function KH02Page() {
                   type="button"
                   size="sm"
                   onClick={handleConfirmCustomerData}
+                  loading={submitting}
+                  disabled={uploadingType !== null}
                   className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-4 py-2 shrink-0 cursor-pointer shadow-xs self-end sm:self-auto flex items-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
@@ -777,17 +705,6 @@ export function KH02Page() {
             )}
           </div>
         )}
-
-        {/* Nút ẩn giữ tương thích tuyệt đối cho test suites */}
-        <button
-          type="button"
-          data-testid="ai-accept"
-          onClick={handleAcceptAi}
-          className="hidden"
-          aria-hidden="true"
-        >
-          Áp dụng vào hợp đồng
-        </button>
 
         {/* Cam kết điều khoản */}
         <div className="pt-2 border-t border-slate-100">
@@ -813,7 +730,7 @@ export function KH02Page() {
               variant="primary"
               size="md"
               loading={submitting}
-              disabled={!isAllDocsReady || ocrLoading || !isCustomerConfirmed}
+              disabled={!isAllDocsReady || ocrLoading || uploadingType !== null || !isCustomerConfirmed}
               data-testid="node-M_CheckDocs"
               onClick={handleVerifyDocuments}
               className="flex items-center gap-2 px-8 min-w-[200px]"
@@ -849,7 +766,7 @@ export function KH02Page() {
                 variant="primary"
                 size="md"
                 loading={submitting}
-                disabled={!isAllDocsReady || ocrLoading || !isCustomerConfirmed}
+                disabled={!isAllDocsReady || ocrLoading || uploadingType !== null || !isCustomerConfirmed}
                 data-testid="node-M_CheckDocs"
                 onClick={handleVerifyDocuments}
                 className="flex items-center gap-2 min-w-[140px]"

@@ -199,7 +199,8 @@ export async function fn_check_documents(
   scenarioPreset?: 'HIGH_CONFIDENCE' | 'MEDIUM_CONFIDENCE' | 'LOW_CONFIDENCE' | 'BLURRY_IMAGE' | 'NAME_MISMATCH' | 'NETWORK_ERROR'
 ): Promise<{ allValid: boolean; ocrResponse?: AiOcrResponse }> {
   const docs = await db.customer_documents.where('request_id').equals(requestId).toArray();
-  const cccdDoc = docs.find((d) => d.doc_type.includes('CCCD'));
+  const cccdDoc = docs.find((d) => d.doc_type === 'CCCD_TRUOC');
+  const cccdBackDoc = docs.find((d) => d.doc_type === 'CCCD_SAU');
   const gplxDoc = docs.find((d) => d.doc_type.includes('BANG_LAI'));
   const req = await db.rental_requests.get(requestId);
 
@@ -207,7 +208,7 @@ export async function fn_check_documents(
   let hasAllTypes = true;
   for (const reqType of BUSINESS_RULES.REQUIRED_DOCUMENT_TYPES) {
     const doc = docs.find((d) => d.doc_type === reqType);
-    if (!doc) {
+    if (!doc?.file_url) {
       hasAllTypes = false;
       break;
     }
@@ -222,10 +223,17 @@ export async function fn_check_documents(
     return { allValid: false };
   }
 
+  // Đã đối chiếu thủ công: không chạy OCR lần nữa khi khách chuyển sang cọc.
+  if (!scenarioPreset && docs.every(d => d.is_valid === true)) {
+    await logEvent(requestId, 'M_CheckDocs', 'CHECK_DOCS', actor, { allValid: true, source: 'MANUAL_CONFIRMATION', uploaded_count: docs.length });
+    return { allValid: true };
+  }
+
   // 2. Kích hoạt AI Agent OCR trích xuất thông tin & phân loại
   const ocrRes = await aiService.processOcr({
     requestId,
     cccdImageRef: cccdDoc?.file_url,
+    cccdBackImageRef: cccdBackDoc?.file_url,
     gplxImageRef: gplxDoc?.file_url,
     selectedVehicleType: req?.vehicle_id,
     scenarioPreset,

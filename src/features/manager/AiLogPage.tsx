@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { aiService } from '@/ai';
 import { getAiConfig, saveAiConfig } from '@/config/ai';
-import { Button, Card, Badge, Modal, toast } from '@/components/ui';
+import { Button, Card, Badge, Modal, Input, toast } from '@/components/ui';
 import type { AiLog } from '@/db/types';
 import type { RoutingAction } from '@/ai/types';
 import {
@@ -418,11 +418,12 @@ export function AiLogPage() {
                 <select
                   value={configForm.mode}
                   onChange={(e) =>
-                    setConfigForm({ ...configForm, mode: e.target.value as 'MOCK' | 'LIVE' })
+                    setConfigForm({ ...configForm, mode: e.target.value as 'LOCAL' | 'MOCK' | 'LIVE' })
                   }
                   className="w-full text-xs rounded-lg border border-slate-300 p-2"
                 >
-                  <option value="MOCK">MOCK (Giả lập offline theo kịch bản)</option>
+                  <option value="LOCAL">LOCAL (OCR thật trên thiết bị, không cần khóa)</option>
+                  <option value="MOCK">MOCK (Chỉ giả lập khi chạy kịch bản thử nghiệm)</option>
                   <option value="LIVE">LIVE (Gọi Google Gemini API trực tiếp)</option>
                 </select>
               </div>
@@ -439,9 +440,15 @@ export function AiLogPage() {
                   className="w-full text-xs rounded-lg border border-slate-300 p-2 font-mono"
                 />
                 <span className="text-[10px] text-slate-500">
-                  Lấy API key tại Google AI Studio. Ở chế độ MOCK không cần nhập key.
+                  Khóa chỉ dùng trong phiên trình duyệt này. LOCAL không cần khóa; lần tải dữ liệu nhận diện đầu tiên cần mạng.
                 </span>
               </div>
+
+              <Input label="Mô hình Gemini" value={configForm.model}
+                onChange={(e) => setConfigForm({ ...configForm, model: e.target.value })} />
+              <Input label="Giới hạn xử lý OCR (mili giây)" type="number" min={1} max={120000}
+                value={configForm.timeoutMs}
+                onChange={(e) => setConfigForm({ ...configForm, timeoutMs: Number(e.target.value) })} />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
