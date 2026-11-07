@@ -20,7 +20,6 @@ import type { RentalRequest, Vehicle, CustomerDocument, DocumentType } from '@/d
 import {
   Card,
   Button,
-  Input,
   toast,
   BookingProgress,
   StatusChip,
@@ -84,11 +83,26 @@ async function compressImageToDataUrl(file: File, maxDimension = 1920, quality =
   });
 }
 
+/**
+ * Tính dấu vết (fingerprint) nhanh của tệp ảnh để đối chiếu nguồn gốc dữ liệu trích xuất
+ */
+function computeImageFingerprint(str?: string | null): string {
+  if (!str) return '';
+  let hash = 0;
+  const len = str.length;
+  const sample = str.slice(0, 100) + str.slice(Math.floor(len / 2) - 50, Math.floor(len / 2) + 50) + str.slice(-100);
+  for (let i = 0; i < sample.length; i++) {
+    hash = ((hash << 5) - hash) + sample.charCodeAt(i);
+    hash |= 0;
+  }
+  return `${len}_${hash}`;
+}
+
 export function KH02Page() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
-  const { currentActor, currentUser, updateProfileName } = useAuthStore();
+  const { currentActor, updateProfileName } = useAuthStore();
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -101,14 +115,19 @@ export function KH02Page() {
   const [scanState, setScanState] = useState<'idle' | 'reading' | 'success' | 'needs_review' | 'failed'>('idle');
   const [scanFailureMessage, setScanFailureMessage] = useState<string>('Ảnh chưa rõ. Chụp lại.');
 
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCustomerConfirmed, setIsCustomerConfirmed] = useState(false);
-  const [extractedProfile, setExtractedProfile] = useState({
-    fullName: '',
-    idNumber: '',
-    dob: '',
-    licenseClass: '',
-    address: '',
+  const [extractedProfile, setExtractedProfile] = useState<{
+    fullName: string | null;
+    idNumber: string | null;
+    dob: string | null;
+    licenseClass: string | null;
+    address: string | null;
+  }>({
+    fullName: null,
+    idNumber: null,
+    dob: null,
+    licenseClass: null,
+    address: null,
   });
   const [isAppliedToProfile, setIsAppliedToProfile] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
@@ -200,12 +219,12 @@ export function KH02Page() {
           thresholds: { X: 0.95, Y: 0.80 },
         });
 
-        // 4. Ưu tiên 100% dữ liệu thực tế trích xuất được từ ảnh
-        const cName = cccdDoc?.full_name?.value || gplxDoc?.full_name?.value || currentUser?.full_name || '';
-        const cId = cccdDoc?.id_number?.value || '';
-        const cDob = cccdDoc?.date_of_birth?.value || '';
-        const cLic = gplxDoc?.license_class?.value || 'A1';
-        const cAddr = cccdDoc?.address?.value || 'Đà Nẵng';
+        // 4. Ưu tiên 100% dữ liệu thực tế trích xuất được từ ảnh (Tuyệt đối không dùng fallback giả định)
+        const cName = cccdDoc?.full_name?.value || gplxDoc?.full_name?.value || null;
+        const cId = cccdDoc?.id_number?.value || null;
+        const cDob = cccdDoc?.date_of_birth?.value || null;
+        const cLic = gplxDoc?.license_class?.value || null;
+        const cAddr = cccdDoc?.address?.value || null;
 
         const profileData = {
           fullName: cName,
@@ -215,19 +234,61 @@ export function KH02Page() {
           address: cAddr,
         };
         setExtractedProfile(profileData);
-        setIsCustomerConfirmed(false); // Buộc khách hàng kiểm tra & bấm xác nhận
+        setIsCustomerConfirmed(false);
         setIsAppliedToProfile(true);
 
-        // 5. Cập nhật máy trạng thái giao diện
-        if (routingRes.action === 'PREFILL_FOR_RULES') {
+        const cccdFingerprint = computeImageFingerprint(cccdFront?.file_url || cccdBack?.file_url);
+        const gplxFingerprint = computeImageFingerprint(gplxFront?.file_url);
+
+        // Lưu vào process_state với metadata source, image_fingerprint, read_at
+        const pState = await db.process_state.get(req.id);
+        if (pState) {
+          await db.process_state.update(req.id, {
+            variables: {
+              ...pState.variables,
+              extracted_cccd: cccdRes.success && cccdDoc ? {
+                full_name: cName,
+                id_number: cId,
+                dob: cDob,
+                address: cAddr,
+                source: 'QR',
+                image_fingerprint: cccdFingerprint,
+                read_at: new Date().toISOString(),
+              } : null,
+              extracted_gplx: gplxDoc ? {
+                full_name: gplxDoc.full_name?.value || null,
+                license_class: cLic,
+                source: 'AI',
+                image_fingerprint: gplxFingerprint,
+                read_at: new Date().toISOString(),
+              } : null,
+              requires_staff_verification: isGplxServiceError || !gplxDoc,
+            },
+          });
+        }
+
+        // 5. Cập nhật máy trạng thái giao diện theo bảng ngưỡng & quy tắc P0
+        if (!cccdRes.success) {
+          // CCCD không có QR hợp lệ hoặc kiểm tra chéo không khớp (QR_INCONSISTENT)
+          setScanState('failed');
+          const isCrossCheckFail = cccdRes.error?.startsWith('QR_INCONSISTENT');
+          const failureMsg = isCrossCheckFail
+            ? 'Mã QR chưa khớp chuẩn thông tin CCCD. Vui lòng chụp lại ảnh rõ nét hơn.'
+            : 'Chưa đọc được mã QR. Chụp lại ảnh rõ hơn.';
+          setScanFailureMessage(failureMsg);
+          toast.warning(failureMsg);
+        } else if (routingRes.action === 'FALLBACK_MANUAL' || isGplxServiceError) {
+          setScanState('needs_review');
+          toast.info('Thông tin CCCD đã đọc thành công! Cần nhân viên kiểm tra bổ sung GPLX.');
+        } else if (routingRes.action === 'PREFILL_FOR_RULES') {
           setScanState('success');
           toast.success('Đã đọc xong thông tin từ giấy tờ! Vui lòng kiểm tra và xác nhận.');
-        } else if (routingRes.action === 'MANUAL_REVIEW' || routingRes.action === 'FALLBACK_MANUAL') {
+        } else if (routingRes.action === 'MANUAL_REVIEW') {
           setScanState('needs_review');
           toast.info('Thông tin đã được ghi nhận. Cần nhân viên hỗ trợ kiểm tra.');
         } else if (routingRes.action === 'REQUEST_REUPLOAD') {
           setScanState('failed');
-          setScanFailureMessage('Ảnh chưa rõ. Chụp lại.');
+          setScanFailureMessage('Ảnh chưa rõ hoặc thiếu góc. Chụp lại.');
           toast.warning('Ảnh chưa rõ hoặc thiếu góc. Vui lòng chụp lại.');
         }
 
@@ -259,7 +320,7 @@ export function KH02Page() {
         setScanState('needs_review');
       }
     },
-    [currentUser?.full_name, scanState]
+    [scanState]
   );
 
   const loadData = useCallback(async () => {
@@ -288,20 +349,46 @@ export function KH02Page() {
       const docs = await db.customer_documents.where('request_id').equals(requestId).toArray();
       setDocuments(docs);
 
-      // Nếu đã có sẵn biến từ trước, phục hồi vào extractedProfile
+      // Chỉ nạp lại kết quả khi ảnh nguồn hiện tại vẫn khớp dấu vết (fingerprint)
+      const cccdFront = docs.find((d) => d.doc_type === 'CCCD_TRUOC');
+      const cccdBack = docs.find((d) => d.doc_type === 'CCCD_SAU');
+      const gplxFront = docs.find((d) => d.doc_type === 'BANG_LAI_TRUOC');
+
       const pState = await db.process_state.get(requestId);
-      if (pState?.variables?.customer_id_number) {
+      const savedCccd = pState?.variables?.extracted_cccd as {
+        full_name: string | null;
+        id_number: string | null;
+        dob: string | null;
+        address: string | null;
+        image_fingerprint?: string;
+      } | undefined;
+      const savedGplx = pState?.variables?.extracted_gplx as {
+        full_name: string | null;
+        license_class: string | null;
+        image_fingerprint?: string;
+      } | undefined;
+
+      const currentCccdFingerprint = computeImageFingerprint(cccdFront?.file_url || cccdBack?.file_url);
+      const currentGplxFingerprint = computeImageFingerprint(gplxFront?.file_url);
+
+      const isCccdMatch = Boolean(savedCccd?.id_number && savedCccd.image_fingerprint && savedCccd.image_fingerprint === currentCccdFingerprint);
+      const isGplxMatch = Boolean(savedGplx?.license_class && savedGplx.image_fingerprint && savedGplx.image_fingerprint === currentGplxFingerprint);
+
+      if (isCccdMatch) {
         setExtractedProfile({
-          fullName: String(pState.variables.customer_full_name || currentUser?.full_name || ''),
-          idNumber: String(pState.variables.customer_id_number || ''),
-          dob: String(pState.variables.customer_dob || ''),
-          licenseClass: String(pState.variables.customer_license_class || 'A1'),
-          address: String(pState.variables.customer_address || 'Đà Nẵng'),
+          fullName: savedCccd?.full_name || null,
+          idNumber: savedCccd?.id_number || null,
+          dob: savedCccd?.dob || null,
+          licenseClass: isGplxMatch ? (savedGplx?.license_class || null) : null,
+          address: savedCccd?.address || null,
         });
         setIsAppliedToProfile(true);
-        setScanState('success');
+        setScanState(isGplxMatch ? 'success' : 'needs_review');
+        if (pState?.variables?.customer_confirmed_at) {
+          setIsCustomerConfirmed(true);
+        }
       } else {
-        // Kiểm tra nếu đã đủ 3 ảnh mà chưa quét thì tự động quét
+        // Chưa có dữ liệu trích xuất hoặc ảnh đã đổi -> tự động quét nếu đủ 3 ảnh
         const hasCccdFront = docs.some((d) => d.doc_type === 'CCCD_TRUOC' && d.file_url);
         const hasCccdBack = docs.some((d) => d.doc_type === 'CCCD_SAU' && d.file_url);
         const hasGplxFront = docs.some((d) => d.doc_type === 'BANG_LAI_TRUOC' && d.file_url);
@@ -315,7 +402,7 @@ export function KH02Page() {
     } finally {
       setLoading(false);
     }
-  }, [requestId, navigate, currentUser?.full_name, triggerAutoOcr]);
+  }, [requestId, navigate, triggerAutoOcr]);
 
   useEffect(() => {
     loadData();
@@ -351,6 +438,34 @@ export function KH02Page() {
       }
 
       toast.success(`Đã tải lên ảnh từ thiết bị: ${file.name}`);
+
+      // Xóa các trường trích xuất phụ thuộc ảnh đã bị thay đổi
+      if (type === 'CCCD_TRUOC' || type === 'CCCD_SAU') {
+        setExtractedProfile((p) => ({ ...p, fullName: null, idNumber: null, dob: null, address: null }));
+        const pState = await db.process_state.get(requestId);
+        if (pState?.variables) {
+          const updatedVars = { ...pState.variables };
+          delete updatedVars.extracted_cccd;
+          delete updatedVars.customer_full_name;
+          delete updatedVars.customer_id_number;
+          delete updatedVars.customer_dob;
+          delete updatedVars.customer_confirmed_at;
+          await db.process_state.update(requestId, { variables: updatedVars });
+        }
+      } else if (type === 'BANG_LAI_TRUOC') {
+        setExtractedProfile((p) => ({ ...p, licenseClass: null }));
+        const pState = await db.process_state.get(requestId);
+        if (pState?.variables) {
+          const updatedVars = { ...pState.variables };
+          delete updatedVars.extracted_gplx;
+          delete updatedVars.customer_license_class;
+          delete updatedVars.customer_confirmed_at;
+          await db.process_state.update(requestId, { variables: updatedVars });
+        }
+      }
+      setIsCustomerConfirmed(false);
+      setScanState('idle');
+
       const updatedDocs = await db.customer_documents.where('request_id').equals(requestId).toArray();
       setDocuments(updatedDocs);
 
@@ -377,15 +492,8 @@ export function KH02Page() {
   const handleConfirmCustomerData = async () => {
     if (!requestId) return;
 
-    if (!extractedProfile.fullName?.trim()) {
-      toast.warning('Vui lòng kiểm tra và nhập Họ và tên');
-      setIsEditingDetails(true);
-      return;
-    }
-
-    if (!extractedProfile.idNumber?.trim()) {
-      toast.warning('Vui lòng kiểm tra và nhập Số CCCD (12 chữ số)');
-      setIsEditingDetails(true);
+    if (!extractedProfile.fullName?.trim() || !extractedProfile.idNumber?.trim()) {
+      toast.warning('Chưa có thông tin trích xuất hợp lệ từ thẻ CCCD. Vui lòng chụp lại ảnh.');
       return;
     }
 
@@ -404,6 +512,7 @@ export function KH02Page() {
             customer_dob: extractedProfile.dob,
             customer_license_class: extractedProfile.licenseClass,
             customer_address: extractedProfile.address,
+            customer_confirmed_at: new Date().toISOString(),
           },
         });
       }
@@ -419,7 +528,6 @@ export function KH02Page() {
 
       setIsCustomerConfirmed(true);
       setIsAppliedToProfile(true);
-      setIsEditingDetails(false);
       toast.success('Đã xác nhận thông tin giấy tờ chính xác!');
     } catch (err) {
       console.error(err);
@@ -766,103 +874,60 @@ export function KH02Page() {
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsEditingDetails(!isEditingDetails)}
-                className="text-xs font-semibold text-teal-700 hover:text-teal-800 self-start sm:self-auto cursor-pointer flex items-center gap-1"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{isEditingDetails ? 'Đóng chỉnh sửa' : 'Chỉnh sửa'}</span>
-              </button>
             </div>
 
-            {!isEditingDetails ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-sm">
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
-                  <span className="text-[12px] text-slate-500 block">Họ và tên</span>
-                  <span className="font-bold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.fullName || (
-                      <span className="text-amber-600 italic text-xs font-normal">Chưa rõ - Bấm sửa</span>
-                    )}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
-                  <span className="text-[12px] text-slate-500 block">Số CCCD</span>
-                  <span className="font-bold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.idNumber || (
-                      <span className="text-amber-600 italic text-xs font-normal">Chưa rõ - Bấm sửa</span>
-                    )}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
-                  <span className="text-[12px] text-slate-500 block">Hạng GPLX</span>
-                  <span className="font-bold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.licenseClass || 'A1'}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
-                  <span className="text-[12px] text-slate-500 block">Ngày sinh</span>
-                  <span className="font-bold text-slate-900 truncate block mt-0.5">
-                    {extractedProfile.dob || (
-                      <span className="text-slate-400 italic text-xs font-normal">Chưa rõ - Bấm sửa</span>
-                    )}
-                  </span>
-                </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-sm">
+              <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
+                <span className="text-[12px] text-slate-500 block">Họ và tên</span>
+                <span className="font-bold text-slate-900 truncate block mt-0.5">
+                  {extractedProfile.fullName || (
+                    <span className="text-rose-600 italic text-xs font-normal">Chưa đọc được</span>
+                  )}
+                </span>
               </div>
-            ) : (
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Họ và tên (chính xác theo CCCD)"
-                    placeholder="Nhập họ và tên có dấu"
-                    value={extractedProfile.fullName}
-                    onChange={(e) => setExtractedProfile((p) => ({ ...p, fullName: e.target.value }))}
-                  />
-                  <Input
-                    label="Số CCCD (12 chữ số)"
-                    placeholder="vd: 048098001234"
-                    value={extractedProfile.idNumber}
-                    onChange={(e) => setExtractedProfile((p) => ({ ...p, idNumber: e.target.value }))}
-                  />
-                  <Input
-                    label="Ngày sinh (YYYY-MM-DD)"
-                    type="date"
-                    value={extractedProfile.dob}
-                    onChange={(e) => setExtractedProfile((p) => ({ ...p, dob: e.target.value }))}
-                  />
-                  <Input
-                    label="Hạng bằng lái xe"
-                    placeholder="vd: A1 hoặc A2"
-                    value={extractedProfile.licenseClass}
-                    onChange={(e) => setExtractedProfile((p) => ({ ...p, licenseClass: e.target.value }))}
-                  />
-                </div>
-                <div className="flex justify-end pt-1">
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleAcceptAi}
-                    data-testid="ai-accept"
-                  >
-                    Lưu thông tin
-                  </Button>
-                </div>
+              <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
+                <span className="text-[12px] text-slate-500 block">Số CCCD</span>
+                <span className="font-bold text-slate-900 truncate block mt-0.5">
+                  {extractedProfile.idNumber || (
+                    <span className="text-rose-600 italic text-xs font-normal">Chưa đọc được</span>
+                  )}
+                </span>
               </div>
-            )}
+              <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
+                <span className="text-[12px] text-slate-500 block">Hạng GPLX</span>
+                <span className="font-bold text-slate-900 truncate block mt-0.5">
+                  {extractedProfile.licenseClass || (
+                    <span className="text-amber-700 italic text-xs font-normal">Nhân viên xác minh</span>
+                  )}
+                </span>
+              </div>
+              <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 shadow-xs">
+                <span className="text-[12px] text-slate-500 block">Ngày sinh</span>
+                <span className="font-bold text-slate-900 truncate block mt-0.5">
+                  {extractedProfile.dob || (
+                    <span className="text-slate-400 italic text-xs font-normal">Chưa đọc được</span>
+                  )}
+                </span>
+              </div>
+            </div>
 
             {/* Khối xác nhận thông tin đúng để tiến sang đặt cọc */}
             {!isCustomerConfirmed ? (
               <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-start sm:items-center gap-2 text-xs text-amber-900">
                   <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
-                  <span>Vui lòng đối chiếu thông tin trên xem đã đúng với CCCD &amp; Bằng lái của bạn chưa.</span>
+                  <span>
+                    {!extractedProfile.fullName || !extractedProfile.idNumber
+                      ? 'Chưa đọc được đầy đủ thông tin từ thẻ CCCD. Vui lòng bấm [Đổi ảnh] để chụp lại ảnh rõ hơn.'
+                      : 'Vui lòng đối chiếu thông tin trích xuất trên thẻ trước khi bấm xác nhận.'}
+                  </span>
                 </div>
                 <Button
                   type="button"
                   size="sm"
+                  disabled={!extractedProfile.fullName || !extractedProfile.idNumber}
                   onClick={handleConfirmCustomerData}
-                  className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-4 py-2 shrink-0 cursor-pointer shadow-xs self-end sm:self-auto flex items-center gap-1.5"
+                  className="bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs px-4 py-2 shrink-0 cursor-pointer shadow-xs self-end sm:self-auto flex items-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
                   <span>Xác nhận thông tin đúng</span>
@@ -874,13 +939,6 @@ export function KH02Page() {
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>Thông tin giấy tờ đã được xác nhận chính xác. Bạn có thể tiến hành đặt cọc ngay bên dưới.</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCustomerConfirmed(false)}
-                  className="text-teal-700 underline hover:text-teal-900 text-xs font-semibold cursor-pointer shrink-0 ml-2"
-                >
-                  Sửa lại
-                </button>
               </div>
             )}
           </div>

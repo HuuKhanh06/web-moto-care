@@ -1,4 +1,4 @@
-// @ts-nocheck
+/// <reference path="../deno-types.d.ts" />
 // supabase/functions/ocr-gplx/index.ts
 // Supabase Edge Function: Trích xuất thông tin Giấy phép lái xe (GPLX) bằng AI Vision
 // Tuân thủ bảo mật P0: API Key lưu trữ trong Edge Function Secrets, không lộ ra frontend

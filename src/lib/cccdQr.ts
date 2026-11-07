@@ -10,6 +10,18 @@ export interface ExtractedFieldItem {
   source: 'QR' | 'AI' | 'MANUAL';
 }
 
+export interface ObservedFieldStructure {
+  index: number;
+  length: number;
+  type: '12_DIGITS' | '9_DIGITS' | '8_DIGITS' | 'DIGITS' | 'GENDER' | 'TEXT' | 'EMPTY';
+}
+
+export interface CccdCrossCheckResult {
+  passed: boolean;
+  reason?: 'MATCH' | 'GENDER_MISMATCH' | 'YEAR_MISMATCH' | 'INVALID_CCCD_FORMAT' | 'INVALID_DOB_FORMAT' | 'INVALID_GENDER_FORMAT';
+  observedStructure?: ObservedFieldStructure[];
+}
+
 export interface ParsedCccdData {
   id_number: ExtractedFieldItem;
   old_id_number?: ExtractedFieldItem;
@@ -19,6 +31,9 @@ export interface ParsedCccdData {
   address: ExtractedFieldItem;
   issue_date: ExtractedFieldItem;
   raw_qr?: string;
+  is_consistent?: boolean;
+  cross_check_reason?: string;
+  observed_structure?: ObservedFieldStructure[];
 }
 
 export interface DecodeQrResult {
@@ -27,6 +42,7 @@ export interface DecodeQrResult {
   maskedRawString?: string;
   data?: ParsedCccdData;
   error?: string;
+  crossCheck?: CccdCrossCheckResult;
 }
 
 /**
@@ -125,6 +141,90 @@ export function parseDateDdMmYyyyToIso(dateStr: string): string | null {
 }
 
 /**
+ * Kiểm tra chéo tính nhất quán giữa Số CCCD (12 số) với Năm sinh và Giới tính
+ * Theo quy chuẩn định danh cá nhân Việt Nam (Bộ Công An):
+ * - Ký tự 4 (cccd[3]): Giới tính & Thế kỷ
+ *   + Thế kỷ 20 (1900-1999): Nam = 0, Nữ = 1
+ *   + Thế kỷ 21 (2000-2099): Nam = 2, Nữ = 3
+ *   + Thế kỷ 22 (2100-2199): Nam = 4, Nữ = 5
+ * - Ký tự 5 và 6 (cccd[4..5]): 2 chữ số cuối của năm sinh
+ * Nếu không khớp: coi là đọc sai (QR_INCONSISTENT), KHÔNG tự đổi thứ tự trường theo cách đoán.
+ */
+export function verifyCccdConsistency(
+  cccdId: string | null | undefined,
+  dobIso: string | null | undefined,
+  gender: string | null | undefined,
+  rawParts?: string[]
+): CccdCrossCheckResult {
+  // Trích xuất cấu trúc quan sát được để báo cáo an toàn (tuyệt đối không để lộ PII)
+  const observedStructure: ObservedFieldStructure[] = (rawParts || []).map((part, idx) => {
+    const trimmed = part.trim();
+    let type: ObservedFieldStructure['type'] = 'TEXT';
+    if (trimmed.length === 0) {
+      type = 'EMPTY';
+    } else if (/^\d{12}$/.test(trimmed)) {
+      type = '12_DIGITS';
+    } else if (/^\d{9}$/.test(trimmed)) {
+      type = '9_DIGITS';
+    } else if (/^\d{8}$/.test(trimmed)) {
+      type = '8_DIGITS';
+    } else if (/^\d+$/.test(trimmed)) {
+      type = 'DIGITS';
+    } else if (/^(nam|nữ|nu|male|female|m|f)$/i.test(trimmed)) {
+      type = 'GENDER';
+    }
+    return {
+      index: idx,
+      length: trimmed.length,
+      type,
+    };
+  });
+
+  if (!cccdId || !/^\d{12}$/.test(cccdId)) {
+    return { passed: false, reason: 'INVALID_CCCD_FORMAT', observedStructure };
+  }
+
+  if (!dobIso || !/^\d{4}-\d{2}-\d{2}$/.test(dobIso)) {
+    return { passed: false, reason: 'INVALID_DOB_FORMAT', observedStructure };
+  }
+
+  if (!gender || (gender !== 'Nam' && gender !== 'Nữ')) {
+    return { passed: false, reason: 'INVALID_GENDER_FORMAT', observedStructure };
+  }
+
+  const birthYear = parseInt(dobIso.slice(0, 4), 10);
+  const birthYearLast2 = dobIso.slice(2, 4);
+  const cccdYearDigits = cccdId.slice(4, 6);
+
+  // 1. Kiểm tra 2 số cuối của năm sinh (vị trí ký tự thứ 5 và 6 của CCCD)
+  if (cccdYearDigits !== birthYearLast2) {
+    return { passed: false, reason: 'YEAR_MISMATCH', observedStructure };
+  }
+
+  // 2. Kiểm tra thế kỷ và giới tính (vị trí ký tự thứ 4 của CCCD)
+  const genderDigit = cccdId[3];
+  let expectedGenderDigit: string | null = null;
+
+  if (birthYear >= 1900 && birthYear <= 1999) {
+    expectedGenderDigit = gender === 'Nam' ? '0' : '1';
+  } else if (birthYear >= 2000 && birthYear <= 2099) {
+    expectedGenderDigit = gender === 'Nam' ? '2' : '3';
+  } else if (birthYear >= 2100 && birthYear <= 2199) {
+    expectedGenderDigit = gender === 'Nam' ? '4' : '5';
+  } else if (birthYear >= 2200 && birthYear <= 2299) {
+    expectedGenderDigit = gender === 'Nam' ? '6' : '7';
+  } else if (birthYear >= 2300 && birthYear <= 2399) {
+    expectedGenderDigit = gender === 'Nam' ? '8' : '9';
+  }
+
+  if (!expectedGenderDigit || genderDigit !== expectedGenderDigit) {
+    return { passed: false, reason: 'GENDER_MISMATCH', observedStructure };
+  }
+
+  return { passed: true, reason: 'MATCH', observedStructure };
+}
+
+/**
  * Phân tích chuỗi QR thô của CCCD Việt Nam thành các trường có cấu trúc
  * Định dạng chuẩn Bộ Công An:
  * 7 trường: <Số CCCD 12 số>|<Số CMND cũ>|<Họ và tên>|<Ngày sinh ddMMyyyy>|<Giới tính>|<Địa chỉ>|<Ngày cấp ddMMyyyy>
@@ -213,6 +313,30 @@ export function parseCccdQrString(rawString: string): ParsedCccdData {
     ? { value: isoIssueDate, confidence: 1.0, source: 'QR' }
     : { value: null, confidence: null, source: 'QR' };
 
+  // 7. Kiểm tra chéo tính nhất quán bảo vệ (Cơ chế bảo vệ quy chuẩn CCCD Việt Nam)
+  const crossCheck = verifyCccdConsistency(
+    idField.value,
+    dobField.value,
+    genderField.value,
+    parts
+  );
+
+  // Nếu kiểm tra chéo không khớp: coi là đọc sai (QR_INCONSISTENT), KHÔNG tự đổi thứ tự trường theo cách đoán
+  if (!crossCheck.passed) {
+    return {
+      id_number: { value: null, confidence: null, source: 'QR' },
+      full_name: { value: null, confidence: null, source: 'QR' },
+      date_of_birth: { value: null, confidence: null, source: 'QR' },
+      gender: { value: null, confidence: null, source: 'QR' },
+      address: { value: null, confidence: null, source: 'QR' },
+      issue_date: { value: null, confidence: null, source: 'QR' },
+      raw_qr: rawString,
+      is_consistent: false,
+      cross_check_reason: crossCheck.reason,
+      observed_structure: crossCheck.observedStructure,
+    };
+  }
+
   const result: ParsedCccdData = {
     id_number: idField,
     full_name: nameField,
@@ -221,6 +345,9 @@ export function parseCccdQrString(rawString: string): ParsedCccdData {
     address: addrField,
     issue_date: issueDateField,
     raw_qr: rawString,
+    is_consistent: true,
+    cross_check_reason: 'MATCH',
+    observed_structure: crossCheck.observedStructure,
   };
 
   if (oldIdRaw) {
@@ -430,11 +557,31 @@ export async function decodeAndParse(
 
     const parsedData = parseCccdQrString(rawQr);
 
+    if (parsedData.is_consistent === false) {
+      return {
+        success: false,
+        rawString: rawQr,
+        maskedRawString: masked,
+        data: parsedData,
+        error: `QR_INCONSISTENT: Số CCCD không khớp giới tính hoặc năm sinh đọc được (${parsedData.cross_check_reason})`,
+        crossCheck: {
+          passed: false,
+          reason: parsedData.cross_check_reason as CccdCrossCheckResult['reason'],
+          observedStructure: parsedData.observed_structure,
+        },
+      };
+    }
+
     return {
       success: true,
       rawString: rawQr,
       maskedRawString: masked,
       data: parsedData,
+      crossCheck: {
+        passed: true,
+        reason: 'MATCH',
+        observedStructure: parsedData.observed_structure,
+      },
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

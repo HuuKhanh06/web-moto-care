@@ -11,7 +11,32 @@ export class MockAiProvider implements IAiProvider {
     const X = config.thresholdX; // 0.95
     const Y = config.thresholdY; // 0.80
 
-    // Giả lập độ trễ nhận diện quang học ~150ms
+    // RÀNG BUỘC P0: VITE_USE_MOCK_OCR mặc định tắt (false).
+    // Mock chỉ được phép chạy khi VITE_USE_MOCK_OCR === 'true' hoặc đang trong môi trường kiểm thử (MODE === 'test').
+    const isMockAllowed = import.meta.env.VITE_USE_MOCK_OCR === 'true' || import.meta.env.MODE === 'test';
+    if (!isMockAllowed) {
+      return {
+        schema_version: '1.0',
+        request_id: input.requestId,
+        model_version: 'ocr-real-strict',
+        documents: {},
+        checks: {
+          image_quality: 'FAIL',
+          required_fields_present: false,
+          name_consistency: 'NOT_APPLICABLE',
+        },
+        thresholds: { X, Y },
+        minimum_required_confidence: null,
+        routing: {
+          action: 'FALLBACK_MANUAL',
+          reason_codes: ['MOCK_DISABLED_PRODUCTION_STRICT'],
+          next_step: 'HUMAN_VERIFICATION_AT_M_CheckDocs',
+          business_rule_status: 'NOT_EVALUATED',
+        },
+      };
+    }
+
+    // Giả lập độ trễ nhận diện quang học ~150ms khi đang ở chế độ mock được phép
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     // Kịch bản lỗi mạng mô phỏng

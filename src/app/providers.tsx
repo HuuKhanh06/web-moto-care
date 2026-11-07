@@ -6,6 +6,7 @@ import { DevPanel } from '@/components/DevPanel';
 import { useAuthStore } from '@/features/auth/authStore';
 import { db } from '@/db';
 import { seedDatabase } from '@/db/seed';
+import { cleanupLegacyMockData } from '@/db/cleanupLegacyMockData';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { toast } from '@/components/ui/toastStore';
 
@@ -31,6 +32,8 @@ export function AppProviders({ children }: AppProvidersProps) {
       } catch (err) {
         console.error('Auto seed check error:', err);
       }
+      // Dọn sạch tàn dư mock NGUYEN VAN A nếu có
+      await cleanupLegacyMockData(false);
       await restoreSession();
     }
     initApp();
