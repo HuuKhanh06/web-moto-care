@@ -65,15 +65,6 @@ export async function fn_check_fleet(
   const startReq = new Date(req.start_at).getTime();
   const endReq = new Date(req.end_at).getTime();
 
-  // Đồng bộ mới nhất từ Cloud nếu không phải unit test để chống xung đột đặt trùng xe giữa nhiều người dùng
-  if (import.meta.env.MODE !== 'test') {
-    try {
-      await dataAdapter.pullCloudToLocal();
-    } catch {
-      // Bỏ qua lỗi mạng nếu đang offline
-    }
-  }
-
   // Tìm danh sách xe đang sẵn sàng
   let vehicles = await db.vehicles.where('status').equals('SAN_SANG').toArray();
   if (preferredType) {
@@ -178,7 +169,18 @@ export async function fn_reject_no_vehicle(requestId: string, actor: Actor): Pro
  * M_SendTerms (T02 • Báo giá/điều kiện thuê)
  */
 export async function fn_send_quote(requestId: string, actor: Actor): Promise<void> {
-  const req = await db.rental_requests.get(requestId);
+  let req = await db.rental_requests.get(requestId);
+  if (!req) throw new Error(`Không tìm thấy hồ sơ ${requestId}`);
+
+  if (!req.vehicle_id) {
+    const pState = await db.process_state.get(requestId);
+    if (pState?.variables?.found_vehicle_id) {
+      const vId = pState.variables.found_vehicle_id as string;
+      await db.rental_requests.update(requestId, { vehicle_id: vId });
+      req = await db.rental_requests.get(requestId);
+    }
+  }
+
   if (!req || !req.vehicle_id) throw new Error(`Hồ sơ ${requestId} chưa được gắn xe`);
 
   const vehicle = await db.vehicles.get(req.vehicle_id);

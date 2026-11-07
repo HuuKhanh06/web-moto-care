@@ -140,9 +140,20 @@ class DataAdapter {
 
   // --- 3. ĐẨY 1 BẢN GHI TỨC THÌ LÊN SUPABASE CLOUD (AUTO-PUSH) ---
   public async pushRecordToCloud(table: string, record: Record<string, unknown>): Promise<void> {
+    if (import.meta.env.MODE === 'test') return;
     if (!isSupabaseConfigured || !supabase) return;
     try {
-      await supabase.from(table).upsert(record, { onConflict: 'id' });
+      if (table === 'rental_requests' && record.customer_id) {
+        // Đảm bảo profile khách hàng đã tồn tại trên Supabase trước khi upsert rental_request
+        const profile = await db.profiles.get(record.customer_id as string);
+        if (profile) {
+          await supabase.from('profiles').upsert(profile, { onConflict: 'id' });
+        }
+      }
+      const { error } = await supabase.from(table).upsert(record, { onConflict: 'id' });
+      if (error) {
+        console.warn(`[DataAdapter] Lỗi Supabase upsert ${table}:`, error.message);
+      }
     } catch (err) {
       console.warn(`[DataAdapter] Lỗi tự động đẩy dữ liệu bảng ${table} lên Supabase:`, err);
     }
@@ -179,66 +190,35 @@ class DataAdapter {
         supabase.from('profiles').select('*'),
       ]);
 
-      if (cloudRentals) {
-        if (cloudRentals.length === 0) {
-          // Cloud đã được xóa trắng -> dọn dẹp các đơn rác cục bộ
-          await Promise.all([
-            db.rental_requests.clear(),
-            db.process_state.clear(),
-            db.vehicle_schedule.clear(),
-            db.payments.clear(),
-            db.contracts.clear(),
-            db.customer_documents.clear(),
-            db.inspections.clear(),
-            db.handovers.clear(),
-            db.incidents.clear(),
-          ]);
-        } else {
-          await db.rental_requests.bulkPut(cloudRentals as RentalRequest[]);
+      if (cloudRentals && cloudRentals.length > 0) {
+        await db.rental_requests.bulkPut(cloudRentals as RentalRequest[]);
 
-          // Xóa các đơn local không còn tồn tại trên Cloud
-          const cloudIds = new Set(cloudRentals.map((r: { id: string }) => r.id));
-          const localRentals = await db.rental_requests.toArray();
-          for (const lr of localRentals) {
-            if (!cloudIds.has(lr.id)) {
-              await db.rental_requests.delete(lr.id);
-              await db.process_state.delete(lr.id);
-            }
-          }
+        // Tự động khôi phục / đồng bộ process_state để màn hình Việc cần làm của Nhân viên hiển thị đồng nhất
+        for (const req of cloudRentals as RentalRequest[]) {
+          const existingState = await db.process_state.get(req.id);
+          const expectedWaitingNodes = inferWaitingNodesFromRequestStatus(req.status);
 
-          // Tự động khôi phục / đồng bộ process_state để màn hình Việc cần làm của Nhân viên hiển thị đồng nhất
-          for (const req of cloudRentals as RentalRequest[]) {
-            const existingState = await db.process_state.get(req.id);
-            const expectedWaitingNodes = inferWaitingNodesFromRequestStatus(req.status);
-
-            if (!existingState) {
-              await db.process_state.put({
-                request_id: req.id,
-                waiting_node_ids: expectedWaitingNodes,
-                loop_counters: {},
-                variables: {
-                  preferred_vehicle_type: req.vehicle_id ? undefined : 'Xe máy',
-                },
-                updated_at: new Date().toISOString(),
-              });
-            } else if (expectedWaitingNodes.length > 0 && !expectedWaitingNodes.some((n) => existingState.waiting_node_ids.includes(n))) {
-              await db.process_state.update(req.id, {
-                waiting_node_ids: expectedWaitingNodes,
-                updated_at: new Date().toISOString(),
-              });
-            }
+          if (!existingState) {
+            await db.process_state.put({
+              request_id: req.id,
+              waiting_node_ids: expectedWaitingNodes,
+              loop_counters: {},
+              variables: {
+                preferred_vehicle_type: req.vehicle_id ? undefined : 'Xe máy',
+              },
+              updated_at: new Date().toISOString(),
+            });
+          } else if (expectedWaitingNodes.length > 0 && !expectedWaitingNodes.some((n) => existingState.waiting_node_ids.includes(n))) {
+            await db.process_state.update(req.id, {
+              waiting_node_ids: expectedWaitingNodes,
+              updated_at: new Date().toISOString(),
+            });
           }
         }
       }
 
       if (cloudVehicles && cloudVehicles.length > 0) await db.vehicles.bulkPut(cloudVehicles);
-      if (cloudSchedules) {
-        if (cloudSchedules.length === 0) {
-          await db.vehicle_schedule.clear();
-        } else {
-          await db.vehicle_schedule.bulkPut(cloudSchedules);
-        }
-      }
+      if (cloudSchedules && cloudSchedules.length > 0) await db.vehicle_schedule.bulkPut(cloudSchedules);
       if (cloudPayments && cloudPayments.length > 0) await db.payments.bulkPut(cloudPayments);
       if (cloudContracts && cloudContracts.length > 0) await db.contracts.bulkPut(cloudContracts);
       if (cloudDocs && cloudDocs.length > 0) await db.customer_documents.bulkPut(cloudDocs);
