@@ -73,6 +73,19 @@ function RootRedirect() {
 }
 
 /**
+ * Component bọc layout tương ứng theo vai trò đang đăng nhập:
+ * - Quản lý: ManagerLayout (Menu điều hành của Quản lý, badge Quản lý)
+ * - Nhân viên: StaffLayout (Menu công việc của Nhân viên, badge Nhân viên)
+ */
+function StaffOrManagerLayout({ children }: { children?: React.ReactNode }) {
+  const currentActor = useAuthStore((s) => s.currentActor);
+  if (currentActor?.role === 'quan_ly') {
+    return <ManagerLayout>{children}</ManagerLayout>;
+  }
+  return <StaffLayout>{children}</StaffLayout>;
+}
+
+/**
  * Component bọc trang AD-01 với Layout tương ứng của vai trò đang đăng nhập
  */
 function AD01Wrapper() {
@@ -179,13 +192,13 @@ export function AppRouter() {
       </Route>
 
       {/* ============================================================== */}
-      {/* PHÂN HỆ NHÂN VIÊN (nhan_vien)                                   */}
+      {/* PHÂN HỆ VẬN HÀNH & HỘP VIỆC (/nv)                              */}
       {/* ============================================================== */}
       <Route
         path="/nv"
         element={
           <ProtectedRoute allowedRoles={['nhan_vien', 'quan_ly']}>
-            <StaffLayout />
+            <StaffOrManagerLayout />
           </ProtectedRoute>
         }
       >
@@ -219,26 +232,24 @@ export function AppRouter() {
         <Route path="02" element={<QL02Page />} />
       </Route>
 
-      {/* Đội xe vận hành cho Nhân viên */}
+      {/* Đội xe vận hành cho Nhân viên / Quản lý */}
       <Route
         path="/fleet"
         element={
           <ProtectedRoute allowedRoles={['nhan_vien', 'quan_ly']}>
-            <StaffLayout>
-              <AD01Page />
-            </StaffLayout>
+            <AD01Wrapper />
           </ProtectedRoute>
         }
       />
 
-      {/* DT-01: Giả lập đối tác (Quản lý/Nhân viên thao tác mô phỏng) */}
+      {/* DT-01: Giả lập đối tác */}
       <Route
         path="/dt/01"
         element={
           <ProtectedRoute allowedRoles={['nhan_vien', 'quan_ly']}>
-            <StaffLayout>
+            <StaffOrManagerLayout>
               <DT01Page />
-            </StaffLayout>
+            </StaffOrManagerLayout>
           </ProtectedRoute>
         }
       />

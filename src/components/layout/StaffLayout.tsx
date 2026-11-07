@@ -17,7 +17,8 @@ import { COPY } from '@/copy';
 
 export function StaffLayout({ children }: { children?: React.ReactNode }) {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuthStore();
+  const { currentUser, logout, currentActor } = useAuthStore();
+  const isManager = currentActor?.role === 'quan_ly';
 
   const handleLogout = () => {
     logout();
@@ -38,15 +39,21 @@ export function StaffLayout({ children }: { children?: React.ReactNode }) {
         {/* Brand Header */}
         <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
           <Logo size="sm" />
-          <span className="text-[13px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
-            Nhân viên
-          </span>
+          {isManager ? (
+            <span className="text-[13px] font-semibold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200">
+              Quản lý
+            </span>
+          ) : (
+            <span className="text-[13px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+              Nhân viên
+            </span>
+          )}
         </div>
 
         {/* Menu điều hướng */}
         <nav className="p-3 flex-1 overflow-y-auto space-y-1">
           <span className="px-3 py-2 text-[13px] font-semibold uppercase text-slate-400 tracking-wider block">
-            Công việc
+            {isManager ? 'Giám sát vận hành' : 'Công việc'}
           </span>
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -70,18 +77,20 @@ export function StaffLayout({ children }: { children?: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Thông tin nhân viên & Đăng xuất */}
+        {/* Thông tin nhân viên / Quản lý & Đăng xuất */}
         <div className="p-4 border-t border-slate-200">
           <div className="flex items-center gap-2.5 mb-3 px-1">
-            <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-semibold text-sm shrink-0">
-              {currentUser?.full_name?.slice(0, 1) || 'N'}
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${
+              isManager ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+            }`}>
+              {currentUser?.full_name?.slice(0, 1) || (isManager ? 'Q' : 'N')}
             </div>
             <div className="min-w-0 flex-1">
               <span className="text-sm font-semibold text-slate-900 truncate block">
-                {currentUser?.full_name || 'Nhân viên'}
+                {currentUser?.full_name || (isManager ? 'Quản lý' : 'Nhân viên')}
               </span>
-              <span className="text-[13px] text-slate-500 truncate block">
-                {currentUser?.phone || 'Kỹ thuật'}
+              <span className={`text-[13px] truncate block ${isManager ? 'text-purple-700 font-semibold' : 'text-slate-500'}`}>
+                {isManager ? 'Quản lý điều hành' : currentUser?.phone || 'Kỹ thuật'}
               </span>
             </div>
           </div>
@@ -102,13 +111,19 @@ export function StaffLayout({ children }: { children?: React.ReactNode }) {
         <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-2 md:hidden">
             <Logo size="sm" />
-            <span className="text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
-              Nhân viên
-            </span>
+            {isManager ? (
+              <span className="text-[13px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200">
+                Quản lý
+              </span>
+            ) : (
+              <span className="text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+                Nhân viên
+              </span>
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-2 text-sm text-slate-600 font-semibold">
-            <span>Phân hệ Nhân viên Kỹ thuật & Vận hành</span>
+            <span>{isManager ? 'Hộp việc điều hành & Giám sát vận hành' : 'Phân hệ Nhân viên Kỹ thuật & Vận hành'}</span>
           </div>
 
           <div className="flex items-center gap-3">

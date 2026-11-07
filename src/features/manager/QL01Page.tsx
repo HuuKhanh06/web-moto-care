@@ -138,7 +138,7 @@ export function QL01Page() {
 
       toast.success('Đã duyệt phương án điều chỉnh và gửi lại bảng kê mới tới khách hàng!');
       setTimeout(() => {
-        navigate('/nv/01');
+        navigate('/ql/dashboard');
       }, 1000);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Có lỗi khi xử lý khiếu nại');
@@ -159,7 +159,7 @@ export function QL01Page() {
             Hiện tại khách hàng đã xác nhận đồng thuận toàn bộ bảng kê thanh lý hoặc không có tranh chấp phát sinh.
           </p>
           <div className="mt-6 flex justify-center gap-3">
-            <Button onClick={() => navigate('/nv/01')}>Về Hộp việc điều hành</Button>
+            <Button onClick={() => navigate('/ql/dashboard')}>Về Bảng điều hành</Button>
           </div>
         </Card>
       </div>
@@ -329,14 +329,14 @@ export function QL01Page() {
 
           {/* Nút Submit */}
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-            <Button variant="outline" onClick={() => navigate('/nv/01')}>
-              Quay lại Hộp việc
+            <Button variant="outline" onClick={() => navigate('/ql/dashboard')}>
+              Quay lại Bảng điều hành
             </Button>
             <Button
               data-testid="node-M_Resolve"
               onClick={handleApproveAdjustment}
               loading={isSubmitting}
-              className="bg-brand-600 hover:bg-brand-700 text-white font-semibold flex items-center gap-1.5"
+              className="bg-teal-700 hover:bg-teal-800 text-white font-semibold flex items-center gap-1.5"
             >
               <span>Duyệt phương án &amp; Gửi lại bảng kê</span>
               <ArrowRight className="w-4 h-4" />
@@ -345,7 +345,7 @@ export function QL01Page() {
         </Card>
       ) : (
         <Card className="p-8 text-center space-y-4">
-          <CheckCircle className="w-12 h-12 text-brand-600 mx-auto" />
+          <CheckCircle className="w-12 h-12 text-teal-700 mx-auto" />
           <h3 className="text-lg font-bold text-slate-900">
             Hồ sơ không ở trạng thái chờ giải quyết khiếu nại!
           </h3>
@@ -353,8 +353,8 @@ export function QL01Page() {
             Hiện hồ sơ đang ở trạng thái <strong>{rentalReq ? getStatusLabel(rentalReq.status) : ''}</strong>. Có thể khách hàng đã chấp thuận bảng kê hoặc quản lý đã giải quyết xong.
           </p>
           <div className="pt-2 flex justify-center gap-3">
-            <Button variant="outline" onClick={() => navigate('/nv/01')}>
-              Về Hộp việc cần làm
+            <Button variant="outline" onClick={() => navigate('/ql/dashboard')}>
+              Về Bảng điều hành
             </Button>
             <Button onClick={() => navigate(`/kh/09?requestId=${requestId}`)}>
               Xem bảng kê chi tiết

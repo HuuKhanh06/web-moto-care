@@ -160,16 +160,24 @@ export function NV01Page() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Tiêu đề & Làm mới */}
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
-          {COPY.TITLES.STAFF_TASKS}
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+            {isManager ? 'Hộp việc điều hành hệ thống' : COPY.TITLES.STAFF_TASKS}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {isManager
+              ? 'Giám sát và xử lý toàn bộ nhiệm vụ kiểm tra xe, bàn giao, nhận trả và giải quyết sự cố'
+              : 'Tiếp nhận và xử lý các yêu cầu bàn giao xe, kiểm tra kỹ thuật, đối soát và quyết toán'}
+          </p>
+        </div>
         <Button
           variant="outline"
           size="sm"
           onClick={loadData}
           loading={loading}
           title="Làm mới danh sách"
+          className="self-start sm:self-auto shrink-0"
         >
           <RotateCcw className="w-4 h-4 mr-1.5" />
           <span>Làm mới</span>

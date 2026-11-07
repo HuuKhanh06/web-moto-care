@@ -8,6 +8,7 @@ import { Logo } from '@/components/common/Logo';
 import { cn } from '@/lib/utils';
 import {
   LayoutGrid,
+  Inbox,
   Calendar,
   FileCheck2,
   AlertTriangle,
@@ -27,6 +28,7 @@ export function ManagerLayout({ children }: { children?: React.ReactNode }) {
 
   const menuItems = [
     { to: '/ql/dashboard', label: COPY.TITLES.MANAGER_DASHBOARD, icon: LayoutGrid },
+    { to: '/nv/01', label: 'Hộp việc điều hành', icon: Inbox },
     { to: '/manager/timeline', label: COPY.TITLES.MANAGER_TIMELINE, icon: Calendar },
     { to: '/ql/01', label: COPY.TITLES.MANAGER_RESOLVE, icon: FileCheck2 },
     { to: '/ql/02', label: COPY.TITLES.MANAGER_ESCALATE, icon: AlertTriangle },
