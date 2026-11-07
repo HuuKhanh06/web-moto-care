@@ -102,7 +102,7 @@ export function KH02Page() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
   const navigate = useNavigate();
-  const { currentActor, updateProfileName } = useAuthStore();
+  const { currentActor } = useAuthStore();
 
   const [request, setRequest] = useState<RentalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -498,10 +498,7 @@ export function KH02Page() {
     }
 
     try {
-      if (currentActor?.id && extractedProfile.fullName) {
-        await updateProfileName(extractedProfile.fullName);
-      }
-
+      // Lưu thông tin trích xuất vào biến quy trình cho hợp đồng thuê xe; không ghi đè họ tên tài khoản của người dùng
       const pState = await db.process_state.get(requestId);
       if (pState) {
         await db.process_state.update(requestId, {

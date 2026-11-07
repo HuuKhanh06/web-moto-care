@@ -5,6 +5,7 @@
 import { db } from '@/db';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuthStore } from '@/features/auth/authStore';
+import { SEED_USERS } from '@/db/seed';
 
 export interface CleanupReport {
   cleaned: boolean;
@@ -13,7 +14,7 @@ export interface CleanupReport {
 }
 
 export async function cleanupLegacyMockData(force = false): Promise<CleanupReport> {
-  const CLEANUP_KEY = 'motocare_legacy_mock_cleaned_v2';
+  const CLEANUP_KEY = 'motocare_legacy_mock_cleaned_v3';
   const affectedProcessStates: string[] = [];
   const affectedProfiles: Array<{ id: string; email?: string; oldName: string; newName: string }> = [];
 
@@ -44,21 +45,18 @@ export async function cleanupLegacyMockData(force = false): Promise<CleanupRepor
       }
     }
 
-    // 2. Quét và khôi phục tên tài khoản bị ghi đè thành 'NGUYEN VAN A' trong db.profiles
+    // 2. Khôi phục hồ sơ nếu trước đó bị mock đè thành 'NGUYEN VAN A'
+    // TUYỆT ĐỐI KHÔNG đoán tên khách hàng từ email hay bất kỳ chuỗi nào.
+    // Tên khách hàng lấy chính xác từ trường 'Họ và tên' khi người dùng đăng ký tài khoản.
     const allProfiles = await db.profiles.toArray();
     for (const prof of allProfiles) {
       if (prof.full_name === 'NGUYEN VAN A' || prof.full_name === 'NGUYỄN VĂN A') {
         const account = await db.auth_accounts.where('user_id').equals(prof.id).first();
-        let fallbackName = 'Khách hàng';
-        if (account?.email) {
-          const emailLower = account.email.toLowerCase();
-          if (emailLower.includes('huukhanh')) {
-            fallbackName = 'Hữu Khánh';
-          } else {
-            const prefix = account.email.split('@')[0];
-            fallbackName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
-          }
-        }
+        const seedMatch = SEED_USERS.find(
+          (u) => u.id === prof.id || (account && u.email.toLowerCase() === account.email.toLowerCase())
+        );
+        // Nếu là tài khoản seed thì trả về đúng tên seed đã định nghĩa; nếu là tài khoản người dùng thì đặt 'Khách hàng' để họ tự đổi tên
+        const fallbackName = seedMatch ? seedMatch.full_name : 'Khách hàng';
 
         await db.profiles.update(prof.id, {
           full_name: fallbackName,
