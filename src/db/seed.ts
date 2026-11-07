@@ -652,17 +652,17 @@ export async function seedDatabase(): Promise<void> {
     },
   ];
 
-  // Ghi đồng loạt vào Dexie
+  // Ghi đồng loạt vào Dexie (dùng bulkPut để an toàn nếu cập nhật/nạp thêm dữ liệu mà không bị lỗi trùng khóa)
   await db.transaction('rw', db.tables, async () => {
-    await db.profiles.bulkAdd(profiles);
-    await db.auth_accounts.bulkAdd(authAccounts);
-    await db.vehicles.bulkAdd(vehicles);
-    await db.partners.bulkAdd(partners);
-    await db.rental_requests.bulkAdd(rentalRequests);
-    await db.vehicle_schedule.bulkAdd(schedules);
-    await db.contracts.bulkAdd(contracts);
-    await db.payments.bulkAdd(payments);
-    await db.statements.bulkAdd(statements);
-    await db.process_state.bulkAdd(processStates);
+    await db.profiles.bulkPut(profiles);
+    await db.auth_accounts.bulkPut(authAccounts);
+    await db.vehicles.bulkPut(vehicles);
+    await db.partners.bulkPut(partners);
+    await db.rental_requests.bulkPut(rentalRequests);
+    await db.vehicle_schedule.bulkPut(schedules);
+    await db.contracts.bulkPut(contracts);
+    await db.payments.bulkPut(payments);
+    await db.statements.bulkPut(statements);
+    await db.process_state.bulkPut(processStates);
   });
 }
