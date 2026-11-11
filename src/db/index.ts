@@ -58,8 +58,8 @@ export class MotoCareDatabase extends Dexie {
   integration_logs!: Table<IntegrationLog, string>;
   ai_logs!: Table<AiLog, number>;
 
-  constructor() {
-    super('MotoCareDB');
+  constructor(name = 'MotoCareDB') {
+    super(name);
 
     this.version(1).stores({
       // 19 bảng gốc
@@ -89,6 +89,14 @@ export class MotoCareDatabase extends Dexie {
       auth_accounts: '&user_id, &email',
       integration_logs: '&id, type, status, endpoint, request_id, created_at, [type+status]',
       ai_logs: '++id, request_id, bpmn_node_id, routing_action, created_at',
+    });
+
+    // Reset legacy browser data once. Suppress cloud hooks: clearing a cache must never delete cloud rows.
+    this.version(2).stores({}).upgrade(async transaction => {
+      (transaction as unknown as Record<string, unknown>).__motocareRemote = true;
+      for (const table of transaction.db.tables) {
+        if (table.name !== 'vehicles' && table.name !== 'partners') await transaction.table(table.name).clear();
+      }
     });
   }
 

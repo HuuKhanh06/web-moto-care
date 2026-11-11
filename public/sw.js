@@ -1,7 +1,7 @@
 // public/sw.js
 // Service Worker cho MOTO CARE - Tự động xóa sạch bộ nhớ đệm cũ khi có phiên bản mới
 
-const CACHE_NAME = 'motocare-v3-clean';
+const CACHE_NAME = 'motocare-fresh-20261111-1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
