@@ -90,14 +90,17 @@ export function FileUpload({
                   return;
                 }
 
-                const previewUrl = URL.createObjectURL(blob);
-                resolve({
+                // Consumers persist this field in cloud records: a blob: URL is local to one browser.
+                const persistedReader = new FileReader();
+                persistedReader.onerror = () => reject(new Error('Không thể lưu dữ liệu ảnh đã nén'));
+                persistedReader.onload = () => resolve({
                   blob,
-                  previewUrl,
+                  previewUrl: String(persistedReader.result),
                   originalSize: file.size,
                   compressedSize: blob.size,
                   fileName: file.name,
                 });
+                persistedReader.readAsDataURL(blob);
               },
               'image/jpeg',
               quality
@@ -130,9 +133,6 @@ export function FileUpload({
 
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (result) {
-      URL.revokeObjectURL(result.previewUrl);
-    }
     setResult(null);
     onFileSelect?.(null);
     if (inputRef.current) inputRef.current.value = '';

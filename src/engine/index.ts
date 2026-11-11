@@ -10,6 +10,7 @@ import { BUSINESS_RULES } from '@/config/rules';
 import { integrations } from '@/integrations';
 import { isVehicleFree } from './fleet';
 import { dataAdapter, STATUS_TO_NODES } from '@/db/adapter';
+import { durableHandoverPhotos } from '@/lib/handoverPhotos';
 import type { Actor, ProcessEvent, ProcessState } from '@/db/types';
 
 import {
@@ -525,13 +526,13 @@ export class ProcessEngine {
       outcome = 'Kiểm tra lại';
     } else if (nodeId === 'M_Photo') {
       // Chụp ảnh bàn giao (NV-04)
-      const photoUrls = (payload.photo_urls as string[]) || [];
-      const lastInsp = await db.inspections
+      const photoUrls = await durableHandoverPhotos((payload.photo_urls as string[]) || []);
+      const inspections = await db.inspections
         .where('request_id')
         .equals(requestId)
-        .and((i) => i.kind === 'PRE_HANDOVER')
-        .reverse()
-        .first();
+        .and((i) => i.kind === 'PRE_HANDOVER' && i.result === 'DAT')
+        .toArray();
+      const lastInsp = inspections.sort((a, b) => b.attempt_no - a.attempt_no)[0];
       if (lastInsp) {
         await db.inspections.update(lastInsp.id, { photo_urls: photoUrls });
       }

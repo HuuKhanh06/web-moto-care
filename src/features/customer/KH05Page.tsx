@@ -30,6 +30,24 @@ import {
   X,
 } from 'lucide-react';
 
+function HandoverPhoto({ url, index, onPreview }: { url: string; index: number; onPreview: (url: string) => void }) {
+  const [failed, setFailed] = useState(url.startsWith('blob:'));
+  useEffect(() => { setFailed(url.startsWith('blob:')); }, [url]);
+  return (
+    <div onClick={() => { if (!failed) onPreview(url); }}
+      className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-100 aspect-video sm:aspect-square flex items-center justify-center">
+      {failed ? <p className="p-3 text-center text-xs text-slate-600">Ảnh chưa tải được. Vui lòng yêu cầu nhân viên gửi lại ảnh.</p> : <>
+        <img src={url} alt={`Ảnh bàn giao ${index + 1}`} onError={() => setFailed(true)}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white"><Eye className="w-6 h-6" /></div>
+      </>}
+      <span className="absolute bottom-1.5 left-1.5 rounded-lg bg-black/60 px-2 py-0.5 text-[11px] text-white font-medium">
+        {['Đầu xe', 'Đuôi xe', 'Sườn trái', 'Sườn phải', 'Đồng hồ'][index] || `Ảnh ${index + 1}`}
+      </span>
+    </div>
+  );
+}
+
 export function KH05Page() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
@@ -47,9 +65,9 @@ export function KH05Page() {
   const [customerNote, setCustomerNote] = useState('');
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     if (!requestId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const req = await db.rental_requests.get(requestId);
       if (!req) {
@@ -69,12 +87,12 @@ export function KH05Page() {
         setVehicle(v || null);
       }
 
-      const insp = await db.inspections
+      const inspections = await db.inspections
         .where('request_id')
         .equals(requestId)
-        .and((i) => i.kind === 'PRE_HANDOVER')
-        .last();
-      setInspection(insp || null);
+        .and((i) => i.kind === 'PRE_HANDOVER' && i.result === 'DAT')
+        .toArray();
+      setInspection(inspections.sort((a, b) => b.attempt_no - a.attempt_no)[0] || null);
 
       const hList = await db.handovers
         .where('request_id')
@@ -84,12 +102,15 @@ export function KH05Page() {
     } catch (err) {
       console.error('Lỗi nạp thông tin nhận xe:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [requestId, navigate]);
 
   useEffect(() => {
     loadData();
+    const refresh = () => { void loadData(true); };
+    window.addEventListener('motocare_data_updated', refresh);
+    return () => window.removeEventListener('motocare_data_updated', refresh);
   }, [loadData]);
 
   if (loading) {
@@ -257,23 +278,7 @@ export function KH05Page() {
         {inspection?.photo_urls && inspection.photo_urls.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {inspection.photo_urls.map((url, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedPhotoPreview(url)}
-                className="group relative cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-100 aspect-video sm:aspect-square flex items-center justify-center"
-              >
-                <img
-                  src={url}
-                  alt={`Ảnh bàn giao ${idx + 1}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                  <Eye className="w-6 h-6" />
-                </div>
-                <span className="absolute bottom-1.5 left-1.5 rounded-lg bg-black/60 px-2 py-0.5 text-[11px] text-white font-medium">
-                  {idx === 0 ? 'Đầu xe' : idx === 1 ? 'Đuôi xe' : idx === 2 ? 'Sườn trái' : idx === 3 ? 'Sườn phải' : 'Đồng hồ'}
-                </span>
-              </div>
+              <HandoverPhoto key={idx} url={url} index={idx} onPreview={setSelectedPhotoPreview} />
             ))}
           </div>
         ) : (

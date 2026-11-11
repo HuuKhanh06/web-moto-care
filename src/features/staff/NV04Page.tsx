@@ -22,6 +22,7 @@ import {
   getStatusLabel,
 } from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
+import { durableHandoverPhotos } from '@/lib/handoverPhotos';
 import {
   PendingRequestBar,
   type PendingRequestSummary,
@@ -65,7 +66,7 @@ export function NV04Page() {
     try {
       // 1. Quét toàn bộ hồ sơ đang ở trạng thái CHO_BAN_GIAO
       const candidates = await db.rental_requests
-        .filter((r) => r.status === 'CHO_BAN_GIAO')
+        .filter((r) => r.status === 'CHO_BAN_GIAO' || r.status === 'CHO_KHACH_NHAN')
         .toArray();
 
       const pList: PendingRequestSummary[] = [];
@@ -107,11 +108,12 @@ export function NV04Page() {
       }
 
       // Lấy bản ghi PRE_HANDOVER đạt có attempt_no lớn nhất
-      const insp = await db.inspections
+      const inspections = await db.inspections
         .where('request_id')
         .equals(targetId)
         .and((i) => i.kind === 'PRE_HANDOVER' && i.result === 'DAT')
-        .last();
+        .toArray();
+      const insp = inspections.sort((a, b) => b.attempt_no - a.attempt_no)[0];
 
       if (insp) {
         setLastPassedInspection(insp);
@@ -184,6 +186,10 @@ export function NV04Page() {
       toast.error('Vui lòng đăng nhập lại');
       return;
     }
+    if (currentActor.role !== 'nhan_vien' && currentActor.role !== 'quan_ly') {
+      toast.error('Chỉ nhân viên hoặc quản lý được gửi ảnh bàn giao.');
+      return;
+    }
 
     if (!allPhotosUploaded) {
       toast.error('Vui lòng chụp đủ 5 ảnh (4 góc xe và đồng hồ km)');
@@ -192,7 +198,18 @@ export function NV04Page() {
 
     setSubmitting(true);
     try {
-      const photos = [frontPhoto, rearPhoto, leftPhoto, rightPhoto, odometerPhoto];
+      const photos = await durableHandoverPhotos([frontPhoto, rearPhoto, leftPhoto, rightPhoto, odometerPhoto]);
+      const state = await db.process_state.get(request.id);
+      if (!state?.waiting_node_ids.includes('M_Photo')) {
+        // Repair photos already sent to a customer without advancing or replaying the handover workflow.
+        if (!(request.status === 'CHO_KHACH_NHAN' || state?.waiting_node_ids.includes('Activity_0d0qzp6')) || !lastPassedInspection) {
+          throw new Error('Hồ sơ không còn ở bước gửi ảnh hoặc chờ khách nhận xe.');
+        }
+        await db.inspections.update(lastPassedInspection.id, { photo_urls: photos });
+        toast.success('Đã cập nhật ảnh bàn giao để đồng bộ cho khách hàng.');
+        navigate('/nv/01');
+        return;
+      }
 
       // Hoàn tất nút M_Photo
       await engine.complete(
