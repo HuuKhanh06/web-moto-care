@@ -19,10 +19,12 @@ Chưa triển khai lên dịch vụ thật và chưa gửi ba ảnh cá nhân d�
    Không dùng tên `VITE_GEMINI_API_KEY` cho khóa production.
 3. Thêm repository variables:
    - `SUPABASE_PROJECT_REF`: project ref của Supabase đang dùng, ví dụ `cvgbgwuzhkuinwzlyijt` (kiểm tra đúng project trước khi chạy).
+   - `SUPABASE_POOLER_HOST`: hostname trong Supabase → Connect → Session pooler. Chỉ sao chép host kết thúc `.pooler.supabase.com`, không có mật khẩu, username, port hay `postgresql://`. Không đoán host từ region: mỗi vùng có thể có nhiều pooler cluster.
    - `OCR_ALLOWED_ORIGINS`: `https://huukhanh06.github.io` (origin không có `/web-moto-care/`). Nhiều origin phân cách dấu phẩy.
    - `GEMINI_MODEL`: mặc định `gemini-3.5-flash`.
 4. Đưa mã nguồn lên GitHub rồi chạy Actions → **Deploy OCR backend** → Run workflow.
    Workflow áp dụng migration quota và triển khai function. Cần duyệt migration trước khi chạy vì `db push` áp dụng các migration chưa chạy trong thư mục.
+   Workflow dùng Supabase CLI v3, kết nối Session pooler port 5432 qua IPv4 và đọc mật khẩu từ `SUPABASE_DB_PASSWORD`. Không dùng direct connection IPv6 hoặc transaction pooler port 6543.
 5. Sau khi backend triển khai thành công, đặt repository variable:
    `VITE_OCR_ENDPOINT=https://<project-ref>.supabase.co/functions/v1/document-ocr`
 6. Chạy lại **Deploy to GitHub Pages**. Frontend tự chuyển sang backend; cấu hình LOCAL cũ trong trình duyệt không ghi đè được.

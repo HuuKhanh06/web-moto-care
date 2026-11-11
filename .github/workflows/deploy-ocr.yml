@@ -18,11 +18,12 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST }}
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          version: '^3'
       - name: Validate deployment configuration
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -31,10 +32,30 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$PROJECT_REF"
           test -n "$GEMINI_API_KEY"
-      - name: Apply OCR quota migration
+          if [[ ! "$PROJECT_REF" =~ ^[a-z]{20}$ ]]; then
+            echo "::error::SUPABASE_PROJECT_REF must be the 20-letter project reference."
+            exit 1
+          fi
+          if [[ ! "$POOLER_HOST" =~ ^[a-zA-Z0-9.-]+\.pooler\.supabase\.com$ ]]; then
+            echo "::error::Set repository variable SUPABASE_POOLER_HOST to the Session pooler hostname shown in Supabase Connect (without username, password, port or URL scheme)."
+            exit 1
+          fi
+      - name: Prepare IPv4 database connection
+        # Explicit IPv4 session pooler: GitHub-hosted runners cannot use the free-plan IPv6 direct endpoint.
+        # CLI v3 requires URL-target credentials in the URL. Encode and mask it before subsequent steps.
         run: |
-          supabase link --project-ref "$PROJECT_REF"
-          supabase db push --linked
+          python - <<'PY'
+          import os
+          from urllib.parse import quote
+          password = quote(os.environ['SUPABASE_DB_PASSWORD'], safe='')
+          url = f"postgresql://postgres.{os.environ['PROJECT_REF']}:{password}@{os.environ['POOLER_HOST']}:5432/postgres?sslmode=require"
+          print(f'::add-mask::{password}')
+          print(f'::add-mask::{url}')
+          with open(os.environ['GITHUB_ENV'], 'a') as target:
+              target.write(f'OCR_DATABASE_URL={url}\n')
+          PY
+      - name: Apply OCR quota migration
+        run: env -u SUPABASE_DB_PASSWORD supabase db push --yes --remote="$OCR_DATABASE_URL"
       - name: Set server secrets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -50,7 +71,7 @@ jobs:
               raise SystemExit('Secret values must be single line')
           Path(os.environ['RUNNER_TEMP'], 'ocr.env').write_text(''.join(f'{key}={value}\n' for key, value in values.items()))
           PY
-          supabase secrets set --project-ref "$PROJECT_REF" --env-file "$RUNNER_TEMP/ocr.env"
+          supabase secrets set --env-file "$RUNNER_TEMP/ocr.env" --yes --remote="$PROJECT_REF"
           rm "$RUNNER_TEMP/ocr.env"
       - name: Deploy authenticated handler
-        run: supabase functions deploy document-ocr --project-ref "$PROJECT_REF"
+        run: supabase functions deploy document-ocr --use-api --yes --remote="$PROJECT_REF"
