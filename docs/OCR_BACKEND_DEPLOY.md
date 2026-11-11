@@ -9,6 +9,19 @@ Chưa triển khai lên dịch vụ thật và chưa gửi ba ảnh cá nhân d�
 
 ## Cấu hình một lần
 
+### Lựa chọn không cần pooler (SQL Editor)
+
+Nếu giao diện Dashboard không hiện Session pooler, mở SQL Editor của đúng project, tạo query mới,
+dán toàn bộ nội dung `supabase/migrations/202611110001_ocr_quota.sql` và Run.
+Script chỉ tạo bảng hạn mức OCR và hàm quota, không xóa bảng hồ sơ hay dữ liệu hiện có.
+Sau khi SQL chạy thành công, khi Run workflow **Deploy OCR backend**, đánh dấu
+**I already ran the OCR quota migration in Supabase SQL Editor**.
+Ở chế độ này không cần `SUPABASE_POOLER_HOST` hoặc `SUPABASE_DB_PASSWORD` cho workflow;
+workflow bỏ qua kết nối database trực tiếp. Phải chạy lại SQL phù hợp trước mỗi thay đổi migration sau này.
+Nếu chưa tạo bảng/hàm, backend từ chối quét với lỗi quota unavailable thay vì bỏ giới hạn.
+
+### Cấu hình chung và lựa chọn tự động qua pooler
+
 1. Trong Supabase Dashboard, Authentication → Providers → Anonymous Sign-ins: bật anonymous sign-ins.
    Phiên này phục vụ xác thực dịch vụ OCR, không thay thế hệ thống tài khoản tự quản lý hiện có.
    Bật CAPTCHA cho anonymous sign-ins cần bổ sung giao diện CAPTCHA tương ứng trước khi sử dụng.

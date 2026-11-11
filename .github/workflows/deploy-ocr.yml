@@ -2,6 +2,12 @@ name: Deploy OCR backend
 
 on:
   workflow_dispatch:
+    inputs:
+      quota_sql_applied:
+        description: 'I already ran the OCR quota migration in Supabase SQL Editor'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -19,6 +25,7 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
       POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST }}
+      QUOTA_SQL_APPLIED: ${{ inputs.quota_sql_applied }}
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v3
@@ -29,18 +36,24 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN"
-          test -n "$SUPABASE_DB_PASSWORD"
           test -n "$PROJECT_REF"
           test -n "$GEMINI_API_KEY"
           if [[ ! "$PROJECT_REF" =~ ^[a-z]{20}$ ]]; then
             echo "::error::SUPABASE_PROJECT_REF must be the 20-letter project reference."
             exit 1
           fi
+          if [[ "$QUOTA_SQL_APPLIED" != 'true' ]]; then
+          test -n "$SUPABASE_DB_PASSWORD"
           if [[ ! "$POOLER_HOST" =~ ^[a-zA-Z0-9.-]+\.pooler\.supabase\.com$ ]]; then
             echo "::error::Set repository variable SUPABASE_POOLER_HOST to the Session pooler hostname shown in Supabase Connect (without username, password, port or URL scheme)."
             exit 1
           fi
+          fi
+      - name: Quota migration prepared in SQL Editor
+        if: ${{ inputs.quota_sql_applied }}
+        run: echo 'Using quota schema prepared in SQL Editor. No direct database connection will be attempted. The OCR handler still enforces database quota and fails closed if the schema is missing.'
       - name: Prepare IPv4 database connection
+        if: ${{ !inputs.quota_sql_applied }}
         # Explicit IPv4 session pooler: GitHub-hosted runners cannot use the free-plan IPv6 direct endpoint.
         # CLI v3 requires URL-target credentials in the URL. Encode and mask it before subsequent steps.
         run: |
@@ -55,6 +68,7 @@ jobs:
               target.write(f'OCR_DATABASE_URL={url}\n')
           PY
       - name: Apply OCR quota migration
+        if: ${{ !inputs.quota_sql_applied }}
         run: env -u SUPABASE_DB_PASSWORD supabase db push --yes --remote="$OCR_DATABASE_URL"
       - name: Set server secrets
         env:
