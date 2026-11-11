@@ -82,6 +82,7 @@ const RENTAL_PUBLIC_COLUMNS = 'id,customer_id,vehicle_id,status,start_at,end_at,
 
 const PROCESS_STATE = 'process_state';
 const OUTBOX_KEY = 'motocare_sync_outbox';
+const MODE_KEY = 'motocare_data_mode_v2';
 const FULL_SYNC_INTERVAL_MS = 30_000;
 const FLUSH_DELAY_MS = 40;
 const REMOTE_FLAG = '__motocareRemote';
@@ -117,13 +118,15 @@ class DataAdapter {
       return;
     }
 
-    const savedMode = typeof localStorage !== 'undefined' ? (localStorage.getItem('motocare_data_mode') as DataSourceMode) : null;
-    if (savedMode) {
-      this.currentMode = savedMode;
-    } else if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
-      this.currentMode = 'LIVE';
-    } else {
+    // Mặc định LIVE khi đã cấu hình Supabase (bỏ qua lựa chọn DEMO cũ do mất mạng ở phiên bản trước).
+    // Chỉ dùng DEMO khi VITE_APP_MODE=demo hoặc người dùng tự chọn DEMO ở phiên bản này.
+    if (typeof localStorage !== 'undefined') localStorage.removeItem('motocare_data_mode');
+    const forcedDemo = String(import.meta.env.VITE_APP_MODE || '').toLowerCase() === 'demo';
+    const savedMode = typeof localStorage !== 'undefined' ? (localStorage.getItem(MODE_KEY) as DataSourceMode | null) : null;
+    if (forcedDemo || !isSupabaseConfigured) {
       this.currentMode = 'DEMO';
+    } else {
+      this.currentMode = savedMode === 'DEMO' ? 'DEMO' : 'LIVE';
     }
 
     this.loadOutbox();
@@ -158,7 +161,7 @@ class DataAdapter {
   public setMode(mode: DataSourceMode) {
     this.currentMode = mode;
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('motocare_data_mode', mode);
+      localStorage.setItem(MODE_KEY, mode);
     }
     this.notifyListeners();
   }
