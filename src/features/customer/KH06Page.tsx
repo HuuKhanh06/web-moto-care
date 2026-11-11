@@ -1,11 +1,13 @@
 // src/features/customer/KH06Page.tsx
 // Màn hình chuyến đi của tôi (Khách hàng)
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
+import { dataAdapter } from '@/db/adapter';
+import { getTripGroup } from '@/lib/tripStatus';
 import type { RentalRequest, Vehicle } from '@/db/types';
 import {
   Card,
@@ -14,7 +16,7 @@ import {
   StatusChip,
   toast,
 } from '@/components/ui';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDateTime, getStatusLabel } from '@/lib/format';
 import { getVehicleImageUrl } from '@/lib/vehicleImages';
 import { COPY } from '@/copy';
 import {
@@ -39,21 +41,20 @@ interface EnrichedRequest {
 export function KH06Page() {
   const navigate = useNavigate();
   const currentActor = useAuthStore((s) => s.currentActor);
+  const customerId = currentActor?.id;
 
   const [requests, setRequests] = useState<EnrichedRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingReturnId, setProcessingReturnId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<'ALL' | 'ACTIVE' | 'PENDING' | 'DONE'>('ALL');
+  const loadSequence = useRef(0);
 
-  const loadRequests = useCallback(async () => {
-    if (!currentActor) return;
-    setLoading(true);
+  const loadRequests = useCallback(async (silent = false) => {
+    const run = ++loadSequence.current;
+    if (!customerId) { setRequests([]); setLoading(false); return; }
+    if (!silent) setLoading(true);
     try {
-      const list = await db.rental_requests
-        .where('customer_id')
-        .equals(currentActor.id)
-        .reverse()
-        .sortBy('created_at');
+      const list = await dataAdapter.getCustomerRentalRequests(customerId);
 
       const enriched: EnrichedRequest[] = [];
       for (const req of list) {
@@ -64,22 +65,29 @@ export function KH06Page() {
         const pState = await db.process_state.get(req.id);
         enriched.push({ request: req, vehicle: veh, processState: pState });
       }
-      setRequests(enriched);
+      if (run === loadSequence.current) setRequests(enriched);
     } catch (err) {
       console.error('Lỗi khi tải danh sách chuyến đi:', err);
+      if (!silent && run === loadSequence.current) toast.error('Không tải được trạng thái mới nhất. Vui lòng kiểm tra mạng và thử lại.');
     } finally {
-      setLoading(false);
+      if (run === loadSequence.current) setLoading(false);
     }
-  }, [currentActor]);
+  }, [customerId]);
 
   useEffect(() => {
     loadRequests();
-    const interval = setInterval(loadRequests, 3000);
-    const handleUpdate = () => loadRequests();
+    const interval = setInterval(() => { void loadRequests(true); }, 15000);
+    const handleUpdate = () => { void loadRequests(true); };
+    const invalidatePendingLoads = () => { loadSequence.current++; };
     window.addEventListener('motocare_data_updated', handleUpdate);
+    window.addEventListener('online', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
     return () => {
+      invalidatePendingLoads();
       clearInterval(interval);
       window.removeEventListener('motocare_data_updated', handleUpdate);
+      window.removeEventListener('online', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
     };
   }, [loadRequests]);
 
@@ -112,40 +120,13 @@ export function KH06Page() {
     }
   };
 
-  const filteredRequests = requests.filter(({ request: req }) => {
-    if (filterTab === 'ACTIVE') {
-      return ['DANG_THUE', 'DANG_GIA_HAN', 'DANG_XU_LY_SU_CO'].includes(req.status);
-    }
-    if (filterTab === 'PENDING') {
-      return [
-        'MOI',
-        'CHO_HO_SO',
-        'CHO_COC',
-        'CHO_KY',
-        'CHO_BAN_GIAO',
-        'CHO_KHACH_NHAN',
-        'CHO_NHAN_XE_TRA',
-        'CHO_KHACH_XAC_NHAN_BANG_KE',
-        'CHO_THU_THEM',
-        'CONG_NO',
-      ].includes(req.status);
-    }
-    if (filterTab === 'DONE') {
-      return ['HOAN_TAT', 'DA_HUY', 'TU_CHOI'].includes(req.status);
-    }
-    return true;
-  });
+  const filteredRequests = requests.filter(({ request: req }) => filterTab === 'ALL' || getTripGroup(req.status) === filterTab);
 
   const getStatusDisplay = (req: RentalRequest) => {
-    if (req.status === 'DANG_THUE') return { status: 'success' as const, label: COPY.STATUS.ACTIVE };
-    if (req.status === 'HOAN_TAT') return { status: 'success' as const, label: COPY.STATUS.DONE };
-    if (req.status === 'TU_CHOI' || req.status === 'DA_HUY') return { status: 'error' as const, label: 'Đã kết thúc' };
-    if (req.status === 'DANG_GIA_HAN') return { status: 'pending' as const, label: 'Đang gia hạn' };
-    if (req.status === 'DANG_XU_LY_SU_CO') return { status: 'pending' as const, label: 'Đang hỗ trợ sự cố' };
-    if (req.status === 'CHO_KHACH_NHAN') return { status: 'pending' as const, label: 'Chờ nhận xe' };
-    if (req.status === 'CHO_COC') return { status: 'pending' as const, label: 'Chờ đặt cọc' };
-    if (req.status === 'CHO_KY') return { status: 'pending' as const, label: 'Chờ ký số' };
-    return { status: 'pending' as const, label: COPY.STATUS.PENDING };
+    const label = getStatusLabel(req.status);
+    if (req.status === 'DANG_THUE' || req.status === 'HOAN_TAT') return { status: 'success' as const, label };
+    if (['TU_CHOI', 'DA_HUY', 'CONG_NO'].includes(req.status)) return { status: 'error' as const, label };
+    return { status: 'pending' as const, label };
   };
 
   return (
@@ -161,7 +142,7 @@ export function KH06Page() {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadRequests}
+            onClick={() => void loadRequests()}
             title="Làm mới danh sách"
           >
             <RotateCcw className="w-4 h-4 mr-1.5" />
@@ -203,7 +184,7 @@ export function KH06Page() {
           Đang thuê (
           {
             requests.filter((r) =>
-              ['DANG_THUE', 'DANG_GIA_HAN', 'DANG_XU_LY_SU_CO'].includes(r.request.status)
+              getTripGroup(r.request.status) === 'ACTIVE'
             ).length
           }
           )
@@ -220,18 +201,7 @@ export function KH06Page() {
           Chờ xử lý (
           {
             requests.filter((r) =>
-              [
-                'MOI',
-                'CHO_HO_SO',
-                'CHO_COC',
-                'CHO_KY',
-                'CHO_BAN_GIAO',
-                'CHO_KHACH_NHAN',
-                'CHO_NHAN_XE_TRA',
-                'CHO_KHACH_XAC_NHAN_BANG_KE',
-                'CHO_THU_THEM',
-                'CONG_NO',
-              ].includes(r.request.status)
+              getTripGroup(r.request.status) === 'PENDING'
             ).length
           }
           )

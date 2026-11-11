@@ -264,6 +264,18 @@ class DataAdapter {
     return db.rental_requests.toArray();
   }
 
+  /** Customer trips must use the same cloud status as the staff timeline, not a stale browser snapshot. */
+  public async getCustomerRentalRequests(customerId: string): Promise<RentalRequest[]> {
+    if (this.currentMode === 'LIVE' && supabase && (typeof navigator === 'undefined' || navigator.onLine)) {
+      const { data, error } = await supabase.from('rental_requests').select('*')
+        .eq('customer_id', customerId).order('created_at', { ascending: false });
+      if (error) throw error;
+      // An empty cloud result is authoritative too. Do not bring deleted local trips back into the list.
+      return (data ?? []) as RentalRequest[];
+    }
+    return db.rental_requests.where('customer_id').equals(customerId).reverse().sortBy('created_at');
+  }
+
   // ===========================================================================
   // LỚP ĐẨY LÊN: Dexie hooks → Outbox → Supabase
   // ===========================================================================
