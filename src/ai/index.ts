@@ -83,7 +83,7 @@ class AiService {
     if (signal.aborted) throw new OcrError('CANCELLED', 'Ảnh đã thay đổi; kết quả OCR cũ đã được hủy.');
 
     try {
-      await withOcrDeadline(async storageSignal => db.transaction('rw', db.customer_documents, db.ai_logs, async () => {
+      await withOcrDeadline(async storageSignal => db.transaction('rw', db.customer_documents, db.ai_logs, db.process_state, async () => {
         const transaction = Dexie.currentTransaction!;
         const abort = () => transaction.abort();
         if (storageSignal.aborted) throw new OcrError('CANCELLED', 'Đã dừng lưu OCR.');
@@ -91,12 +91,23 @@ class AiService {
         try {
           const docs = await db.customer_documents.where('request_id').equals(input.requestId).toArray();
           if (snapshot(docs) !== snapshot(initialDocs)) throw new OcrError('STALE_DOCUMENTS', 'Ảnh giấy tờ đã thay đổi. Vui lòng quét lại bộ ảnh mới.');
+          const state = await db.process_state.get(input.requestId);
+          const mismatch = response.checks.name_consistency === 'MISMATCH';
+          const resolved = response.checks.name_consistency === 'PASS' && response.checks.required_fields_present;
+          const blocked = mismatch || (!resolved && state?.variables.document_identity_mismatch === true);
+          if (state && (blocked || resolved)) {
+            await db.process_state.update(input.requestId, { variables: {
+              ...state.variables, document_identity_mismatch: blocked,
+              ...(blocked ? { docs_all_valid: false } : {}),
+            } });
+          }
           for (const doc of docs) {
             const result = doc.doc_type.includes('CCCD') ? response.documents.cccd : doc.doc_type.includes('BANG_LAI') ? response.documents.gplx : undefined;
             // Xóa kết quả cũ cả khi lần xử lý mới thất bại.
             await db.customer_documents.update(doc.id, {
               ai_result: result ? result as unknown as Record<string, unknown> : null,
               ai_confidence: response.minimum_required_confidence, ai_source: source,
+              ...(blocked ? { is_valid: false } : {}),
             });
           }
           await db.ai_logs.add({

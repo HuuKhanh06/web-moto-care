@@ -59,6 +59,39 @@ describe('KH-02 OCR lifecycle (controlled provider, real test IndexedDB)', () =>
   });
   afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 
+  it('không cho tự xác nhận hoặc đặt cọc khi tên không khớp, kể cả sửa thủ công và retry lỗi', async () => {
+    vi.mocked(aiService.processOcr).mockResolvedValueOnce({
+      ...structuredClone(response), checks: { ...response.checks, name_consistency: 'MISMATCH' },
+    }).mockRejectedValueOnce(new OcrError('TIMEOUT', 'OCR quá thời gian xử lý.'));
+    mount();
+    await screen.findByText('048098001234');
+    expect(screen.getByRole('button', { name: 'Xác nhận thông tin đúng' })).toBeDisabled();
+    for (const button of screen.getAllByTestId('node-M_CheckDocs')) expect(button).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Nhập thông tin thủ công' }));
+    fireEvent.change(screen.getByLabelText('Họ và tên (chính xác theo CCCD)'), { target: { value: 'TEN KHAC' } });
+    expect(screen.getByRole('button', { name: 'Lưu thông tin' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Thử quét lại' }));
+    await waitFor(() => expect(aiService.processOcr).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId('ocr-processing')).not.toBeInTheDocument());
+    expect(screen.getByTestId('ocr-error')).toHaveTextContent('Không thể xác nhận hoặc đặt cọc');
+    expect((await db.customer_documents.toArray()).every(doc => doc.is_valid !== true)).toBe(true);
+  });
+
+  it('tải lại trang không khôi phục xác nhận cũ cho bộ giấy tờ không khớp', async () => {
+    await db.customer_documents.toCollection().modify({ is_valid: true, ai_source: 'LOCAL' });
+    await db.customer_documents.update('front', { ai_result: { full_name: { value: 'NGUYEN VAN A' } } });
+    await db.customer_documents.update('license', { ai_result: { full_name: { value: 'TRAN VAN B' } } });
+    await db.process_state.add({ request_id: 'ocr-request', waiting_node_ids: ['M_CheckDocs'],
+      variables: { customer_id_number: '048098001234' }, loop_counters: {}, updated_at: new Date().toISOString() });
+    await db.ai_logs.add({ request_id: 'ocr-request', bpmn_node_id: 'M_CheckDocs', input_summary: 'LOCAL',
+      output: { ...structuredClone(response), checks: { ...response.checks, name_consistency: 'MISMATCH' } },
+      confidence: 0.9, routing_action: 'MANUAL_REVIEW', is_overridden: false, created_at: new Date().toISOString() });
+    mount();
+    await screen.findByText('048098001234');
+    expect(screen.getByRole('button', { name: 'Xác nhận thông tin đúng' })).toBeDisabled();
+    for (const button of screen.getAllByTestId('node-M_CheckDocs')) expect(button).toBeDisabled();
+  });
+
   it('chỉ gửi ảnh lên backend sau khi khách đồng ý, vẫn cho phép nhập thủ công', async () => {
     vi.stubEnv('VITE_OCR_ENDPOINT', 'https://project.test/functions/v1/document-ocr');
     mount();

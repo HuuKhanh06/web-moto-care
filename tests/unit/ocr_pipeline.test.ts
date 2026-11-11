@@ -184,6 +184,23 @@ describe('Facade persistence and single-flight (controlled providers, real test 
     expect(await db.ai_logs.count()).toBe(1);
     expect(await db.customer_documents.get('p-front')).toMatchObject({ ai_source: 'LOCAL', ai_confidence: 0.96 });
   });
+  it('persists mismatch and revokes confirmation, keeps block on timeout, clears after matching OCR', async () => {
+    await db.process_state.add({ request_id: 'pipeline', waiting_node_ids: ['M_CheckDocs'], loop_counters: {}, variables: { docs_all_valid: true }, updated_at: new Date().toISOString() });
+    await db.customer_documents.toCollection().modify({ is_valid: true });
+    const mismatch = validResult();
+    mismatch.documents.gplx!.full_name.value = 'ANOTHER PERSON';
+    const provider = vi.spyOn(LocalOcrProvider.prototype, 'processOcr').mockResolvedValueOnce(mismatch)
+      .mockRejectedValueOnce(new Error('timeout')).mockResolvedValueOnce(validResult());
+    await aiService.processOcr(input);
+    expect((await db.process_state.get('pipeline'))?.variables).toMatchObject({ document_identity_mismatch: true, docs_all_valid: false });
+    expect((await db.customer_documents.toArray()).every(doc => doc.is_valid === false)).toBe(true);
+    await aiService.processOcr(input);
+    expect((await db.process_state.get('pipeline'))?.variables.document_identity_mismatch).toBe(true);
+    await aiService.processOcr(input);
+    expect((await db.process_state.get('pipeline'))?.variables.document_identity_mismatch).toBe(false);
+    expect((await db.customer_documents.toArray()).every(doc => doc.is_valid === false)).toBe(true);
+    expect(provider).toHaveBeenCalledTimes(3);
+  });
   it('LIVE without key fails honestly and never switches to mock', async () => {
     aiService.updateConfig({ mode: 'LIVE', apiKey: '' });
     const local = vi.spyOn(LocalOcrProvider.prototype, 'processOcr');

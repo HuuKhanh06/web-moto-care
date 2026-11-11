@@ -13,6 +13,7 @@ import { compressImageToDataUrl } from '@/ai/images';
 import { OcrError, safeOcrError } from '@/ai/errors';
 import { AiOcrResponseSchema, type AiOcrResponse } from '@/ai/types';
 import { isValidBirthDate } from '@/ai/validation';
+import { documentNamesMismatch, IDENTITY_MISMATCH_MESSAGE } from '@/ai/documentIdentity';
 import type { RentalRequest, Vehicle, CustomerDocument, DocumentType } from '@/db/types';
 import {
   Card,
@@ -62,6 +63,7 @@ export function KH02Page() {
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
   const [ocrStatus, setOcrStatus] = useState<'IDLE' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('IDLE');
   const [ocrError, setOcrError] = useState('');
+  const [identityMismatch, setIdentityMismatch] = useState(false);
   const ocrLoading = ocrStatus === 'PROCESSING';
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCustomerConfirmed, setIsCustomerConfirmed] = useState(false);
@@ -88,6 +90,7 @@ export function KH02Page() {
     setIsEditingDetails(false); setUploadingType(null);
     setOcrStatus('IDLE');
     setOcrError('');
+    setIdentityMismatch(false);
     setIsCustomerConfirmed(false);
     setIsAppliedToProfile(false);
     setExtractedProfile(EMPTY_PROFILE);
@@ -102,6 +105,8 @@ export function KH02Page() {
   const getDoc = (type: DocumentType) => documents.find(d => d.doc_type === type);
 
   const applyOcrResponse = useCallback((res: AiOcrResponse, announce = false) => {
+    if (res.checks.name_consistency === 'MISMATCH') setIdentityMismatch(true);
+    else if (res.checks.name_consistency === 'PASS' && res.checks.required_fields_present) setIdentityMismatch(false);
     const profile = {
       fullName: res.documents.cccd?.full_name.value || '',
       idNumber: res.documents.cccd?.id_number.value || '',
@@ -120,7 +125,7 @@ export function KH02Page() {
       setOcrError('Chưa đọc đủ thông tin bắt buộc. Vui lòng đổi ảnh rõ nét hoặc kiểm tra và nhập các trường còn thiếu.');
     } else {
       setOcrStatus('COMPLETED');
-      setOcrError(res.checks.name_consistency === 'MISMATCH' ? 'Họ tên trên CCCD và bằng lái không khớp. Vui lòng đối chiếu lại giấy tờ.' : '');
+      setOcrError(res.checks.name_consistency === 'MISMATCH' ? IDENTITY_MISMATCH_MESSAGE : '');
       setIsAppliedToProfile(true);
       if (announce) toast.success('Đã đọc thông tin từ ảnh. Vui lòng đối chiếu và xác nhận bên dưới.');
     }
@@ -181,7 +186,10 @@ export function KH02Page() {
       const pState = await db.process_state.get(requestId);
       if (!current()) return;
       setRequest(req); setVehicle(foundVehicle); setDocuments(docs);
-      if (hasRequiredDocuments(docs) && docs.every(d => d.is_valid === true) && pState?.variables.customer_id_number) {
+      const mismatch = documentNamesMismatch(docs) || pState?.variables.document_identity_mismatch === true;
+      setIdentityMismatch(mismatch);
+      if (mismatch) setOcrError(IDENTITY_MISMATCH_MESSAGE);
+      if (!mismatch && hasRequiredDocuments(docs) && docs.every(d => d.is_valid === true) && pState?.variables.customer_id_number) {
         setExtractedProfile({
           fullName: String(pState.variables.customer_full_name || ''),
           idNumber: String(pState.variables.customer_id_number || ''),
@@ -238,7 +246,7 @@ export function KH02Page() {
         });
         const state = await db.process_state.get(uploadRequestId);
         if (state) {
-          const variables: Record<string, unknown> = { ...state.variables, docs_all_valid: false };
+          const variables: Record<string, unknown> = { ...state.variables, docs_all_valid: false, document_identity_mismatch: false };
           for (const key of ['customer_full_name', 'customer_id_number', 'customer_date_of_birth', 'customer_license_class', 'customer_address']) delete variables[key];
           await db.process_state.update(uploadRequestId, { variables });
         }
@@ -247,6 +255,7 @@ export function KH02Page() {
       const docs = await db.customer_documents.where('request_id').equals(uploadRequestId).toArray();
       if (!current()) return;
       attempt.current = '';
+      setIdentityMismatch(false);
       setDocuments(docs); setIsCustomerConfirmed(false); setIsAppliedToProfile(false);
       setExtractedProfile(EMPTY_PROFILE); setOcrError(''); setOcrStatus('IDLE');
       toast.success('Đã lưu ảnh giấy tờ.');
@@ -262,6 +271,7 @@ export function KH02Page() {
 
   const handleConfirmCustomerData = async () => {
     if (!requestId || ocrBusy.current || uploadBusy.current || confirmationBusy.current) return;
+    if (identityMismatch) { toast.warning(IDENTITY_MISMATCH_MESSAGE); return; }
     if (!extractedProfile.fullName.trim() || !/^0\d{11}$/.test(extractedProfile.idNumber) || !isValidBirthDate(extractedProfile.dob) || !extractedProfile.licenseClass.trim()) {
       toast.warning('Vui lòng kiểm tra họ tên, số CCCD 12 chữ số, ngày sinh và hạng bằng lái.');
       setIsEditingDetails(true); return;
@@ -275,6 +285,10 @@ export function KH02Page() {
         }
         const state = await db.process_state.get(requestId);
         if (!state) throw new OcrError('STORAGE_ERROR', 'Không tìm thấy trạng thái hồ sơ. Vui lòng tải lại trang.');
+        if (documentNamesMismatch(docs) || state.variables.document_identity_mismatch === true) {
+          setIdentityMismatch(true);
+          throw new OcrError('IDENTITY_MISMATCH', IDENTITY_MISMATCH_MESSAGE);
+        }
         if (currentActor?.id) await db.profiles.update(currentActor.id, { full_name: extractedProfile.fullName });
         await db.process_state.update(requestId, { variables: {
           ...state.variables, customer_full_name: extractedProfile.fullName, customer_id_number: extractedProfile.idNumber,
@@ -297,11 +311,17 @@ export function KH02Page() {
 
   const handleVerifyDocuments = async () => {
     if (!requestId || !currentActor || uploadBusy.current || ocrBusy.current || confirmationBusy.current) return;
+    if (identityMismatch) { toast.warning(IDENTITY_MISMATCH_MESSAGE); return; }
     if (!isCustomerConfirmed) { toast.warning('Vui lòng đối chiếu và xác nhận thông tin trước khi đặt cọc'); return; }
     if (!agreeTerms) { toast.warning('Vui lòng đồng ý với điều khoản dịch vụ và mức cọc 30%'); return; }
     setSubmitting(true);
     try {
       const docs = await db.customer_documents.where('request_id').equals(requestId).toArray();
+      const state = await db.process_state.get(requestId);
+      if (documentNamesMismatch(docs) || state?.variables.document_identity_mismatch === true) {
+        setIdentityMismatch(true); setIsCustomerConfirmed(false); setOcrError(IDENTITY_MISMATCH_MESSAGE);
+        return;
+      }
       if (hasRequiredDocuments(docs) && docs.every(d => d.is_valid === true) && imageSnapshot(docs) === imageSnapshot(documents)) {
         await engine.advance(requestId, 'M_CheckDocs', undefined, currentActor);
         navigate(`/kh/03?requestId=${requestId}`);
@@ -557,9 +577,9 @@ export function KH02Page() {
           </div>
         )}
 
-        {!ocrLoading && ocrError && !isCustomerConfirmed && (
+        {!ocrLoading && (ocrError || identityMismatch) && !isCustomerConfirmed && (
           <div role="alert" data-testid="ocr-error" className="p-4 rounded-xl border border-amber-200 bg-amber-50 space-y-3">
-            <p className="text-sm text-amber-900">{ocrError}</p>
+            <p className="text-sm text-amber-900">{identityMismatch ? IDENTITY_MISMATCH_MESSAGE : ocrError}</p>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" disabled={!isAllDocsReady || submitting || uploadingType !== null}
                 onClick={() => void triggerAutoOcr(documents, request, vehicle, true)}>Thử quét lại</Button>
@@ -666,7 +686,7 @@ export function KH02Page() {
                     variant="primary"
                     size="sm"
                     onClick={handleAcceptAi}
-                    disabled={submitting || uploadingType !== null}
+                    disabled={identityMismatch || submitting || uploadingType !== null}
                     data-testid="ai-accept"
                   >
                     Lưu thông tin
@@ -687,7 +707,7 @@ export function KH02Page() {
                   size="sm"
                   onClick={handleConfirmCustomerData}
                   loading={submitting}
-                  disabled={uploadingType !== null}
+                  disabled={identityMismatch || uploadingType !== null}
                   className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-4 py-2 shrink-0 cursor-pointer shadow-xs self-end sm:self-auto flex items-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
@@ -743,7 +763,7 @@ export function KH02Page() {
               variant="primary"
               size="md"
               loading={submitting}
-              disabled={!isAllDocsReady || ocrLoading || uploadingType !== null || !isCustomerConfirmed}
+              disabled={identityMismatch || !isAllDocsReady || ocrLoading || uploadingType !== null || !isCustomerConfirmed}
               data-testid="node-M_CheckDocs"
               onClick={handleVerifyDocuments}
               className="flex items-center gap-2 px-8 min-w-[200px]"
@@ -779,7 +799,7 @@ export function KH02Page() {
                 variant="primary"
                 size="md"
                 loading={submitting}
-                disabled={!isAllDocsReady || ocrLoading || uploadingType !== null || !isCustomerConfirmed}
+                disabled={identityMismatch || !isAllDocsReady || ocrLoading || uploadingType !== null || !isCustomerConfirmed}
                 data-testid="node-M_CheckDocs"
                 onClick={handleVerifyDocuments}
                 className="flex items-center gap-2 min-w-[140px]"

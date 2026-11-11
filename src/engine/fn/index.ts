@@ -11,6 +11,7 @@ import { integrations } from '@/integrations';
 import { getIntegrationConfig } from '@/config/integrations';
 import { aiService } from '@/ai';
 import type { AiOcrResponse } from '@/ai/types';
+import { documentNamesMismatch } from '@/ai/documentIdentity';
 import type { Actor, RentalRequest, Payment, Contract, Statement, Settlement } from '@/db/types';
 
 // ==============================================================
@@ -200,6 +201,11 @@ export async function fn_check_documents(
   }
 
   // Đã đối chiếu thủ công: không chạy OCR lần nữa khi khách chuyển sang cọc.
+  const state = await db.process_state.get(requestId);
+  if (!scenarioPreset && (documentNamesMismatch(docs) || state?.variables.document_identity_mismatch === true)) {
+    await logEvent(requestId, 'M_CheckDocs', 'CHECK_DOCS', actor, { allValid: false, reason: 'DOCUMENT_IDENTITY_MISMATCH' });
+    return { allValid: false };
+  }
   if (!scenarioPreset && docs.every(d => d.is_valid === true)) {
     await logEvent(requestId, 'M_CheckDocs', 'CHECK_DOCS', actor, { allValid: true, source: 'MANUAL_CONFIRMATION', uploaded_count: docs.length });
     return { allValid: true };
@@ -225,7 +231,9 @@ export async function fn_check_documents(
   // 3. Xử lý phân nhánh dựa trên routing.action và Business Rules
   let allValid = false;
 
-  if (ocrRes.routing.action === 'PREFILL_FOR_RULES') {
+  if (ocrRes.checks.name_consistency === 'MISMATCH') {
+    allValid = false;
+  } else if (ocrRes.routing.action === 'PREFILL_FOR_RULES') {
     // m >= X (0.95): Tự động điền dữ liệu cho Business Rules
     allValid = docs.every((d) => d.is_valid !== false);
   } else if (ocrRes.routing.action === 'MANUAL_REVIEW') {
