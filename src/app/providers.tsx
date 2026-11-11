@@ -5,6 +5,7 @@ import { ToastContainer } from '@/components/ui';
 import { DevPanel } from '@/components/DevPanel';
 import { useAuthStore } from '@/features/auth/authStore';
 import { db } from '@/db';
+import { dataAdapter } from '@/db/adapter';
 import { seedDatabase } from '@/db/seed';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { toast } from '@/components/ui/toastStore';
@@ -32,6 +33,8 @@ export function AppProviders({ children }: AppProvidersProps) {
         console.error('Auto seed check error:', err);
       }
       await restoreSession();
+      // Kích hoạt đồng bộ đám mây Supabase Realtime đa thiết bị
+      dataAdapter.startRealtimeSync();
     }
     initApp();
 

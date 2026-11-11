@@ -135,6 +135,13 @@ export function NV01Page() {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 3000);
+    const handleUpdate = () => loadData();
+    window.addEventListener('motocare_data_updated', handleUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('motocare_data_updated', handleUpdate);
+    };
   }, [loadData]);
 
   const filteredTasks = tasks.filter((item) => {

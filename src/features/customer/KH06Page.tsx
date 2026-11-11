@@ -74,6 +74,13 @@ export function KH06Page() {
 
   useEffect(() => {
     loadRequests();
+    const interval = setInterval(loadRequests, 3000);
+    const handleUpdate = () => loadRequests();
+    window.addEventListener('motocare_data_updated', handleUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('motocare_data_updated', handleUpdate);
+    };
   }, [loadRequests]);
 
   const handleReturnVehicle = async (requestId: string) => {

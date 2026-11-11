@@ -45,6 +45,13 @@ export function DashboardPage() {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 4000);
+    const handleUpdate = () => loadData();
+    window.addEventListener('motocare_data_updated', handleUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('motocare_data_updated', handleUpdate);
+    };
   }, []);
 
   const totalVehicles = vehicles.length;

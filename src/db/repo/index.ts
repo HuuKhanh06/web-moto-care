@@ -2,6 +2,7 @@
 // Tầng Repository: Thực thi kiểm tra quyền (Actor RLS) và các ràng buộc dữ liệu nghiệp vụ
 
 import { db } from '../index';
+import { dataAdapter } from '../adapter';
 import { clock } from '@/lib/clock';
 import type {
   Actor,
@@ -67,6 +68,7 @@ export async function logEvent(
   };
 
   await db.process_events.add(event);
+  void dataAdapter.pushToCloud('process_events', event);
   return event;
 }
 
@@ -109,6 +111,7 @@ export const scheduleRepo = {
     };
 
     await db.vehicle_schedule.add(schedule);
+    void dataAdapter.pushToCloud('vehicle_schedule', schedule);
     return schedule;
   },
 
@@ -142,6 +145,7 @@ export const inspectionRepo = {
     };
 
     await db.inspections.add(inspection);
+    void dataAdapter.pushToCloud('inspections', inspection);
     return inspection;
   },
 };
@@ -171,6 +175,7 @@ export const handoverRepo = {
     };
 
     await db.handovers.add(handover);
+    void dataAdapter.pushToCloud('handovers', handover);
     return handover;
   },
 };
@@ -208,6 +213,7 @@ export const paymentRepo = {
     };
 
     await db.payments.add(payment);
+    void dataAdapter.pushToCloud('payments', payment);
     return payment;
   },
 
@@ -237,6 +243,11 @@ export const paymentRepo = {
       paid_amount: paidAmount,
       paid_at: clock.nowISO(),
     });
+
+    const updated = await db.payments.get(paymentId);
+    if (updated) {
+      void dataAdapter.pushToCloud('payments', updated);
+    }
   },
 };
 
@@ -259,6 +270,10 @@ export const rentalRepo = {
   async updateStatus(actor: Actor, id: string, status: RentalRequest['status']): Promise<void> {
     assertRole(actor, ['nhan_vien', 'quan_ly', 'khach_hang', 'system']);
     await db.rental_requests.update(id, { status });
+    const updated = await db.rental_requests.get(id);
+    if (updated) {
+      void dataAdapter.pushToCloud('rental_requests', updated);
+    }
   },
 
   async getAll(actor: Actor): Promise<RentalRequest[]> {
@@ -284,5 +299,9 @@ export const vehicleRepo = {
   async updateStatus(actor: Actor, id: string, status: Vehicle['status']): Promise<void> {
     assertRole(actor, ['nhan_vien', 'quan_ly', 'system']);
     await db.vehicles.update(id, { status });
+    const updated = await db.vehicles.get(id);
+    if (updated) {
+      void dataAdapter.pushToCloud('vehicles', updated);
+    }
   },
 };

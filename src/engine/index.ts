@@ -9,6 +9,7 @@ import { timerManager } from './timers';
 import { BUSINESS_RULES } from '@/config/rules';
 import { integrations } from '@/integrations';
 import { isVehicleFree } from './fleet';
+import { dataAdapter, STATUS_TO_NODES } from '@/db/adapter';
 import type { Actor, ProcessEvent, ProcessState } from '@/db/types';
 
 import {
@@ -163,6 +164,8 @@ export class ProcessEngine {
       updated_at: clock.nowISO(),
     };
     await db.process_state.put(state);
+    void dataAdapter.pushToCloud('rental_requests', request);
+    void dataAdapter.pushProcessStateToCloud(state, actor.id);
 
     // Chạy tiếp từ M_START
     await this.advance(request.id, 'M_START', undefined, actor);
@@ -356,9 +359,18 @@ export class ProcessEngine {
         waiting_node_ids: waitingNodeIds,
         updated_at: clock.nowISO(),
       });
+      const updatedState = await db.process_state.get(requestId);
+      if (updatedState) {
+        void dataAdapter.pushProcessStateToCloud(updatedState, actor.id);
+      }
     }
 
     await logEvent(requestId, nodeId, 'ENTER_WAIT_POINT', actor);
+
+    const req = await db.rental_requests.get(requestId);
+    if (req) {
+      void dataAdapter.pushToCloud('rental_requests', req);
+    }
 
     // Đăng ký timer boundary nếu có
     if (nodeId === 'M_WaitDeposit') {
@@ -387,9 +399,27 @@ export class ProcessEngine {
     payload: Record<string, unknown> = {},
     actor: Actor
   ): Promise<void> {
-    const state = await db.process_state.get(requestId);
+    let state = await db.process_state.get(requestId);
+    const req = await db.rental_requests.get(requestId);
+
     if (!state || !state.waiting_node_ids.includes(nodeId)) {
-      throw new Error(`[ProcessEngine] Nút '${nodeId}' hiện không nằm trong danh sách đang chờ của hồ sơ ${requestId}`);
+      if (req && STATUS_TO_NODES[req.status]?.includes(nodeId)) {
+        if (!state) {
+          state = {
+            request_id: requestId,
+            waiting_node_ids: [nodeId],
+            loop_counters: {},
+            variables: { preferred_vehicle_type: 'xe_so' },
+            updated_at: clock.nowISO(),
+          };
+          await db.process_state.put(state);
+        } else if (!state.waiting_node_ids.includes(nodeId)) {
+          state.waiting_node_ids.push(nodeId);
+          await db.process_state.put(state);
+        }
+      } else {
+        throw new Error(`[ProcessEngine] Nút '${nodeId}' hiện không nằm trong danh sách đang chờ của hồ sơ ${requestId}`);
+      }
     }
 
     // Kiểm tra phân quyền Actor
@@ -745,6 +775,11 @@ export class ProcessEngine {
 
     await logEvent(requestId, nodeId, 'COMPLETE_TASK', actor, payload);
     await db.process_state.put(state);
+    void dataAdapter.pushProcessStateToCloud(state, actor.id);
+    const updatedReq = await db.rental_requests.get(requestId);
+    if (updatedReq) {
+      void dataAdapter.pushToCloud('rental_requests', updatedReq);
+    }
 
     // Tiếp tục chạy quy trình
     await this.advance(requestId, nodeId, outcome, actor);
@@ -1230,6 +1265,14 @@ export class ProcessEngine {
       waiting_node_ids: [],
       updated_at: clock.nowISO(),
     });
+    const endState = await db.process_state.get(requestId);
+    if (endState) {
+      void dataAdapter.pushProcessStateToCloud(endState, actor.id);
+    }
+    const endReq = await db.rental_requests.get(requestId);
+    if (endReq) {
+      void dataAdapter.pushToCloud('rental_requests', endReq);
+    }
 
     await logEvent(requestId, endNodeId, 'END_PROCESS', actor);
 

@@ -99,7 +99,14 @@ export function FleetTimeline({
   useEffect(() => {
     loadData();
     const unsub = dataAdapter.subscribeMode(() => loadData());
-    return unsub;
+    const interval = setInterval(loadData, 4000);
+    const handleUpdate = () => loadData();
+    window.addEventListener('motocare_data_updated', handleUpdate);
+    return () => {
+      unsub();
+      clearInterval(interval);
+      window.removeEventListener('motocare_data_updated', handleUpdate);
+    };
   }, []);
 
   // Danh sách các ngày trong phạm vi xem
