@@ -26,6 +26,7 @@ import { KH09Page } from '@/features/customer/KH09Page';
 import { KH10Page } from '@/features/customer/KH10Page';
 import { NV01Page } from '@/features/staff/NV01Page';
 import { NV02Page } from '@/features/staff/NV02Page';
+import { NVDocumentsPage } from '@/features/staff/NVDocumentsPage';
 import { NV03Page } from '@/features/staff/NV03Page';
 import { NV04Page } from '@/features/staff/NV04Page';
 import { NV05Page } from '@/features/staff/NV05Page';
@@ -208,6 +209,7 @@ export function AppRouter() {
         <Route index element={<Navigate to="/nv/01" replace />} />
         <Route path="01" element={<NV01Page />} />
         <Route path="02" element={<NV02Page />} />
+        <Route path="documents" element={<NVDocumentsPage />} />
         <Route path="03" element={<NV03Page />} />
         <Route path="04" element={<NV04Page />} />
         <Route path="05" element={<NV05Page />} />

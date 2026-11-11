@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { engine } from '@/engine';
 import { db } from '@/db';
+import { dataAdapter } from '@/db/adapter';
 import type { RentalRequest, Profile, Vehicle } from '@/db/types';
 import {
   Card,
@@ -35,6 +36,7 @@ interface TaskItem {
 }
 
 const NODE_TO_SCREEN_MAP: Record<string, string> = {
+  M_CheckDocs: '/nv/documents',
   M_ManualDeposit: '/nv/02',
   M_InspectPre: '/nv/03',
   M_Rework: '/nv/03',
@@ -53,6 +55,7 @@ const NODE_TO_SCREEN_MAP: Record<string, string> = {
 };
 
 const TASK_HUMAN_NAMES: Record<string, string> = {
+  M_CheckDocs: 'Kiểm tra hồ sơ giấy tờ',
   M_ManualDeposit: 'Đối soát tiền cọc',
   M_InspectPre: 'Kiểm tra xe',
   M_Rework: 'Khắc phục kỹ thuật',
@@ -78,9 +81,10 @@ export function NV01Page() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (refreshCloud = false, silent = false) => {
+    if (!silent) setLoading(true);
     try {
+      if (refreshCloud) await dataAdapter.syncCloudToLocal();
       const pendingRaw = await engine.getPendingTasks('nhan_vien');
 
       let managerTasks: Array<{ request_id: string; node_id: string; node_name: string }> = [];
@@ -129,14 +133,14 @@ export function NV01Page() {
     } catch (err) {
       console.error('Lỗi tải danh sách việc cần làm:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [isManager]);
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 3000);
-    const handleUpdate = () => loadData();
+    void loadData(true);
+    const interval = setInterval(() => { void loadData(true, true); }, 15000);
+    const handleUpdate = () => { void loadData(false, true); };
     window.addEventListener('motocare_data_updated', handleUpdate);
     return () => {
       clearInterval(interval);
@@ -181,7 +185,7 @@ export function NV01Page() {
         <Button
           variant="outline"
           size="sm"
-          onClick={loadData}
+          onClick={() => void loadData(true)}
           loading={loading}
           title="Làm mới danh sách"
           className="self-start sm:self-auto shrink-0"

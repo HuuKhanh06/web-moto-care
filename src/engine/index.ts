@@ -1303,12 +1303,15 @@ export class ProcessEngine {
     const tasks: Array<{ request_id: string; node_id: string; node_name: string }> = [];
 
     for (const s of states) {
+      const req = await db.rental_requests.get(s.request_id);
+      if (!req) continue;
       if (role === 'khach_hang') {
-        const req = await db.rental_requests.get(s.request_id);
         if (req && customerId && req.customer_id !== customerId) continue;
       }
 
       for (const nodeId of s.waiting_node_ids) {
+        if (['HOAN_TAT', 'DA_HUY', 'TU_CHOI'].includes(req.status) && !(role === 'khach_hang' && nodeId === 'M_ConfirmRefund')) continue;
+        if (nodeId === 'M_CheckDocs' && !['MOI', 'CHO_HO_SO'].includes(req.status)) continue;
         const allowedRoles = TASK_ROLE_MAP[nodeId] || [];
         if (allowedRoles.includes(role)) {
           const node = bpmnGraph.getNode(nodeId);
