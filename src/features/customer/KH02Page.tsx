@@ -442,13 +442,6 @@ export function KH02Page() {
           </span>
         </div>
 
-        {import.meta.env.VITE_OCR_ENDPOINT && (
-          <label className="flex items-start gap-2 text-sm text-slate-700 p-3 rounded-lg bg-slate-50">
-            <input type="checkbox" checked={allowCloudOcr} disabled={ocrLoading}
-              onChange={e => setAllowCloudOcr(e.target.checked)} className="mt-1" />
-            <span>Tôi đồng ý gửi ảnh giấy tờ đến Google Gemini để tự động điền thông tin hồ sơ. Vui lòng tải ảnh rõ nét, chữ đúng chiều.</span>
-          </label>
-        )}
         {import.meta.env.VITE_OCR_ENDPOINT && !allowCloudOcr && hasRequiredDocuments(documents) && (
           <Button size="sm" variant="outline" onClick={() => { setIsAppliedToProfile(true); setIsEditingDetails(true); }}>Nhập thông tin thủ công</Button>
         )}
@@ -720,7 +713,14 @@ export function KH02Page() {
         )}
 
         {/* Cam kết điều khoản */}
-        <div className="pt-2 border-t border-slate-100">
+        <div className="pt-2 border-t border-slate-100 space-y-3">
+          {import.meta.env.VITE_OCR_ENDPOINT && (
+            <label className="flex items-start gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
+              <input type="checkbox" checked={allowCloudOcr} disabled={ocrLoading}
+                onChange={e => setAllowCloudOcr(e.target.checked)} className="mt-1 rounded text-teal-600 focus:ring-teal-500" />
+              <span>Tôi đồng ý gửi ảnh để tự động điền thông tin hồ sơ</span>
+            </label>
+          )}
           <label className="flex items-start gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
             <input
               type="checkbox"

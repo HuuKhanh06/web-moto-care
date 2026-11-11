@@ -62,7 +62,7 @@ describe('KH-02 OCR lifecycle (controlled provider, real test IndexedDB)', () =>
   it('chỉ gửi ảnh lên backend sau khi khách đồng ý, vẫn cho phép nhập thủ công', async () => {
     vi.stubEnv('VITE_OCR_ENDPOINT', 'https://project.test/functions/v1/document-ocr');
     mount();
-    const consent = await screen.findByRole('checkbox', { name: /Tôi đồng ý gửi ảnh giấy tờ/ });
+    const consent = await screen.findByRole('checkbox', { name: 'Tôi đồng ý gửi ảnh để tự động điền thông tin hồ sơ' });
     expect(consent).not.toBeChecked();
     expect(aiService.processOcr).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Nhập thông tin thủ công' })).toBeEnabled();
