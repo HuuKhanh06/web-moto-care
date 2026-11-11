@@ -428,6 +428,11 @@ export class ProcessEngine {
       throw new Error(`[ProcessEngine] Vai trò '${actor.role}' không có quyền thực hiện tác vụ '${nodeId}'.`);
     }
 
+    // Cô lập dữ liệu: Khách hàng chỉ được thao tác trên hồ sơ của chính mình
+    if (actor.role === 'khach_hang' && req && req.customer_id !== actor.id) {
+      throw new Error(`[ProcessEngine] Khách hàng không sở hữu hồ sơ ${requestId}.`);
+    }
+
     // Hủy timer biên nếu có
     if (nodeId === 'M_WaitDeposit') {
       await timerManager.cancelTimer(requestId, 'M_BoundDeposit');

@@ -27,16 +27,26 @@ export function AppProviders({ children }: AppProvidersProps) {
         const legacyCustomer = await db.auth_accounts.where('email').equalsIgnoreCase('khachhang1@gmail.com').first();
         if (count === 0 || vCount < 30 || legacyCustomer) {
           console.log(`[AutoSync] Khởi tạo dữ liệu sạch (30 xe, 3 tài khoản vận hành)`);
-          await seedDatabase();
+          // Dữ liệu mẫu chỉ nạp vào máy cục bộ, không ghi đè dữ liệu thật trên cloud
+          await dataAdapter.withoutCloudSync(() => seedDatabase());
         }
       } catch (err) {
         console.error('Auto seed check error:', err);
       }
       await restoreSession();
+      // Phạm vi đồng bộ theo phiên (cô lập dữ liệu khách hàng) trước khi kéo dữ liệu
+      const actor = useAuthStore.getState().currentActor;
+      dataAdapter.setSyncScope(actor ? { role: actor.role, id: actor.id } : null);
       // Kích hoạt đồng bộ đám mây Supabase Realtime đa thiết bị
       dataAdapter.startRealtimeSync();
     }
     initApp();
+
+    // Cập nhật phạm vi đồng bộ mỗi khi đăng nhập / đăng xuất / đổi tài khoản
+    const unsubscribeAuth = useAuthStore.subscribe((s) => {
+      const a = s.currentActor;
+      dataAdapter.setSyncScope(a ? { role: a.role, id: a.id } : null);
+    });
 
     // 2. Đăng ký Service Worker cho PWA
     if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -75,9 +85,11 @@ export function AppProviders({ children }: AppProvidersProps) {
         .subscribe();
 
       return () => {
+        unsubscribeAuth();
         activeClient.removeChannel(channel);
       };
     }
+    return unsubscribeAuth;
   }, [restoreSession]);
 
   return (

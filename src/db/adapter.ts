@@ -1,7 +1,17 @@
 // src/db/adapter.ts
-// Dual-Mode Adapter: Điều phối luồng dữ liệu thông minh giữa Dexie (IndexedDB) và Supabase (PostgreSQL Cloud)
-// Hỗ trợ đồng bộ đa thiết bị thời gian thực (Multi-Device Realtime Cloud Sync)
+// KIẾN TRÚC ĐỒNG BỘ ĐÁM MÂY 2 LỚP (HYBRID CLOUD STATE ARCHITECTURE)
+//
+//  Lớp 1 - LOCAL (Dexie/IndexedDB): nguồn dữ liệu tức thời cho UI (useLiveQuery), hoạt động cả khi offline.
+//  Lớp 2 - CLOUD (Supabase/PostgreSQL): nguồn chân lý dùng chung giữa các thiết bị.
+//
+//  • ĐẨY LÊN (Local → Cloud): Dexie hooks bắt MỌI thao tác add/put/update/delete trên các bảng nghiệp vụ,
+//    gom vào Outbox (lưu localStorage, chống mất khi offline/F5) rồi đẩy theo lô sau ~40ms.
+//  • KÉO VỀ (Cloud → Local): Realtime postgres_changes (INSERT/UPDATE/DELETE trên mọi bảng) + Broadcast,
+//    kèm đối soát toàn phần định kỳ 30s / khi có mạng lại. Ghi từ cloud được đánh dấu "remote" để không đẩy ngược.
+//  • CÔ LẬP DỮ LIỆU: Khi phiên là khách hàng, chỉ kéo hồ sơ của chính khách đó (đơn khác chỉ lấy cột
+//    phục vụ kiểm tra xe trống, không có thông tin cá nhân) và dọn dữ liệu nhạy cảm không thuộc về họ.
 
+import Dexie, { type Table } from 'dexie';
 import { db } from './index';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { RentalRequest, Vehicle, ProcessState } from './types';
@@ -25,12 +35,81 @@ export const STATUS_TO_NODES: Record<string, string[]> = {
   CHO_DANH_GIA_XE: ['M_CheckReady'],
 };
 
+/** Các bảng nghiệp vụ được đồng bộ 2 chiều tự động (khóa chính đều là `id`). */
+export const SYNCED_TABLES = [
+  'profiles',
+  'vehicles',
+  'rental_requests',
+  'customer_documents',
+  'payments',
+  'contracts',
+  'vehicle_schedule',
+  'inspections',
+  'handovers',
+  'damage_findings',
+  'statements',
+  'settlements',
+  'extension_requests',
+  'partners',
+  'incidents',
+  'incident_dispatches',
+  'maintenance_orders',
+  'notifications',
+  'process_events',
+] as const;
+type SyncedTable = (typeof SYNCED_TABLES)[number];
+const SYNCED_SET = new Set<string>(SYNCED_TABLES);
+
+/** Bảng con gắn với hồ sơ thuê qua cột `request_id` (dùng để cô lập dữ liệu khách hàng). */
+const REQUEST_SCOPED: SyncedTable[] = [
+  'customer_documents',
+  'payments',
+  'contracts',
+  'inspections',
+  'handovers',
+  'damage_findings',
+  'statements',
+  'settlements',
+  'extension_requests',
+  'incidents',
+  'maintenance_orders',
+  'process_events',
+];
+/** Bảng dùng chung, không chứa thông tin cá nhân → mọi vai trò đều được kéo đầy đủ. */
+const PUBLIC_TABLES: SyncedTable[] = ['vehicles', 'partners', 'vehicle_schedule'];
+/** Cột tối thiểu của đơn thuê người khác, đủ cho kiểm tra xe trống (engine/fleet.ts). */
+const RENTAL_PUBLIC_COLUMNS = 'id,customer_id,vehicle_id,status,start_at,end_at,created_at';
+
+const PROCESS_STATE = 'process_state';
+const OUTBOX_KEY = 'motocare_sync_outbox';
+const FULL_SYNC_INTERVAL_MS = 30_000;
+const FLUSH_DELAY_MS = 40;
+const REMOTE_FLAG = '__motocareRemote';
+
+export interface SyncScope {
+  role: 'khach_hang' | 'nhan_vien' | 'quan_ly' | 'system';
+  id: string;
+}
+
+type OutboxOp = { table: string; key: string; op: 'upsert' | 'delete' };
+type Row = Record<string, any>;
+
 class DataAdapter {
   private currentMode: DataSourceMode = 'DEMO';
   private listeners: ((mode: DataSourceMode) => void)[] = [];
   private realtimeChannel: any = null;
   private pollInterval: any = null;
   private isSyncing = false;
+  private resyncRequested = false;
+
+  private scope: SyncScope | null = null;
+  private outbox = new Map<string, OutboxOp>();
+  private flushTimer: any = null;
+  private isFlushing = false;
+  private hooksInstalled = false;
+  private suppressDepth = 0;
+  private processStateTableAvailable = true;
+  private updateEventTimer: any = null;
 
   constructor() {
     if (import.meta.env.MODE === 'test') {
@@ -47,19 +126,27 @@ class DataAdapter {
       this.currentMode = 'DEMO';
     }
 
+    this.loadOutbox();
+    this.installSyncHooks();
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => this.handleNetworkChange());
       window.addEventListener('offline', () => this.handleNetworkChange());
     }
   }
 
+  private get cloudEnabled(): boolean {
+    return import.meta.env.MODE !== 'test' && isSupabaseConfigured && !!supabase && this.currentMode === 'LIVE';
+  }
+
   private handleNetworkChange() {
     if (!navigator.onLine && this.currentMode === 'LIVE') {
-      console.warn('[DataAdapter] Mất kết nối Internet -> Tự động chuyển về chế độ DEMO (Dexie)');
-      this.setMode('DEMO');
+      // Giữ nguyên chế độ LIVE: thao tác offline được ghi vào Outbox và đẩy lên khi có mạng lại.
+      console.warn('[DataAdapter] Mất kết nối Internet -> Ghi cục bộ, chờ đồng bộ (Outbox).');
     } else if (navigator.onLine && isSupabaseConfigured) {
-      console.log('[DataAdapter] Đã có mạng -> Kích hoạt chế độ LIVE (Supabase Cloud)');
-      this.setMode('LIVE');
+      console.log('[DataAdapter] Đã có mạng -> Đẩy Outbox và đối soát dữ liệu đám mây');
+      if (this.currentMode !== 'LIVE') this.setMode('LIVE');
+      this.scheduleFlush();
       void this.syncCloudToLocal();
     }
   }
@@ -87,6 +174,63 @@ class DataAdapter {
     this.listeners.forEach((l) => l(this.currentMode));
   }
 
+  /** Số thao tác cục bộ đang chờ đẩy lên cloud (hiển thị trạng thái đồng bộ). */
+  public getPendingCount(): number {
+    return this.outbox.size;
+  }
+
+  // ===========================================================================
+  // PHÂN QUYỀN & CÔ LẬP DỮ LIỆU: phạm vi đồng bộ theo phiên đăng nhập
+  // ===========================================================================
+  public setSyncScope(scope: SyncScope | null) {
+    const changed = this.scope?.id !== scope?.id || this.scope?.role !== scope?.role;
+    this.scope = scope;
+    if (!changed) return;
+    if (scope?.role === 'khach_hang') {
+      void this.purgeForeignCustomerData(scope.id);
+    }
+    void this.syncCloudToLocal();
+  }
+
+  private isCustomerScope(): boolean {
+    return this.scope?.role === 'khach_hang';
+  }
+
+  /** Dọn dữ liệu nhạy cảm (hồ sơ, giấy tờ, thanh toán...) không thuộc khách đang đăng nhập khỏi máy. */
+  private async purgeForeignCustomerData(customerId: string) {
+    try {
+      const own = await db.rental_requests.where('customer_id').equals(customerId).primaryKeys();
+      const ownIds = new Set(own);
+      await this.applyRemote(async () => {
+        for (const t of REQUEST_SCOPED) {
+          await (db.table(t) as Table<Row, string>).filter((r) => !!r.request_id && !ownIds.has(r.request_id)).delete();
+        }
+        await db.process_state.filter((s) => !ownIds.has(s.request_id)).delete();
+        await db.notifications.filter((n) => !!n.user_id && n.user_id !== customerId).delete();
+        await db.profiles.filter((p) => p.id !== customerId && p.role === 'khach_hang').delete();
+        await db.incident_dispatches.clear();
+      }, [...REQUEST_SCOPED, 'process_state', 'notifications', 'profiles', 'incident_dispatches']);
+    } catch (err) {
+      console.warn('[DataAdapter] Lỗi dọn dữ liệu ngoài phạm vi khách hàng:', err);
+    }
+  }
+
+  /** Kiểm tra một bản ghi từ cloud có thuộc phạm vi phiên hiện tại không. */
+  private async inScope(table: string, row: Row): Promise<boolean> {
+    if (!this.isCustomerScope() || !this.scope) return true;
+    const me = this.scope.id;
+    if ((PUBLIC_TABLES as string[]).includes(table)) return true;
+    if (table === 'rental_requests') return row.customer_id === me;
+    if (table === 'profiles') return row.id === me || row.role !== 'khach_hang';
+    if (table === 'notifications') return row.user_id === me;
+    if (table === 'incident_dispatches') return !!(row.incident_id && (await db.incidents.get(row.incident_id)));
+    if (row.request_id) {
+      const req = await db.rental_requests.get(row.request_id);
+      return req?.customer_id === me;
+    }
+    return false;
+  }
+
   // --- 1. LẤY DANH SÁCH XE ---
   public async getVehicles(): Promise<Vehicle[]> {
     if (this.currentMode === 'LIVE' && supabase) {
@@ -103,7 +247,7 @@ class DataAdapter {
 
   // --- 2. LẤY DANH SÁCH ĐƠN THUÊ (CHO TIMELINE GANTT) ---
   public async getRentalRequests(): Promise<RentalRequest[]> {
-    if (this.currentMode === 'LIVE' && supabase) {
+    if (this.currentMode === 'LIVE' && supabase && !this.isCustomerScope()) {
       try {
         const { data, error } = await supabase.from('rental_requests').select('*').order('start_at', { ascending: false });
         if (error) throw error;
@@ -115,292 +259,437 @@ class DataAdapter {
     return db.rental_requests.toArray();
   }
 
-  // --- 3. ĐỒNG BỘ MỘT BẢN GHI LÊN CLOUD SUPABASE (PUSH TỨC THÌ) ---
-  public async pushToCloud(table: string, record: any): Promise<void> {
-    if (import.meta.env.MODE === 'test' || !isSupabaseConfigured || !supabase || this.currentMode !== 'LIVE') return;
-    try {
-      const conflictCol = table === 'auth_accounts' ? 'user_id' : 'id';
-      const { error } = await supabase.from(table).upsert(record, { onConflict: conflictCol });
-      if (error) {
-        console.warn(`[DataAdapter] Lỗi push ${table} lên Supabase:`, error.message);
-      } else {
-        this.broadcastChange(table, record.id || record.request_id || record.user_id);
-      }
-    } catch (err) {
-      console.warn(`[DataAdapter] Ngoại lệ push ${table}:`, err);
-    }
-  }
+  // ===========================================================================
+  // LỚP ĐẨY LÊN: Dexie hooks → Outbox → Supabase
+  // ===========================================================================
+  private installSyncHooks() {
+    if (this.hooksInstalled) return;
+    this.hooksInstalled = true;
+    const self = this;
+    const skip = (trans: unknown) => self.suppressDepth > 0 || !!(trans as any)[REMOTE_FLAG];
 
-  // --- 4. ĐỒNG BỘ TRẠNG THÁI TIẾN TRÌNH BPMN (PROCESS_STATE) LÊN CLOUD ---
-  public async pushProcessStateToCloud(state: ProcessState, actorId?: string): Promise<void> {
-    if (import.meta.env.MODE === 'test' || !isSupabaseConfigured || !supabase || this.currentMode !== 'LIVE') return;
-    try {
-      // 1. Thử đẩy vào bảng audit_logs với table_name = 'process_state' (chắc chắn thành công 100%)
-      await supabase.from('audit_logs').insert({
-        table_name: 'process_state',
-        record_id: state.request_id,
-        action: 'UPSERT',
-        new_data: state,
-        actor_id: actorId || null,
+    for (const name of [...SYNCED_TABLES, PROCESS_STATE]) {
+      const table = db.table(name);
+      const keyPath = (table.schema.primKey.keyPath as string) || 'id';
+
+      table.hook('creating', function (primKey, obj, trans) {
+        if (skip(trans)) return;
+        const key = (primKey ?? (obj as Row)[keyPath]) as string;
+        if (key) trans.on('complete', () => self.enqueue(name, key, 'upsert'));
       });
-
-      // 2. Thử đẩy vào bảng process_state (nếu đã tạo bảng)
-      try {
-        await supabase.from('process_state').upsert(state, { onConflict: 'request_id' });
-      } catch {
-        // bỏ qua nếu chưa tạo bảng riêng
-      }
-
-      this.broadcastChange('process_state', state.request_id);
-    } catch (err) {
-      console.warn('[DataAdapter] Lỗi push process_state lên cloud:', err);
+      table.hook('updating', function (_mods, primKey, _obj, trans) {
+        if (skip(trans)) return;
+        trans.on('complete', () => self.enqueue(name, primKey as string, 'upsert'));
+      });
+      table.hook('deleting', function (primKey, _obj, trans) {
+        if (skip(trans)) return;
+        // process_state không xóa trên cloud (lịch sử nằm trong audit_logs)
+        if (name === PROCESS_STATE) return;
+        trans.on('complete', () => self.enqueue(name, primKey as string, 'delete'));
+      });
     }
   }
 
-  // --- 5. PHÁT THÔNG ĐIỆP REALTIME ĐẾN CÁC THIẾT BỊ KHÁC ---
-  public broadcastChange(table: string, id?: string) {
-    if (this.realtimeChannel) {
-      try {
-        void this.realtimeChannel.send({
-          type: 'broadcast',
-          event: 'STATE_CHANGED',
-          payload: { table, id, time: Date.now() },
-        });
-      } catch {
-        // bỏ qua
-      }
+  /** Chạy thao tác chỉ ghi cục bộ, KHÔNG đẩy lên cloud (VD: nạp dữ liệu mẫu khi khởi tạo máy mới). */
+  public async withoutCloudSync<T>(fn: () => Promise<T>): Promise<T> {
+    this.suppressDepth++;
+    try {
+      return await fn();
+    } finally {
+      this.suppressDepth--;
     }
   }
 
-  // --- 6. TẢI DỮ LIỆU TỪ SUPABASE CLOUD VỀ TRÌNH DUYỆT (SYNC XUỐNG DEXIE) ---
-  public async syncCloudToLocal(): Promise<void> {
-    if (import.meta.env.MODE === 'test' || !isSupabaseConfigured || !supabase || this.currentMode !== 'LIVE' || this.isSyncing) return;
-    this.isSyncing = true;
+  private enqueue(table: string, key: string, op: 'upsert' | 'delete') {
+    if (!key) return;
+    this.outbox.set(`${table}::${key}`, { table, key, op });
+    this.saveOutbox();
+    this.scheduleFlush();
+  }
+
+  private loadOutbox() {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(OUTBOX_KEY) : null;
+      if (raw) for (const op of JSON.parse(raw) as OutboxOp[]) this.outbox.set(`${op.table}::${op.key}`, op);
+    } catch {
+      // Outbox hỏng -> bỏ qua
+    }
+  }
+
+  private saveOutbox() {
+    try {
+      localStorage.setItem(OUTBOX_KEY, JSON.stringify([...this.outbox.values()]));
+    } catch {
+      // bỏ qua (quota / private mode)
+    }
+  }
+
+  private scheduleFlush() {
+    if (this.flushTimer || !this.cloudEnabled) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      void this.flushOutbox();
+    }, FLUSH_DELAY_MS);
+  }
+
+  /** Đẩy toàn bộ Outbox lên cloud theo lô; thao tác lỗi được giữ lại để thử lại. */
+  public async flushOutbox(): Promise<void> {
+    if (!this.cloudEnabled || this.isFlushing || this.outbox.size === 0) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    this.isFlushing = true;
+
+    const batch = [...this.outbox.entries()];
+    const done: string[] = [];
+    const changed: { table: string; id: string }[] = [];
 
     try {
-      const [
-        profilesRes,
-        vehiclesRes,
-        rentalsRes,
-        docsRes,
-        paymentsRes,
-        contractsRes,
-        schedulesRes,
-        inspectionsRes,
-        handoversRes,
-        findingsRes,
-        statementsRes,
-        settlementsRes,
-        extensionsRes,
-        partnersRes,
-        incidentsRes,
-        dispatchesRes,
-        maintenanceRes,
-        notificationsRes,
-        eventsRes,
-        stateLogsRes,
-      ] = await Promise.all([
-        supabase.from('profiles').select('*'),
-        supabase.from('vehicles').select('*'),
-        supabase.from('rental_requests').select('*'),
-        supabase.from('customer_documents').select('*'),
-        supabase.from('payments').select('*'),
-        supabase.from('contracts').select('*'),
-        supabase.from('vehicle_schedule').select('*'),
-        supabase.from('inspections').select('*'),
-        supabase.from('handovers').select('*'),
-        supabase.from('damage_findings').select('*'),
-        supabase.from('statements').select('*'),
-        supabase.from('settlements').select('*'),
-        supabase.from('extension_requests').select('*'),
-        supabase.from('partners').select('*'),
-        supabase.from('incidents').select('*'),
-        supabase.from('incident_dispatches').select('*'),
-        supabase.from('maintenance_orders').select('*'),
-        supabase.from('notifications').select('*'),
-        supabase.from('process_events').select('*'),
-        supabase.from('audit_logs').select('*').eq('table_name', 'process_state').order('created_at', { ascending: false }),
-      ]);
-
-      // Nạp vào Dexie với bulkPut để cập nhật hoặc thêm mới không làm mất khóa
-      if (profilesRes.data && profilesRes.data.length > 0) {
-        await db.profiles.bulkPut(profilesRes.data);
+      // Gom theo bảng
+      const groups = new Map<string, { upserts: string[]; deletes: string[]; entries: string[] }>();
+      for (const [k, op] of batch) {
+        const g = groups.get(op.table) ?? { upserts: [], deletes: [], entries: [] };
+        (op.op === 'upsert' ? g.upserts : g.deletes).push(op.key);
+        g.entries.push(k);
+        groups.set(op.table, g);
       }
-      if (vehiclesRes.data && vehiclesRes.data.length > 0) {
-        await db.vehicles.bulkPut(vehiclesRes.data);
-      }
-      if (rentalsRes.data && rentalsRes.data.length > 0) {
-        await db.rental_requests.bulkPut(rentalsRes.data);
 
-        // Khôi phục process_state cho những đơn thiếu state
-        for (const req of rentalsRes.data as RentalRequest[]) {
-          const existingState = await db.process_state.get(req.id);
-          if (!existingState) {
-            const fallbackNodes = STATUS_TO_NODES[req.status] || [];
-            if (fallbackNodes.length > 0) {
-              await db.process_state.put({
-                request_id: req.id,
-                waiting_node_ids: fallbackNodes,
-                loop_counters: {},
-                variables: { preferred_vehicle_type: 'xe_so' },
-                updated_at: (req as any).updated_at || new Date().toISOString(),
-              });
+      for (const [table, g] of groups) {
+        if (table === PROCESS_STATE) {
+          const states = (await db.process_state.bulkGet(g.upserts)).filter(Boolean) as ProcessState[];
+          let ok = true;
+          for (const st of states) ok = (await this.writeProcessState(st)) && ok;
+          if (ok) {
+            done.push(...g.entries);
+            states.forEach((s) => changed.push({ table, id: s.request_id }));
+          }
+          continue;
+        }
+
+        let ok = true;
+        if (g.upserts.length > 0) {
+          const rows = ((await db.table(table).bulkGet(g.upserts)) as (Row | undefined)[]).filter(Boolean) as Row[];
+          if (rows.length > 0) {
+            const { error } = await supabase!.from(table).upsert(rows, { onConflict: 'id' });
+            if (error) {
+              ok = false;
+              console.warn(`[DataAdapter] Lỗi đẩy ${table} lên cloud:`, error.message);
+            } else rows.forEach((r) => changed.push({ table, id: r.id }));
+          }
+        }
+        if (g.deletes.length > 0) {
+          const { error } = await supabase!.from(table).delete().in('id', g.deletes);
+          if (error) {
+            ok = false;
+            console.warn(`[DataAdapter] Lỗi xóa ${table} trên cloud:`, error.message);
+          } else g.deletes.forEach((id) => changed.push({ table, id }));
+        }
+        if (ok) done.push(...g.entries);
+      }
+    } catch (err) {
+      console.warn('[DataAdapter] Ngoại lệ khi đẩy Outbox:', err);
+    } finally {
+      // Chỉ xóa entry nếu không bị ghi đè bởi thao tác mới hơn trong lúc đang đẩy
+      for (const k of done) {
+        const original = batch.find(([bk]) => bk === k)?.[1];
+        if (this.outbox.get(k) === original) this.outbox.delete(k);
+      }
+      this.saveOutbox();
+      this.isFlushing = false;
+      if (changed.length > 0) this.broadcastChange(changed);
+      // Còn thao tác mới phát sinh trong lúc đẩy -> đẩy tiếp; lỗi -> thử lại sau 5s
+      if (this.outbox.size > 0) {
+        const allFailed = done.length === 0;
+        setTimeout(() => this.scheduleFlush(), allFailed ? 5000 : 0);
+      }
+    }
+  }
+
+  /** Ghi trạng thái BPMN lên cloud: audit_logs (lịch sử) + bảng process_state (nếu có). */
+  private async writeProcessState(state: ProcessState, actorId?: string): Promise<boolean> {
+    const { error } = await supabase!.from('audit_logs').insert({
+      table_name: PROCESS_STATE,
+      record_id: state.request_id,
+      action: 'UPSERT',
+      new_data: state,
+      actor_id: actorId ?? null,
+    });
+    if (error) {
+      console.warn('[DataAdapter] Lỗi ghi process_state vào audit_logs:', error.message);
+      return false;
+    }
+    if (this.processStateTableAvailable) {
+      const res = await supabase!.from(PROCESS_STATE).upsert(state, { onConflict: 'request_id' });
+      if (res.error && (res.error.code === '42P01' || res.error.code === 'PGRST205')) {
+        this.processStateTableAvailable = false; // chưa tạo bảng riêng -> chỉ dùng audit_logs
+      }
+    }
+    return true;
+  }
+
+  // --- API tương thích ngược: các lời gọi tường minh chỉ cần xếp vào Outbox (gộp trùng tự động) ---
+  public async pushToCloud(table: string, record: any): Promise<void> {
+    if (!this.cloudEnabled) return;
+    const key = record?.id ?? record?.request_id ?? record?.user_id;
+    if (SYNCED_SET.has(table) && key) this.enqueue(table, key, 'upsert');
+  }
+
+  public async pushProcessStateToCloud(state: ProcessState, _actorId?: string): Promise<void> {
+    if (!this.cloudEnabled || !state?.request_id) return;
+    this.enqueue(PROCESS_STATE, state.request_id, 'upsert');
+  }
+
+  // --- PHÁT THÔNG ĐIỆP REALTIME ĐẾN CÁC THIẾT BỊ KHÁC ---
+  public broadcastChange(changes: { table: string; id?: string }[] | string, id?: string) {
+    if (!this.realtimeChannel) return;
+    const list = typeof changes === 'string' ? [{ table: changes, id }] : changes;
+    try {
+      void this.realtimeChannel.send({
+        type: 'broadcast',
+        event: 'STATE_CHANGED',
+        payload: { changes: list, time: Date.now() },
+      });
+    } catch {
+      // bỏ qua
+    }
+  }
+
+  // ===========================================================================
+  // LỚP KÉO VỀ: Cloud → Dexie (đánh dấu remote để không đẩy ngược)
+  // ===========================================================================
+  private async applyRemote(fn: () => Promise<void>, tables: string[]) {
+    await db.transaction('rw', tables.map((t) => db.table(t)), async () => {
+      (Dexie.currentTransaction as any)[REMOTE_FLAG] = true;
+      await fn();
+    });
+  }
+
+  private emitDataUpdated(detail: unknown) {
+    if (typeof window === 'undefined') return;
+    // Gộp nhiều sự kiện liên tiếp thành 1 lần re-render
+    clearTimeout(this.updateEventTimer);
+    this.updateEventTimer = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail }));
+    }, 30);
+  }
+
+  /** Nạp các bản ghi cloud vào Dexie, bỏ qua bản ghi đang có thay đổi cục bộ chưa đẩy. */
+  private async putRemoteRows(table: string, rows: Row[]) {
+    const fresh = rows.filter((r) => r?.id && !this.outbox.has(`${table}::${r.id}`));
+    if (fresh.length === 0) return;
+    await this.applyRemote(async () => {
+      await db.table(table).bulkPut(fresh);
+    }, [table]);
+  }
+
+  /** Khôi phục process_state từ audit_logs (bản mới nhất mỗi hồ sơ, không đè bản cục bộ mới hơn). */
+  private async putRemoteStates(states: ProcessState[]) {
+    const valid = states.filter((s) => s?.request_id && !this.outbox.has(`${PROCESS_STATE}::${s.request_id}`));
+    if (valid.length === 0) return;
+    await this.applyRemote(async () => {
+      for (const st of valid) {
+        const local = await db.process_state.get(st.request_id);
+        if (!local || !local.updated_at || !st.updated_at || st.updated_at >= local.updated_at) {
+          await db.process_state.put(st);
+        }
+      }
+    }, [PROCESS_STATE]);
+  }
+
+  /** Bổ sung process_state cho đơn chưa có (suy ra từ trạng thái đơn). */
+  private async ensureStatesForRequests(reqs: RentalRequest[]) {
+    const missing: ProcessState[] = [];
+    for (const req of reqs) {
+      const nodes = STATUS_TO_NODES[req.status] || [];
+      if (nodes.length === 0) continue;
+      if (!(await db.process_state.get(req.id))) {
+        missing.push({
+          request_id: req.id,
+          waiting_node_ids: nodes,
+          loop_counters: {},
+          variables: { preferred_vehicle_type: 'xe_so' },
+          updated_at: (req as any).updated_at || new Date().toISOString(),
+        });
+      }
+    }
+    if (missing.length > 0) {
+      await this.applyRemote(async () => {
+        await db.process_state.bulkPut(missing);
+      }, [PROCESS_STATE]);
+    }
+  }
+
+  // --- ĐỐI SOÁT TOÀN PHẦN CLOUD → LOCAL (theo phạm vi phân quyền) ---
+  public async syncCloudToLocal(): Promise<void> {
+    if (!this.cloudEnabled) return;
+    if (this.isSyncing) {
+      this.resyncRequested = true;
+      return;
+    }
+    this.isSyncing = true;
+    const client = supabase!;
+
+    try {
+      // Đẩy thay đổi cục bộ trước để không bị dữ liệu cũ trên cloud ghi đè
+      await this.flushOutbox();
+
+      const customer = this.isCustomerScope() ? this.scope!.id : null;
+
+      // 1. Đơn thuê (xác định phạm vi hồ sơ)
+      let ownRequests: RentalRequest[] = [];
+      if (customer) {
+        const [own, others] = await Promise.all([
+          client.from('rental_requests').select('*').eq('customer_id', customer),
+          client.from('rental_requests').select(RENTAL_PUBLIC_COLUMNS).neq('customer_id', customer),
+        ]);
+        if (own.error) throw own.error;
+        ownRequests = (own.data ?? []) as RentalRequest[];
+        await this.putRemoteRows('rental_requests', ownRequests);
+        if (!others.error) await this.putRemoteRows('rental_requests', (others.data ?? []) as unknown as Row[]);
+      } else {
+        const all = await client.from('rental_requests').select('*');
+        if (all.error) throw all.error;
+        ownRequests = (all.data ?? []) as RentalRequest[];
+        await this.putRemoteRows('rental_requests', ownRequests);
+      }
+      const ownIds = ownRequests.map((r) => r.id);
+
+      // 2. Các bảng còn lại
+      const tasks = SYNCED_TABLES.filter((t) => t !== 'rental_requests' && t !== 'incident_dispatches').map(async (t) => {
+        let q = client.from(t).select('*');
+        if (customer && !(PUBLIC_TABLES as string[]).includes(t)) {
+          if (t === 'profiles') q = q.or(`id.eq.${customer},role.neq.khach_hang`);
+          else if (t === 'notifications') q = q.eq('user_id', customer);
+          else if (ownIds.length === 0) return;
+          else q = q.in('request_id', ownIds);
+        }
+        const { data, error } = await q;
+        if (error) {
+          console.warn(`[DataAdapter] Lỗi kéo ${t}:`, error.message);
+          return;
+        }
+        await this.putRemoteRows(t, (data ?? []) as Row[]);
+      });
+      await Promise.all(tasks);
+
+      // 3. Điều phối cứu hộ (phụ thuộc sự cố)
+      let dq = client.from('incident_dispatches').select('*');
+      if (customer) {
+        const incIds = (await db.incidents.where('request_id').anyOf(ownIds).primaryKeys()) as string[];
+        dq = incIds.length > 0 ? dq.in('incident_id', incIds) : (null as any);
+      }
+      if (dq) {
+        const { data, error } = await dq;
+        if (!error) await this.putRemoteRows('incident_dispatches', (data ?? []) as Row[]);
+      }
+
+      // 4. Trạng thái BPMN từ audit_logs (mới nhất trước)
+      let sq = client
+        .from('audit_logs')
+        .select('record_id,new_data,created_at')
+        .eq('table_name', PROCESS_STATE)
+        .order('created_at', { ascending: false })
+        .limit(2000);
+      if (customer) sq = ownIds.length > 0 ? sq.in('record_id', ownIds) : (null as any);
+      if (sq) {
+        const { data, error } = await sq;
+        if (!error && data) {
+          const seen = new Set<string>();
+          const latest: ProcessState[] = [];
+          for (const log of data as Row[]) {
+            if (!seen.has(log.record_id) && log.new_data?.request_id) {
+              seen.add(log.record_id);
+              latest.push(log.new_data as ProcessState);
             }
           }
+          await this.putRemoteStates(latest);
         }
       }
+      await this.ensureStatesForRequests(ownRequests);
 
-      if (docsRes.data && docsRes.data.length > 0) {
-        await db.customer_documents.bulkPut(docsRes.data);
-      }
-      if (paymentsRes.data && paymentsRes.data.length > 0) {
-        await db.payments.bulkPut(paymentsRes.data);
-      }
-      if (contractsRes.data && contractsRes.data.length > 0) {
-        await db.contracts.bulkPut(contractsRes.data);
-      }
-      if (schedulesRes.data && schedulesRes.data.length > 0) {
-        await db.vehicle_schedule.bulkPut(schedulesRes.data);
-      }
-      if (inspectionsRes.data && inspectionsRes.data.length > 0) {
-        await db.inspections.bulkPut(inspectionsRes.data);
-      }
-      if (handoversRes.data && handoversRes.data.length > 0) {
-        await db.handovers.bulkPut(handoversRes.data);
-      }
-      if (findingsRes.data && findingsRes.data.length > 0) {
-        await db.damage_findings.bulkPut(findingsRes.data);
-      }
-      if (statementsRes.data && statementsRes.data.length > 0) {
-        await db.statements.bulkPut(statementsRes.data);
-      }
-      if (settlementsRes.data && settlementsRes.data.length > 0) {
-        await db.settlements.bulkPut(settlementsRes.data);
-      }
-      if (extensionsRes.data && extensionsRes.data.length > 0) {
-        await db.extension_requests.bulkPut(extensionsRes.data);
-      }
-      if (partnersRes.data && partnersRes.data.length > 0) {
-        await db.partners.bulkPut(partnersRes.data);
-      }
-      if (incidentsRes.data && incidentsRes.data.length > 0) {
-        await db.incidents.bulkPut(incidentsRes.data);
-      }
-      if (dispatchesRes.data && dispatchesRes.data.length > 0) {
-        await db.incident_dispatches.bulkPut(dispatchesRes.data);
-      }
-      if (maintenanceRes.data && maintenanceRes.data.length > 0) {
-        await db.maintenance_orders.bulkPut(maintenanceRes.data);
-      }
-      if (notificationsRes.data && notificationsRes.data.length > 0) {
-        await db.notifications.bulkPut(notificationsRes.data);
-      }
-      if (eventsRes.data && eventsRes.data.length > 0) {
-        await db.process_events.bulkPut(eventsRes.data);
-      }
-
-      // Khôi phục chính xác các state từ audit_logs
-      if (stateLogsRes.data && stateLogsRes.data.length > 0) {
-        const seenRequests = new Set<string>();
-        for (const log of stateLogsRes.data) {
-          const reqId = log.record_id;
-          if (!seenRequests.has(reqId) && log.new_data?.request_id) {
-            seenRequests.add(reqId);
-            await db.process_state.put(log.new_data);
-          }
-        }
-      }
-
-      // Phát sự kiện cập nhật để các component lắng nghe và re-render
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail: { source: 'cloud_sync' } }));
-      }
+      this.emitDataUpdated({ source: 'cloud_sync' });
     } catch (err) {
       console.warn('[DataAdapter] Lỗi đồng bộ đám mây về máy:', err);
     } finally {
       this.isSyncing = false;
+      if (this.resyncRequested) {
+        this.resyncRequested = false;
+        void this.syncCloudToLocal();
+      }
     }
   }
 
-  // --- 7. BẮT ĐẦU ĐỒNG BỘ THỜI GIAN THỰC (REALTIME CHANNEL & POLLING) ---
+  /** Xử lý một sự kiện postgres_changes (INSERT/UPDATE/DELETE) từ Supabase Realtime. */
+  private async handleRealtimeChange(payload: any) {
+    const table: string = payload.table;
+    try {
+      if (table === 'audit_logs') {
+        const row = payload.new as Row;
+        if (row?.table_name !== PROCESS_STATE || !row.new_data?.request_id) return;
+        if (!(await this.inScope('rental_requests', (await db.rental_requests.get(row.record_id)) ?? {}))) return;
+        await this.putRemoteStates([row.new_data as ProcessState]);
+        this.emitDataUpdated(payload);
+        return;
+      }
+      if (!SYNCED_SET.has(table)) return;
+
+      if (payload.eventType === 'DELETE') {
+        const id = (payload.old as Row)?.id;
+        if (!id || this.outbox.has(`${table}::${id}`)) return;
+        await this.applyRemote(async () => {
+          await db.table(table).delete(id);
+        }, [table]);
+        this.emitDataUpdated(payload);
+        return;
+      }
+
+      const row = payload.new as Row;
+      if (!row?.id) return;
+      if (!(await this.inScope(table, row))) {
+        // Đơn của khách khác: chỉ giữ cột phục vụ kiểm tra xe trống
+        if (table === 'rental_requests') {
+          const pick: Row = {};
+          for (const c of RENTAL_PUBLIC_COLUMNS.split(',')) pick[c] = row[c];
+          await this.putRemoteRows(table, [pick]);
+        }
+        return;
+      }
+      await this.putRemoteRows(table, [row]);
+      if (table === 'rental_requests') await this.ensureStatesForRequests([row as RentalRequest]);
+      this.emitDataUpdated(payload);
+    } catch (err) {
+      console.warn('[DataAdapter] Lỗi xử lý sự kiện realtime:', err);
+    }
+  }
+
+  // --- BẮT ĐẦU ĐỒNG BỘ THỜI GIAN THỰC (REALTIME CHANNEL + ĐỐI SOÁT ĐỊNH KỲ) ---
   public startRealtimeSync() {
     if (import.meta.env.MODE === 'test' || typeof window === 'undefined') return;
-    if (!isSupabaseConfigured || !supabase || this.currentMode !== 'LIVE') return;
+    if (!this.cloudEnabled) return;
     if (this.realtimeChannel) return;
 
     console.log('[DataAdapter] Bắt đầu đồng bộ thời gian thực Supabase Cloud...');
 
-    // Lần tải ban đầu
+    // Lần đối soát ban đầu + đẩy Outbox còn tồn từ phiên trước
+    this.scheduleFlush();
     void this.syncCloudToLocal();
 
-    // 1. Polling dự phòng mỗi 3.5 giây đảm bảo dữ liệu luôn tươi mới
+    // Đối soát toàn phần dự phòng (bắt các thay đổi lỡ khi WebSocket rớt)
     this.pollInterval = setInterval(() => {
-      if (navigator.onLine && this.currentMode === 'LIVE') {
-        void this.syncCloudToLocal();
-      }
-    }, 3500);
+      if (navigator.onLine && this.currentMode === 'LIVE') void this.syncCloudToLocal();
+    }, FULL_SYNC_INTERVAL_MS);
 
-    // 2. Kênh Realtime WebSocket độ trễ cực thấp
     try {
-      this.realtimeChannel = supabase
-        .channel('motocare-live-sync')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'rental_requests' }, async (payload) => {
-          if (payload.new && (payload.new as any).id) {
-            await db.rental_requests.put(payload.new as any);
-            const req = payload.new as RentalRequest;
-            const nodes = STATUS_TO_NODES[req.status] || [];
-            if (nodes.length > 0) {
-              const existingState = await db.process_state.get(req.id);
-              if (!existingState) {
-                await db.process_state.put({
-                  request_id: req.id,
-                  waiting_node_ids: nodes,
-                  loop_counters: {},
-                  variables: {},
-                  updated_at: (req as any).updated_at || new Date().toISOString(),
-                });
-              }
-            }
-            window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail: payload }));
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'audit_logs' }, async (payload) => {
-          if (payload.new && (payload.new as any).table_name === 'process_state') {
-            const stateData = (payload.new as any).new_data;
-            if (stateData?.request_id) {
-              await db.process_state.put(stateData);
-              window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail: payload }));
-            }
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_documents' }, async (payload) => {
-          if (payload.new && (payload.new as any).id) {
-            await db.customer_documents.put(payload.new as any);
-            window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail: payload }));
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, async (payload) => {
-          if (payload.new && (payload.new as any).id) {
-            await db.payments.put(payload.new as any);
-            window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail: payload }));
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'contracts' }, async (payload) => {
-          if (payload.new && (payload.new as any).id) {
-            await db.contracts.put(payload.new as any);
-            window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail: payload }));
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, async (payload) => {
-          if (payload.new && (payload.new as any).id) {
-            await db.incidents.put(payload.new as any);
-            window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail: payload }));
-          }
+      this.realtimeChannel = supabase!
+        .channel('motocare-live-sync', { config: { broadcast: { self: false } } })
+        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+          void this.handleRealtimeChange(payload);
         })
         .on('broadcast', { event: 'STATE_CHANGED' }, () => {
+          // Thiết bị khác vừa ghi xong -> đối soát ngay (phòng khi postgres_changes chưa bật cho bảng)
           void this.syncCloudToLocal();
         })
-        .subscribe();
+        .subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') void this.syncCloudToLocal();
+        });
     } catch (err) {
       console.warn('[DataAdapter] Đăng ký Realtime channel gặp sự cố:', err);
     }

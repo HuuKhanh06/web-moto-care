@@ -4,6 +4,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/authStore';
 import { ProtectedRoute } from './ProtectedRoute';
+import { RequestOwnershipGuard } from './RequestOwnershipGuard';
 
 // Layouts
 import { CustomerLayout } from '@/components/layout/CustomerLayout';
@@ -174,7 +175,9 @@ export function AppRouter() {
         path="/kh"
         element={
           <ProtectedRoute allowedRoles={['khach_hang']}>
-            <CustomerLayout />
+            <RequestOwnershipGuard>
+              <CustomerLayout />
+            </RequestOwnershipGuard>
           </ProtectedRoute>
         }
       >
