@@ -57,7 +57,19 @@ describe('KH-02 OCR lifecycle (controlled provider, real test IndexedDB)', () =>
       return structuredClone(response);
     });
   });
-  afterEach(cleanup);
+  afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
+
+  it('chỉ gửi ảnh lên backend sau khi khách đồng ý, vẫn cho phép nhập thủ công', async () => {
+    vi.stubEnv('VITE_OCR_ENDPOINT', 'https://project.test/functions/v1/document-ocr');
+    mount();
+    const consent = await screen.findByRole('checkbox', { name: /Tôi đồng ý gửi ảnh giấy tờ/ });
+    expect(consent).not.toBeChecked();
+    expect(aiService.processOcr).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Nhập thông tin thủ công' })).toBeEnabled();
+    fireEvent.click(consent);
+    await screen.findByText('048098001234');
+    expect(aiService.processOcr).toHaveBeenCalledTimes(1);
+  });
 
   it('quét đúng một lần cho bộ ảnh chưa xác nhận, kể cả StrictMode và rerender', async () => {
     mount();

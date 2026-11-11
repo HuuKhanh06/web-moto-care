@@ -5,34 +5,9 @@ import { withOcrDeadline } from './timeout';
 import { OcrError } from './errors';
 import { validateOcrResponse } from './validation';
 
-const enumString = (values: string[]) => ({ type: 'STRING', enum: values });
-const fieldSchema = {
-  type: 'OBJECT', required: ['value', 'confidence'],
-  properties: { value: { type: 'STRING', nullable: true }, confidence: { type: 'NUMBER', nullable: true, minimum: 0, maximum: 1 } },
-};
-const documentSchema = (fields: string[]) => ({ type: 'OBJECT', required: fields, properties: Object.fromEntries(fields.map(key => [key, fieldSchema])) });
-export const GEMINI_OCR_SCHEMA = {
-  type: 'OBJECT', required: ['schema_version', 'request_id', 'model_version', 'documents', 'checks', 'thresholds', 'minimum_required_confidence', 'routing'],
-  properties: {
-    schema_version: { type: 'STRING' }, request_id: { type: 'STRING' }, model_version: { type: 'STRING' },
-    documents: { type: 'OBJECT', required: ['cccd', 'gplx'], properties: {
-      cccd: documentSchema(['full_name', 'date_of_birth', 'id_number']),
-      gplx: documentSchema(['full_name', 'license_class', 'expiry_date']),
-    } },
-    checks: { type: 'OBJECT', required: ['image_quality', 'required_fields_present', 'name_consistency'], properties: {
-      image_quality: enumString(['PASS', 'FAIL', 'BLURRY']), required_fields_present: { type: 'BOOLEAN' },
-      name_consistency: enumString(['PASS', 'MISMATCH', 'NOT_APPLICABLE']),
-    } },
-    thresholds: { type: 'OBJECT', required: ['X', 'Y'], properties: { X: { type: 'NUMBER' }, Y: { type: 'NUMBER' } } },
-    minimum_required_confidence: { type: 'NUMBER', nullable: true, minimum: 0, maximum: 1 },
-    routing: { type: 'OBJECT', required: ['action', 'reason_codes', 'next_step', 'business_rule_status'], properties: {
-      action: enumString(['PREFILL_FOR_RULES', 'MANUAL_REVIEW', 'REQUEST_REUPLOAD', 'FALLBACK_MANUAL']),
-      reason_codes: { type: 'ARRAY', items: { type: 'STRING' } }, next_step: { type: 'STRING' },
-      business_rule_status: enumString(['EVALUATED', 'NOT_EVALUATED']),
-    } },
-  },
-};
-
+export { GEMINI_OCR_SCHEMA } from '../../supabase/functions/_shared/ocrContract';
+import { GEMINI_OCR_SCHEMA } from '../../supabase/functions/_shared/ocrContract';
+import { processServerOcr } from './server';
 function httpError(status: number): OcrError {
   if (status === 401 || status === 403) return new OcrError('PROVIDER_AUTH', 'Gemini từ chối xác thực. Vui lòng kiểm tra khóa và quyền truy cập.');
   if (status === 404) return new OcrError('PROVIDER_MODEL', 'Không tìm thấy mô hình Gemini đã cấu hình. Vui lòng cập nhật tên mô hình.');
@@ -43,6 +18,7 @@ function httpError(status: number): OcrError {
 export class GeminiAiProvider implements IAiProvider {
   async processOcr(input: AiAgentInput, parentSignal?: AbortSignal): Promise<AiOcrResponse> {
     const config = getAiConfig();
+    if (import.meta.env.VITE_OCR_ENDPOINT) return processServerOcr(input, parentSignal);
     if (!config.apiKey?.trim()) throw new OcrError('PROVIDER_CONFIG', 'Chưa cấu hình khóa Gemini. Vui lòng nhập khóa trong Cấu hình AI hoặc chọn OCR trên thiết bị.');
     if (!/^gemini-[\w.-]+$/.test(config.model)) throw new OcrError('PROVIDER_CONFIG', 'Tên mô hình Gemini không hợp lệ.');
     if (!input.cccdImageRef || !input.gplxImageRef) throw new OcrError('INVALID_FILE', 'Thiếu ảnh CCCD hoặc bằng lái.');

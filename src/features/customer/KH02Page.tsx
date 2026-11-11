@@ -68,6 +68,7 @@ export function KH02Page() {
   const [extractedProfile, setExtractedProfile] = useState(EMPTY_PROFILE);
   const [isAppliedToProfile, setIsAppliedToProfile] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
+  const [allowCloudOcr, setAllowCloudOcr] = useState(!import.meta.env.VITE_OCR_ENDPOINT);
   const activeRequest = useRef<string | null>(requestId);
   const mounted = useRef(false);
   const ocrBusy = useRef(false);
@@ -127,6 +128,7 @@ export function KH02Page() {
 
   // Callback không phụ thuộc trạng thái loading: effect nạp dữ liệu không bị gọi lại khi OCR đổi trạng thái.
   const triggerAutoOcr = useCallback(async (currentDocs: CustomerDocument[], req: RentalRequest, v: Vehicle | null, retry = false) => {
+    if (!allowCloudOcr) return;
     if (!hasRequiredDocuments(currentDocs)) return;
     const key = req.id + imageSnapshot(currentDocs);
     if (ocrBusy.current || (!retry && attempt.current === key)) return;
@@ -161,7 +163,7 @@ export function KH02Page() {
     } finally {
       if (generation.current === run) ocrBusy.current = false;
     }
-  }, [applyOcrResponse]);
+  }, [applyOcrResponse, allowCloudOcr]);
 
   const loadData = useCallback(async () => {
     if (!requestId) { toast.error('Không tìm thấy mã yêu cầu thuê xe'); navigate('/kh/01'); return; }
@@ -190,7 +192,8 @@ export function KH02Page() {
         setIsAppliedToProfile(true); setIsCustomerConfirmed(true); setOcrStatus('COMPLETED');
       } else if (hasRequiredDocuments(docs)) {
         // Kết quả lưu cùng transaction với bộ ảnh; đổi ảnh xóa ai_source của cả bộ.
-        const lastLog = docs.every(d => d.ai_source) ? await db.ai_logs.where('request_id').equals(requestId).last() : undefined;
+        const reusableSource = docs.every(d => import.meta.env.VITE_OCR_ENDPOINT ? d.ai_source === 'GEMINI' : Boolean(d.ai_source));
+        const lastLog = reusableSource ? await db.ai_logs.where('request_id').equals(requestId).last() : undefined;
         if (!current()) return;
         const parsed = lastLog ? AiOcrResponseSchema.safeParse(lastLog.output) : null;
         if (parsed?.success && parsed.data.model_version !== 'ocr-mock-v1') {
@@ -439,6 +442,16 @@ export function KH02Page() {
           </span>
         </div>
 
+        {import.meta.env.VITE_OCR_ENDPOINT && (
+          <label className="flex items-start gap-2 text-sm text-slate-700 p-3 rounded-lg bg-slate-50">
+            <input type="checkbox" checked={allowCloudOcr} disabled={ocrLoading}
+              onChange={e => setAllowCloudOcr(e.target.checked)} className="mt-1" />
+            <span>Tôi đồng ý gửi ảnh giấy tờ đến Google Gemini để tự động điền thông tin hồ sơ. Vui lòng tải ảnh rõ nét, chữ đúng chiều.</span>
+          </label>
+        )}
+        {import.meta.env.VITE_OCR_ENDPOINT && !allowCloudOcr && hasRequiredDocuments(documents) && (
+          <Button size="sm" variant="outline" onClick={() => { setIsAppliedToProfile(true); setIsEditingDetails(true); }}>Nhập thông tin thủ công</Button>
+        )}
         <div className="space-y-3">
           {[
             {
@@ -545,7 +558,7 @@ export function KH02Page() {
           <div role="status" data-testid="ocr-processing" className="p-4 rounded-xl border border-teal-200 bg-teal-50/50 space-y-3 animate-pulse">
             <div className="flex items-center gap-2 text-teal-800 font-semibold text-sm">
               <RefreshCw className="w-4 h-4 animate-spin text-teal-600 shrink-0" />
-              <span>Đang đọc thông tin từ ảnh giấy tờ. Vui lòng chờ...</span>
+              <span>{import.meta.env.VITE_OCR_ENDPOINT ? 'Đang đọc giấy tờ qua dịch vụ trực tuyến. Có thể mất khoảng 1–2 phút...' : 'Đang đọc thông tin từ ảnh giấy tờ. Vui lòng chờ...'}</span>
             </div>
             <OcrScanningSkeleton />
           </div>

@@ -1,0 +1,3 @@
+[functions.document-ocr]
+# The handler validates the user JWT using Supabase Auth (also supports asymmetric JWTs).
+verify_jwt = false

@@ -65,12 +65,17 @@ class AiService {
       }
     } catch (error) {
       const safe = safeOcrError(error);
+      const message = safe.code === 'TIMEOUT'
+        ? source === 'LOCAL'
+          ? 'OCR trên thiết bị quá thời gian xử lý (chưa dùng Gemini). Vui lòng thử lại với ảnh giấy tờ xoay đúng chiều, hoặc nhập thông tin thủ công.'
+          : 'Gemini quá thời gian phản hồi. Vui lòng thử lại hoặc nhập thông tin thủ công.'
+        : safe.message;
       response = {
         schema_version: '1.0', request_id: input.requestId, model_version: 'fallback-rules-v1', documents: {},
         checks: { image_quality: 'FAIL', required_fields_present: false, name_consistency: 'NOT_APPLICABLE' },
         thresholds: { X: config.thresholdX, Y: config.thresholdY }, minimum_required_confidence: null,
         routing: {
-          action: 'FALLBACK_MANUAL', reason_codes: [`AI_ERROR: ${safe.code}: ${safe.message}`],
+          action: 'FALLBACK_MANUAL', reason_codes: [`AI_ERROR: ${safe.code}: ${message}`],
           next_step: 'HUMAN_VERIFICATION_AT_M_CheckDocs', business_rule_status: 'NOT_EVALUATED',
         },
       };

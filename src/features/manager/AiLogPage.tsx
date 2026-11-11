@@ -139,6 +139,7 @@ export function AiLogPage() {
           <button
             type="button"
             onClick={handleToggleMode}
+            disabled={Boolean(import.meta.env.VITE_OCR_ENDPOINT)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 ${
               currentCfg.mode === 'LIVE'
                 ? 'bg-purple-600 text-white border-purple-700 shadow-xs'
@@ -416,6 +417,7 @@ export function AiLogPage() {
                   Chế độ hoạt động
                 </label>
                 <select
+                  disabled={Boolean(import.meta.env.VITE_OCR_ENDPOINT)}
                   value={configForm.mode}
                   onChange={(e) =>
                     setConfigForm({ ...configForm, mode: e.target.value as 'LOCAL' | 'MOCK' | 'LIVE' })
@@ -434,13 +436,14 @@ export function AiLogPage() {
                 </label>
                 <input
                   type="password"
+                  disabled={Boolean(import.meta.env.VITE_OCR_ENDPOINT)}
                   placeholder="AIzaSy..."
                   value={configForm.apiKey || ''}
                   onChange={(e) => setConfigForm({ ...configForm, apiKey: e.target.value })}
                   className="w-full text-xs rounded-lg border border-slate-300 p-2 font-mono"
                 />
                 <span className="text-[10px] text-slate-500">
-                  Khóa chỉ dùng trong phiên trình duyệt này. LOCAL không cần khóa; lần tải dữ liệu nhận diện đầu tiên cần mạng.
+                  {import.meta.env.VITE_OCR_ENDPOINT ? 'Đang dùng backend OCR. Khóa và mô hình Gemini được quản lý trên server.' : 'Khóa chỉ dùng trong phiên trình duyệt này. LOCAL không cần khóa; lần tải dữ liệu nhận diện đầu tiên cần mạng.'}
                 </span>
               </div>
 

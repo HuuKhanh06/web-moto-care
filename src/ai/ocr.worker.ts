@@ -4,6 +4,8 @@ import { createWorker } from 'tesseract.js';
 import type { Worker as TesseractWorker } from 'tesseract.js';
 import workerScriptUrl from 'tesseract.js/dist/worker.min.js?url';
 import coreScriptUrl from 'tesseract.js-core/tesseract-core-lstm.wasm.js?url';
+import simdCoreScriptUrl from 'tesseract.js-core/tesseract-core-simd-lstm.wasm.js?url';
+import { simd } from 'wasm-feature-detect';
 import { denoise, preprocess, targetScale, type PreprocessMode } from './ocrPreprocess';
 
 export interface OcrPage { text: string; confidence: number }
@@ -90,9 +92,12 @@ self.onmessage = async (event: MessageEvent<OcrWorkerInput>) => {
   try {
     const deadline = Date.now() + (event.data.budgetMs ?? 30000);
     const { images } = event.data;
+    // Passing a .js corePath disables Tesseract's automatic SIMD selection.
+    // Select explicitly while keeping a fallback for older browsers.
+    const selectedCoreUrl = await simd() ? simdCoreScriptUrl : coreScriptUrl;
     worker = await createWorker(event.data.languages, 1, {
       workerPath: new URL(workerScriptUrl, event.data.origin).href,
-      corePath: new URL(coreScriptUrl, event.data.origin).href,
+      corePath: new URL(selectedCoreUrl, event.data.origin).href,
       workerBlobURL: false,
       // Lưu dữ liệu ngôn ngữ vào IndexedDB để các lần sau chạy được cả khi offline.
       cacheMethod: 'write',

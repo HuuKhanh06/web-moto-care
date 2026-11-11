@@ -1,0 +1,56 @@
+name: Deploy OCR backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ocr-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Validate deployment configuration
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$PROJECT_REF"
+          test -n "$GEMINI_API_KEY"
+      - name: Apply OCR quota migration
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          supabase db push --linked
+      - name: Set server secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
+          OCR_ALLOWED_ORIGINS: ${{ vars.OCR_ALLOWED_ORIGINS || 'https://huukhanh06.github.io' }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          keys = ['GEMINI_API_KEY', 'GEMINI_MODEL', 'OCR_ALLOWED_ORIGINS']
+          values = {key: os.environ[key] for key in keys}
+          if any('\n' in value or '\r' in value for value in values.values()):
+              raise SystemExit('Secret values must be single line')
+          Path(os.environ['RUNNER_TEMP'], 'ocr.env').write_text(''.join(f'{key}={value}\n' for key, value in values.items()))
+          PY
+          supabase secrets set --project-ref "$PROJECT_REF" --env-file "$RUNNER_TEMP/ocr.env"
+          rm "$RUNNER_TEMP/ocr.env"
+      - name: Deploy authenticated handler
+        run: supabase functions deploy document-ocr --project-ref "$PROJECT_REF"
