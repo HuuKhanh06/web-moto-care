@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/db/adapter.ts
 // KIẾN TRÚC ĐỒNG BỘ ĐÁM MÂY 2 LỚP (HYBRID CLOUD STATE ARCHITECTURE)
 //
@@ -12,6 +13,7 @@
 //    phục vụ kiểm tra xe trống, không có thông tin cá nhân) và dọn dữ liệu nhạy cảm không thuộc về họ.
 
 import Dexie, { type Table } from 'dexie';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { db } from './index';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { RentalRequest, Vehicle, ProcessState } from './types';
@@ -98,19 +100,19 @@ type Row = Record<string, any>;
 class DataAdapter {
   private currentMode: DataSourceMode = 'DEMO';
   private listeners: ((mode: DataSourceMode) => void)[] = [];
-  private realtimeChannel: any = null;
-  private pollInterval: any = null;
+  private realtimeChannel: RealtimeChannel | null = null;
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
   private isSyncing = false;
   private resyncRequested = false;
 
   private scope: SyncScope | null = null;
   private outbox = new Map<string, OutboxOp>();
-  private flushTimer: any = null;
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private isFlushing = false;
   private hooksInstalled = false;
   private suppressDepth = 0;
   private processStateTableAvailable = true;
-  private updateEventTimer: any = null;
+  private updateEventTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (import.meta.env.MODE === 'test') {
@@ -268,27 +270,27 @@ class DataAdapter {
   private installSyncHooks() {
     if (this.hooksInstalled) return;
     this.hooksInstalled = true;
-    const self = this;
-    const skip = (trans: unknown) => self.suppressDepth > 0 || !!(trans as any)[REMOTE_FLAG];
+    const skip = (trans: unknown) =>
+      this.suppressDepth > 0 || Boolean((trans as Record<string, unknown>)[REMOTE_FLAG]);
 
     for (const name of [...SYNCED_TABLES, PROCESS_STATE]) {
       const table = db.table(name);
       const keyPath = (table.schema.primKey.keyPath as string) || 'id';
 
-      table.hook('creating', function (primKey, obj, trans) {
+      table.hook('creating', (primKey, obj, trans) => {
         if (skip(trans)) return;
         const key = (primKey ?? (obj as Row)[keyPath]) as string;
-        if (key) trans.on('complete', () => self.enqueue(name, key, 'upsert'));
+        if (key) trans.on('complete', () => this.enqueue(name, key, 'upsert'));
       });
-      table.hook('updating', function (_mods, primKey, _obj, trans) {
+      table.hook('updating', (_mods, primKey, _obj, trans) => {
         if (skip(trans)) return;
-        trans.on('complete', () => self.enqueue(name, primKey as string, 'upsert'));
+        trans.on('complete', () => this.enqueue(name, primKey as string, 'upsert'));
       });
-      table.hook('deleting', function (primKey, _obj, trans) {
+      table.hook('deleting', (primKey, _obj, trans) => {
         if (skip(trans)) return;
         // process_state không xóa trên cloud (lịch sử nằm trong audit_logs)
         if (name === PROCESS_STATE) return;
-        trans.on('complete', () => self.enqueue(name, primKey as string, 'delete'));
+        trans.on('complete', () => this.enqueue(name, primKey as string, 'delete'));
       });
     }
   }
@@ -435,7 +437,8 @@ class DataAdapter {
     if (SYNCED_SET.has(table) && key) this.enqueue(table, key, 'upsert');
   }
 
-  public async pushProcessStateToCloud(state: ProcessState, _actorId?: string): Promise<void> {
+  public async pushProcessStateToCloud(state: ProcessState, actorId?: string): Promise<void> {
+    void actorId;
     if (!this.cloudEnabled || !state?.request_id) return;
     this.enqueue(PROCESS_STATE, state.request_id, 'upsert');
   }
@@ -460,7 +463,7 @@ class DataAdapter {
   // ===========================================================================
   private async applyRemote(fn: () => Promise<void>, tables: string[]) {
     await db.transaction('rw', tables.map((t) => db.table(t)), async () => {
-      (Dexie.currentTransaction as any)[REMOTE_FLAG] = true;
+      (Dexie.currentTransaction as unknown as Record<string, unknown>)[REMOTE_FLAG] = true;
       await fn();
     });
   }
@@ -468,7 +471,7 @@ class DataAdapter {
   private emitDataUpdated(detail: unknown) {
     if (typeof window === 'undefined') return;
     // Gộp nhiều sự kiện liên tiếp thành 1 lần re-render
-    clearTimeout(this.updateEventTimer);
+    if (this.updateEventTimer) clearTimeout(this.updateEventTimer);
     this.updateEventTimer = setTimeout(() => {
       window.dispatchEvent(new CustomEvent('motocare_data_updated', { detail }));
     }, 30);
@@ -574,10 +577,14 @@ class DataAdapter {
       await Promise.all(tasks);
 
       // 3. Điều phối cứu hộ (phụ thuộc sự cố)
-      let dq = client.from('incident_dispatches').select('*');
+      let dq = null;
       if (customer) {
         const incIds = (await db.incidents.where('request_id').anyOf(ownIds).primaryKeys()) as string[];
-        dq = incIds.length > 0 ? dq.in('incident_id', incIds) : (null as any);
+        if (incIds.length > 0) {
+          dq = client.from('incident_dispatches').select('*').in('incident_id', incIds);
+        }
+      } else {
+        dq = client.from('incident_dispatches').select('*');
       }
       if (dq) {
         const { data, error } = await dq;
@@ -585,22 +592,35 @@ class DataAdapter {
       }
 
       // 4. Trạng thái BPMN từ audit_logs (mới nhất trước)
-      let sq = client
-        .from('audit_logs')
-        .select('record_id,new_data,created_at')
-        .eq('table_name', PROCESS_STATE)
-        .order('created_at', { ascending: false })
-        .limit(2000);
-      if (customer) sq = ownIds.length > 0 ? sq.in('record_id', ownIds) : (null as any);
+      let sq = null;
+      if (customer) {
+        if (ownIds.length > 0) {
+          sq = client
+            .from('audit_logs')
+            .select('record_id,new_data,created_at')
+            .eq('table_name', PROCESS_STATE)
+            .in('record_id', ownIds)
+            .order('created_at', { ascending: false })
+            .limit(2000);
+        }
+      } else {
+        sq = client
+          .from('audit_logs')
+          .select('record_id,new_data,created_at')
+          .eq('table_name', PROCESS_STATE)
+          .order('created_at', { ascending: false })
+          .limit(2000);
+      }
       if (sq) {
         const { data, error } = await sq;
         if (!error && data) {
           const seen = new Set<string>();
           const latest: ProcessState[] = [];
           for (const log of data as Row[]) {
-            if (!seen.has(log.record_id) && log.new_data?.request_id) {
-              seen.add(log.record_id);
-              latest.push(log.new_data as ProcessState);
+            const rowLog = log as { record_id: string; new_data?: ProcessState };
+            if (!seen.has(rowLog.record_id) && rowLog.new_data?.request_id) {
+              seen.add(rowLog.record_id);
+              latest.push(rowLog.new_data);
             }
           }
           await this.putRemoteStates(latest);
@@ -621,7 +641,7 @@ class DataAdapter {
   }
 
   /** Xử lý một sự kiện postgres_changes (INSERT/UPDATE/DELETE) từ Supabase Realtime. */
-  private async handleRealtimeChange(payload: any) {
+  private async handleRealtimeChange(payload: { table: string; eventType: string; new?: Row; old?: Row }) {
     const table: string = payload.table;
     try {
       if (table === 'audit_logs') {
